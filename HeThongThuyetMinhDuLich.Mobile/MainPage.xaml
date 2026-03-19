@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
+             x:Class="HeThongThuyetMinhDuLich.Mobile.MainPage"
+             Title="Audio Guide">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="10">
+            <Label Text="Giao dien nguoi dung"
+                   FontSize="24"
+                   FontAttributes="Bold" />
+
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="Tai danh sach diem"
+                        Clicked="OnReloadClicked" />
+                <Button Text="Cap nhat GPS"
+                        Clicked="OnRefreshGpsClicked" />
+                <ActivityIndicator x:Name="LoadingIndicator"
+                                   IsRunning="False"
+                                   IsVisible="False"
+                                   VerticalOptions="Center" />
+            </HorizontalStackLayout>
+
+            <Label x:Name="GpsStatusLabel"
+                   Text="Vi tri: chua cap nhat."
+                   FontSize="12"
+                   TextColor="#456" />
+            <Label x:Name="NearestPoiLabel"
+                   Text="POI gan nhat: chua xac dinh."
+                   FontSize="12"
+                   FontAttributes="Bold"
+                   TextColor="#234" />
+
+            <Border StrokeThickness="1" Padding="6">
+                <maps:Map x:Name="MapView"
+                          HeightRequest="280"
+                          IsShowingUser="True" />
+            </Border>
+
+            <Border StrokeThickness="1" Padding="10">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Mo noi dung bang QR (demo nhap tay)" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Entry x:Name="QrEntry"
+                               Placeholder="Vi du: QR_POI001"
+                               Grid.Column="0" />
+                        <Button Grid.Column="1" Text="Mo QR" Clicked="OnLookupQrClicked" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border StrokeThickness="1" Padding="10">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Danh sach diem tham quan" FontAttributes="Bold" />
+                    <CollectionView x:Name="PoiCollection"
+                                    SelectionMode="Single"
+                                    SelectionChanged="OnPoiSelectionChanged"
+                                    HeightRequest="220">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="8" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                                    <Label Grid.Row="0" Grid.Column="0" Text="{Binding TenDiem}" FontAttributes="Bold" />
+                                    <Label Grid.Row="0" Grid.Column="1" Text="{Binding MaDinhDanh}" FontSize="12" />
+                                    <Label Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding DiaChi}" FontSize="12" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <Label x:Name="SelectedPoiLabel" Text="Chua chon diem." FontAttributes="Bold" />
+
+            <Border StrokeThickness="1" Padding="10">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Noi dung thuyet minh" FontAttributes="Bold" />
+                    <CollectionView x:Name="ContentCollection" HeightRequest="220">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <VerticalStackLayout Spacing="4" Padding="8">
+                                    <Label Text="{Binding TieuDe}" FontAttributes="Bold" />
+                                    <Label Text="{Binding TenNgonNgu, StringFormat='Ngon ngu: {0}'}" FontSize="12" />
+                                    <Label Text="{Binding NoiDungVanBan}" FontSize="12" LineBreakMode="TailTruncation" MaxLines="3" />
+                                    <HorizontalStackLayout Spacing="8">
+                                        <Button Text="Phat TTS"
+                                                FontSize="12"
+                                                Padding="10,6"
+                                                Clicked="OnSpeakTtsClicked" />
+                                        <Button Text="Mo audio"
+                                                FontSize="12"
+                                                Padding="10,6"
+                                                Clicked="OnPlayAudioClicked" />
+                                    </HorizontalStackLayout>
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

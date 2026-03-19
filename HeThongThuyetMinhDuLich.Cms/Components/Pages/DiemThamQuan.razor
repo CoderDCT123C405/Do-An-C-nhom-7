@@ -1,0 +1,110 @@
+@page "/diem-tham-quan"
+@inject CmsApiClient ApiClient
+@inject CmsSession Session
+
+<PageTitle>Diem tham quan</PageTitle>
+
+<h1>Diem tham quan</h1>
+
+<EditForm Model="_createModel" OnValidSubmit="CreateAsync">
+    <div class="row g-2">
+        <div class="col-md-3">
+            <label class="form-label">Ma dinh danh</label>
+            <InputText class="form-control" @bind-Value="_createModel.MaDinhDanh" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Ten diem</label>
+            <InputText class="form-control" @bind-Value="_createModel.TenDiem" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Ma loai</label>
+            <InputNumber class="form-control" @bind-Value="_createModel.MaLoai" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Dia chi</label>
+            <InputText class="form-control" @bind-Value="_createModel.DiaChi" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Vi do</label>
+            <InputNumber class="form-control" @bind-Value="_createModel.ViDo" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Kinh do</label>
+            <InputNumber class="form-control" @bind-Value="_createModel.KinhDo" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Ban kinh</label>
+            <InputNumber class="form-control" @bind-Value="_createModel.BanKinhKichHoat" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Mo ta ngan</label>
+            <InputText class="form-control" @bind-Value="_createModel.MoTaNgan" />
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-primary w-100" type="submit" disabled="@(!Session.IsAuthenticated)">Them</button>
+        </div>
+    </div>
+</EditForm>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <p class="mt-3">@_message</p>
+}
+
+<table class="table table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Ma</th>
+            <th>Ten</th>
+            <th>Ma dinh danh</th>
+            <th>Toa do</th>
+            <th>Ma loai</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in _items)
+        {
+            <tr>
+                <td>@item.MaDiem</td>
+                <td>@item.TenDiem</td>
+                <td>@item.MaDinhDanh</td>
+                <td>@item.ViDo, @item.KinhDo</td>
+                <td>@item.MaLoai</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private readonly List<DiemThamQuanItem> _items = [];
+    private readonly DiemThamQuanCreate _createModel = new()
+    {
+        MaDinhDanh = "POI_DEMO",
+        TenDiem = "Diem Demo",
+        ViDo = 10.762622m,
+        KinhDo = 106.660172m,
+        MaLoai = 1
+    };
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _items.Clear();
+        _items.AddRange(await ApiClient.GetDiemAsync());
+    }
+
+    private async Task CreateAsync()
+    {
+        var ok = await ApiClient.CreateDiemAsync(_createModel);
+        _message = ok ? "Da tao diem tham quan." : "Tao that bai (kiem tra token/du lieu).";
+        if (ok)
+        {
+            await ReloadAsync();
+        }
+    }
+}

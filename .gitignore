@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+.vscode/
+.dotnet/
+*.user
+*.suo
+*.log
+*.db
+*.db3

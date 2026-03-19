@@ -1,0 +1,13 @@
+@page "/"
+@inject CmsSession Session
+
+<PageTitle>Tong quan</PageTitle>
+
+<h1>CMS Quan Tri Du Lich</h1>
+<p>Trang quan tri nhanh de cap nhat loai diem, diem tham quan va thong ke.</p>
+
+<div class="alert @(Session.IsAuthenticated ? "alert-success" : "alert-warning")">
+    @(Session.IsAuthenticated
+        ? $"Da dang nhap: {Session.TenDangNhap}"
+        : "Chua dang nhap. Vao Dang nhap de tiep tuc.")
+</div>

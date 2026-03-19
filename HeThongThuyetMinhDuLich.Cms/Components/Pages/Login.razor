@@ -1,0 +1,51 @@
+@page "/login"
+@inject CmsApiClient ApiClient
+@inject CmsSession Session
+
+<PageTitle>Dang nhap</PageTitle>
+
+<h1>Dang nhap CMS</h1>
+
+<EditForm Model="_model" OnValidSubmit="OnSubmitAsync">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Ten dang nhap</label>
+        <InputText class="form-control" @bind-Value="_model.TenDangNhap" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Mat khau</label>
+        <InputText class="form-control" type="password" @bind-Value="_model.MatKhau" />
+    </div>
+
+    <button class="btn btn-primary" type="submit">Dang nhap</button>
+</EditForm>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <p class="mt-3">@_message</p>
+}
+
+@code {
+    private AdminLoginRequest _model = new()
+    {
+        TenDangNhap = "admin",
+        MatKhau = "Admin@123"
+    };
+
+    private string? _message;
+
+    private async Task OnSubmitAsync()
+    {
+        var result = await ApiClient.LoginAsync(_model);
+        if (result is null || string.IsNullOrWhiteSpace(result.AccessToken))
+        {
+            _message = "Dang nhap that bai.";
+            return;
+        }
+
+        Session.SignIn(_model.TenDangNhap, result.AccessToken);
+        _message = "Dang nhap thanh cong.";
+    }
+}

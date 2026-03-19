@@ -1,0 +1,84 @@
+@page "/loai-diem"
+@inject CmsApiClient ApiClient
+@inject CmsSession Session
+
+<PageTitle>Loai diem</PageTitle>
+
+<h1>Loai diem tham quan</h1>
+
+@if (!Session.IsAuthenticated)
+{
+    <div class="alert alert-warning">Can dang nhap truoc khi tao du lieu.</div>
+}
+
+<EditForm Model="_createModel" OnValidSubmit="CreateAsync">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label">Ten loai</label>
+            <InputText class="form-control" @bind-Value="_createModel.TenLoai" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Mo ta</label>
+            <InputText class="form-control" @bind-Value="_createModel.MoTa" />
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100" type="submit" disabled="@(!Session.IsAuthenticated)">Them</button>
+        </div>
+    </div>
+</EditForm>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <p class="mt-3">@_message</p>
+}
+
+<table class="table table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Ma</th>
+            <th>Ten loai</th>
+            <th>Mo ta</th>
+            <th>Trang thai</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in _items)
+        {
+            <tr>
+                <td>@item.MaLoai</td>
+                <td>@item.TenLoai</td>
+                <td>@item.MoTa</td>
+                <td>@(item.TrangThaiHoatDong ? "Hoat dong" : "Tam dung")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private readonly List<LoaiDiemThamQuanItem> _items = [];
+    private readonly LoaiDiemThamQuanCreate _createModel = new();
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _items.Clear();
+        _items.AddRange(await ApiClient.GetLoaiDiemAsync());
+    }
+
+    private async Task CreateAsync()
+    {
+        var ok = await ApiClient.CreateLoaiDiemAsync(_createModel);
+        _message = ok ? "Da tao loai diem." : "Tao that bai (kiem tra token/du lieu).";
+        if (ok)
+        {
+            _createModel.TenLoai = string.Empty;
+            _createModel.MoTa = null;
+            await ReloadAsync();
+        }
+    }
+}
