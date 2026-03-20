@@ -23,55 +23,104 @@ public class CmsApiClient(
 
     public async Task<LoginResponse?> LoginAsync(AdminLoginRequest request, CancellationToken cancellationToken = default)
     {
-        using var client = CreateClient();
-        var response = await client.PostAsJsonAsync("api/auth/admin/login", request, cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        try
+        {
+            using var client = CreateClient();
+            var response = await client.PostAsJsonAsync("api/auth/admin/login", request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            return await response.Content.ReadFromJsonAsync<LoginResponse>(cancellationToken: cancellationToken);
+        }
+        catch
         {
             return null;
         }
-
-        return await response.Content.ReadFromJsonAsync<LoginResponse>(cancellationToken: cancellationToken);
     }
 
     public async Task<IReadOnlyList<LoaiDiemThamQuanItem>> GetLoaiDiemAsync(CancellationToken cancellationToken = default)
     {
-        using var client = CreateClient();
-        return await client.GetFromJsonAsync<List<LoaiDiemThamQuanItem>>("api/loaidiemthamquan", cancellationToken)
-            ?? [];
+        try
+        {
+            using var client = CreateClient();
+            return await client.GetFromJsonAsync<List<LoaiDiemThamQuanItem>>("api/loaidiemthamquan", cancellationToken)
+                ?? [];
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     public async Task<bool> CreateLoaiDiemAsync(LoaiDiemThamQuanCreate model, CancellationToken cancellationToken = default)
     {
-        using var client = CreateClient();
-        var response = await client.PostAsJsonAsync("api/loaidiemthamquan", model, cancellationToken);
-        return response.IsSuccessStatusCode;
+        try
+        {
+            using var client = CreateClient();
+            var response = await client.PostAsJsonAsync("api/loaidiemthamquan", model, cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public async Task<IReadOnlyList<DiemThamQuanItem>> GetDiemAsync(CancellationToken cancellationToken = default)
     {
-        using var client = CreateClient();
-        return await client.GetFromJsonAsync<List<DiemThamQuanItem>>("api/diemthamquan", cancellationToken)
-            ?? [];
+        try
+        {
+            using var client = CreateClient();
+            return await client.GetFromJsonAsync<List<DiemThamQuanItem>>("api/diemthamquan", cancellationToken)
+                ?? [];
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     public async Task<bool> CreateDiemAsync(DiemThamQuanCreate model, CancellationToken cancellationToken = default)
     {
-        using var client = CreateClient();
-        var response = await client.PostAsJsonAsync("api/diemthamquan", model, cancellationToken);
-        return response.IsSuccessStatusCode;
+        try
+        {
+            using var client = CreateClient();
+            var response = await client.PostAsJsonAsync("api/diemthamquan", model, cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public async Task<IReadOnlyList<ThongKeTheoDiemItem>> GetThongKeTheoDiemAsync(CancellationToken cancellationToken = default)
     {
-        using var client = CreateClient();
-        return await client.GetFromJsonAsync<List<ThongKeTheoDiemItem>>("api/lichsuphat/thong-ke/luot-nghe-theo-diem", cancellationToken)
-            ?? [];
+        try
+        {
+            using var client = CreateClient();
+            return await client.GetFromJsonAsync<List<ThongKeTheoDiemItem>>("api/lichsuphat/thong-ke/luot-nghe-theo-diem", cancellationToken)
+                ?? [];
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     public async Task<IReadOnlyList<ThongKeTheoKichHoatItem>> GetThongKeTheoKichHoatAsync(CancellationToken cancellationToken = default)
     {
-        using var client = CreateClient();
-        return await client.GetFromJsonAsync<List<ThongKeTheoKichHoatItem>>("api/lichsuphat/thong-ke/luot-nghe-theo-kich-hoat", cancellationToken)
-            ?? [];
+        try
+        {
+            using var client = CreateClient();
+            return await client.GetFromJsonAsync<List<ThongKeTheoKichHoatItem>>("api/lichsuphat/thong-ke/luot-nghe-theo-kich-hoat", cancellationToken)
+                ?? [];
+        }
+        catch
+        {
+            return [];
+        }
     }
 }

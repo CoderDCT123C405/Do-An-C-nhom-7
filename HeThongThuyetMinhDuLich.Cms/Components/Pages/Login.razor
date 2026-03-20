@@ -6,7 +6,7 @@
 
 <h1>Dang nhap CMS</h1>
 
-<EditForm Model="_model" OnValidSubmit="OnSubmitAsync">
+<EditForm Model="_model" OnValidSubmit="OnSubmitAsync" FormName="login-form">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
@@ -38,14 +38,21 @@
 
     private async Task OnSubmitAsync()
     {
-        var result = await ApiClient.LoginAsync(_model);
-        if (result is null || string.IsNullOrWhiteSpace(result.AccessToken))
+        try
         {
-            _message = "Dang nhap that bai.";
-            return;
-        }
+            var result = await ApiClient.LoginAsync(_model);
+            if (result is null || string.IsNullOrWhiteSpace(result.AccessToken))
+            {
+                _message = "Dang nhap that bai. Kiem tra API da chay tai http://localhost:5000.";
+                return;
+            }
 
-        Session.SignIn(_model.TenDangNhap, result.AccessToken);
-        _message = "Dang nhap thanh cong.";
+            Session.SignIn(_model.TenDangNhap, result.AccessToken);
+            _message = "Dang nhap thanh cong.";
+        }
+        catch
+        {
+            _message = "Khong ket noi duoc API (http://localhost:5000). Hay chay API truoc roi thu lai.";
+        }
     }
 }

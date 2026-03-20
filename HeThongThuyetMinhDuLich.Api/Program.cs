@@ -7,6 +7,8 @@ using System.Text.Json.Serialization;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -18,8 +20,23 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<JwtTokenService>();
 
+var dbProvider = builder.Configuration["Database:Provider"] ?? "SqlServer";
 builder.Services.AddDbContext<DuLichDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    if (string.Equals(dbProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
+    {
+        var sqliteConn = builder.Configuration.GetConnectionString("SqliteConnection")
+            ?? "Data Source=HeThongThuyetMinhDuLich.offline.db";
+        options.UseSqlite(sqliteConn);
+    }
+    else
+    {
+        var sqlServerConn = builder.Configuration.GetConnectionString("SqlServerConnection")
+            ?? builder.Configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException("Missing SQL Server connection string.");
+        options.UseSqlServer(sqlServerConn);
+    }
+});
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"] ?? throw new InvalidOperationException("Missing Jwt:Key");
@@ -44,12 +61,15 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-await AdminSeedService.EnsureAdminAsync(app.Services, builder.Configuration);
+await AdminSeedService.EnsureAdminAsync(app.Services, builder.Configuration, dbProvider);
 
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();

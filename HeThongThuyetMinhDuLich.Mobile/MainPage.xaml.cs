@@ -3,8 +3,8 @@ using HeThongThuyetMinhDuLich.Mobile.Services;
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Devices.Sensors;
 using Microsoft.Maui.Maps;
-using Microsoft.Extensions.DependencyInjection;
 using System.Collections.ObjectModel;
+using MauiMap = Microsoft.Maui.Controls.Maps.Map;
 
 namespace HeThongThuyetMinhDuLich.Mobile;
 
@@ -16,14 +16,11 @@ public partial class MainPage : ContentPage
     private readonly ObservableCollection<DiemThamQuanItem> _diemThamQuan = [];
     private readonly ObservableCollection<NoiDungItem> _noiDung = [];
     private readonly Dictionary<int, DateTime> _lastAutoTriggerUtcByPoi = [];
+    private MauiMap? _mapView;
 
     private IDispatcherTimer? _gpsTimer;
     private Location? _currentLocation;
     private DiemThamQuanItem? _nearestPoi;
-
-    public MainPage() : this(ResolveApiClient())
-    {
-    }
 
     public MainPage(MobileApiClient apiClient)
     {
@@ -31,6 +28,32 @@ public partial class MainPage : ContentPage
         _apiClient = apiClient;
         PoiCollection.ItemsSource = _diemThamQuan;
         ContentCollection.ItemsSource = _noiDung;
+        InitializeMap();
+    }
+
+    private void InitializeMap()
+    {
+        if (DeviceInfo.Platform == DevicePlatform.WinUI)
+        {
+            _mapView = null;
+            GpsStatusLabel.Text = "Vi tri: map khong ho tro tren Windows.";
+            return;
+        }
+
+        try
+        {
+            _mapView = new MauiMap
+            {
+                IsShowingUser = true
+            };
+            MapHost.Children.Clear();
+            MapHost.Children.Add(_mapView);
+        }
+        catch
+        {
+            _mapView = null;
+            GpsStatusLabel.Text = "Vi tri: map khong ho tro tren thiet bi nay.";
+        }
     }
 
     protected override async void OnAppearing()
@@ -127,7 +150,7 @@ public partial class MainPage : ContentPage
 
             _currentLocation = location;
             GpsStatusLabel.Text = $"Vi tri: {location.Latitude:F6}, {location.Longitude:F6}";
-            MapView.MoveToRegion(MapSpan.FromCenterAndRadius(location, Distance.FromKilometers(1)));
+            _mapView?.MoveToRegion(MapSpan.FromCenterAndRadius(location, Distance.FromKilometers(1)));
             RenderMapPins();
             UpdateNearestPoi();
             await CheckAndTriggerGeofenceAsync();
@@ -182,14 +205,19 @@ public partial class MainPage : ContentPage
 
     private void RenderMapPins()
     {
-        MapView.Pins.Clear();
+        if (_mapView is null)
+        {
+            return;
+        }
+
+        _mapView.Pins.Clear();
 
         foreach (var poi in _diemThamQuan)
         {
             var isNearest = _nearestPoi is not null && _nearestPoi.MaDiem == poi.MaDiem;
             var label = isNearest ? $"Gan nhat: {poi.TenDiem}" : poi.TenDiem;
 
-            MapView.Pins.Add(new Pin
+            _mapView.Pins.Add(new Pin
             {
                 Label = label,
                 Address = poi.DiaChi ?? string.Empty,
@@ -318,7 +346,7 @@ public partial class MainPage : ContentPage
         }
 
         SelectedPoiLabel.Text = $"Da chon: {poi.TenDiem} ({poi.MaDinhDanh})";
-        MapView.MoveToRegion(MapSpan.FromCenterAndRadius(
+        _mapView?.MoveToRegion(MapSpan.FromCenterAndRadius(
             new Location((double)poi.ViDo, (double)poi.KinhDo),
             Distance.FromKilometers(0.6)));
         await LoadNoiDungAsync(poi.MaDiem);
@@ -343,7 +371,7 @@ public partial class MainPage : ContentPage
             }
 
             SelectedPoiLabel.Text = $"QR -> {result.DiemThamQuan.TenDiem} ({result.GiaTriQR})";
-            MapView.MoveToRegion(MapSpan.FromCenterAndRadius(
+            _mapView?.MoveToRegion(MapSpan.FromCenterAndRadius(
                 new Location((double)result.DiemThamQuan.ViDo, (double)result.DiemThamQuan.KinhDo),
                 Distance.FromKilometers(0.6)));
 
@@ -393,17 +421,5 @@ public partial class MainPage : ContentPage
     {
         LoadingIndicator.IsVisible = value;
         LoadingIndicator.IsRunning = value;
-    }
-
-    private static MobileApiClient ResolveApiClient()
-    {
-        var services = Application.Current?.Handler?.MauiContext?.Services;
-        var client = services?.GetService<MobileApiClient>();
-        if (client is null)
-        {
-            throw new InvalidOperationException("Khong khoi tao duoc MobileApiClient.");
-        }
-
-        return client;
     }
 }
