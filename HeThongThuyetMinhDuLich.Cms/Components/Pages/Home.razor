@@ -1,13 +1,36 @@
 @page "/"
-@inject CmsSession Session
 
-<PageTitle>Tong quan</PageTitle>
+<div class="fade-in">
+    <h2>Dashboard</h2>
 
-<h1>CMS Quan Tri Du Lich</h1>
-<p>Trang quan tri nhanh de cap nhat loai diem, diem tham quan va thong ke.</p>
+    <div class="grid">
+        <div class="card">
+            <h3>Tổng điểm</h3>
+            <h1>@tongDiem</h1>
+        </div>
 
-<div class="alert @(Session.IsAuthenticated ? "alert-success" : "alert-warning")">
-    @(Session.IsAuthenticated
-        ? $"Da dang nhap: {Session.TenDangNhap}"
-        : "Chua dang nhap. Vao Dang nhap de tiep tuc.")
+        <div class="card">
+            <h3>Lượt nghe</h3>
+            <h1>@luotNghe</h1>
+        </div>
+
+        <div class="card">
+            <h3>Người dùng</h3>
+            <h1>@nguoiDung</h1>
+        </div>
+    </div>
 </div>
+
+@code {
+    int tongDiem = 0;
+    int luotNghe = 0;
+    int nguoiDung = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // TODO: gọi API thật
+        tongDiem = 3;
+        luotNghe = 120;
+        nguoiDung = 25;
+    }
+}

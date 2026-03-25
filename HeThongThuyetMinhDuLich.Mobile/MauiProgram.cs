@@ -1,6 +1,6 @@
 using HeThongThuyetMinhDuLich.Mobile.Services;
 using Microsoft.Extensions.Logging;
-
+using Microsoft.Maui.Dispatching;
 namespace HeThongThuyetMinhDuLich.Mobile;
 
 public static class MauiProgram
@@ -8,6 +8,7 @@ public static class MauiProgram
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
+
         builder.UseMauiApp<App>();
 
 #if !WINDOWS
@@ -20,14 +21,24 @@ public static class MauiProgram
             fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
         });
 
+        // 🔥 API
         builder.Services.AddHttpClient("Api", client =>
         {
             client.BaseAddress = new Uri(GetApiBaseUrl());
         });
+
+        // 🔥 SERVICES
         builder.Services.AddSingleton<MobileCacheStore>();
         builder.Services.AddSingleton<MobileApiClient>();
+        builder.Services.AddSingleton<SyncService>();
+
+        // 🔥 UI
         builder.Services.AddSingleton<MainPage>();
         builder.Services.AddSingleton<AppShell>();
+
+        // 🔥 DISPATCHER (QUAN TRỌNG)
+        builder.Services.AddSingleton<IDispatcher>(sp =>
+            Application.Current?.Dispatcher ?? throw new Exception("Dispatcher not available"));
 
 #if DEBUG
         builder.Logging.AddDebug();

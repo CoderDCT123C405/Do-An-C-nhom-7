@@ -144,6 +144,7 @@ CMS phuc vu quan tri vien voi cac chuc nang:
 - `BanKinhKichHoat`
 - `DiaChi`
 - `MaLoai`
+- `NgayCapNhat`
 
 ### 5.2 NoiDungThuyetMinhDto
 

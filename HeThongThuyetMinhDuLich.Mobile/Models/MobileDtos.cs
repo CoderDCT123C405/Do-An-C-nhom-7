@@ -12,6 +12,7 @@ public class DiemThamQuanItem
     public string? DiaChi { get; set; }
     public int MaLoai { get; set; }
     public bool TrangThaiHoatDong { get; set; }
+    public DateTime NgayCapNhat { get; set; }
 }
 
 public class NoiDungItem

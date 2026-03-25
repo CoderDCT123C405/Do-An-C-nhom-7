@@ -1,70 +1,34 @@
-@page "/thong-ke"
-@inject CmsApiClient ApiClient
+@page "/thongke"
+@inject HttpClient Http
 
-<PageTitle>Thong ke</PageTitle>
+<div class="fade-in">
+    <h2>Thống kê</h2>
 
-<h1>Thong ke nghe thuyet minh</h1>
-
-<button class="btn btn-outline-primary mb-3" @onclick="ReloadAsync">Tai lai</button>
-
-<h4>Theo diem tham quan</h4>
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Ma diem</th>
-            <th>Ten diem</th>
-            <th>So luot nghe</th>
-            <th>Tong thoi luong</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in _theoDiem)
+    <div class="grid">
+        @foreach (var item in list)
         {
-            <tr>
-                <td>@item.MaDiem</td>
-                <td>@item.TenDiem</td>
-                <td>@item.SoLuotNghe</td>
-                <td>@item.TongThoiLuongDaNghe</td>
-            </tr>
+            <div class="card">
+                <h3>@item.TenDiem</h3>
+                <p>Lượt nghe: @item.Luot</p>
+            </div>
         }
-    </tbody>
-</table>
-
-<h4>Theo cach kich hoat</h4>
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Cach kich hoat</th>
-            <th>So luot phat</th>
-            <th>Tong thoi luong</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in _theoCach)
-        {
-            <tr>
-                <td>@item.CachKichHoat</td>
-                <td>@item.SoLuotPhat</td>
-                <td>@item.TongThoiLuongDaNghe</td>
-            </tr>
-        }
-    </tbody>
-</table>
+    </div>
+</div>
 
 @code {
-    private readonly List<ThongKeTheoDiemItem> _theoDiem = [];
-    private readonly List<ThongKeTheoKichHoatItem> _theoCach = [];
+    List<ThongKeDto> list = new();
+
+    class ThongKeDto
+    {
+        public string? TenDiem { get; set; }
+        public int Luot { get; set; }
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        await ReloadAsync();
-    }
+        var data = await Http.GetFromJsonAsync<List<ThongKeDto>>(
+            "http://localhost:5000/api/thongke/luot-nghe-theo-diem");
 
-    private async Task ReloadAsync()
-    {
-        _theoDiem.Clear();
-        _theoCach.Clear();
-        _theoDiem.AddRange(await ApiClient.GetThongKeTheoDiemAsync());
-        _theoCach.AddRange(await ApiClient.GetThongKeTheoKichHoatAsync());
+        list = data ?? new List<ThongKeDto>();
     }
 }

@@ -1,58 +1,22 @@
 @page "/login"
-@inject CmsApiClient ApiClient
-@inject CmsSession Session
 
-<PageTitle>Dang nhap</PageTitle>
+<div class="fade-in" style="display:flex;justify-content:center;align-items:center;height:80vh">
+    <div class="card" style="width:300px">
+        <h3>Đăng nhập</h3>
 
-<h1>Dang nhap CMS</h1>
+        <input placeholder="Username" @bind="user" />
+        <input type="password" placeholder="Password" @bind="pass" />
 
-<EditForm Model="_model" OnValidSubmit="OnSubmitAsync" FormName="login-form">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
-
-    <div class="mb-3">
-        <label class="form-label">Ten dang nhap</label>
-        <InputText class="form-control" @bind-Value="_model.TenDangNhap" />
+        <button @onclick="HandleLogin">Login</button>
     </div>
-    <div class="mb-3">
-        <label class="form-label">Mat khau</label>
-        <InputText class="form-control" type="password" @bind-Value="_model.MatKhau" />
-    </div>
-
-    <button class="btn btn-primary" type="submit">Dang nhap</button>
-</EditForm>
-
-@if (!string.IsNullOrWhiteSpace(_message))
-{
-    <p class="mt-3">@_message</p>
-}
+</div>
 
 @code {
-    private AdminLoginRequest _model = new()
+    string? user;
+    string? pass;
+
+    void HandleLogin()
     {
-        TenDangNhap = "admin",
-        MatKhau = "Admin@123"
-    };
-
-    private string? _message;
-
-    private async Task OnSubmitAsync()
-    {
-        try
-        {
-            var result = await ApiClient.LoginAsync(_model);
-            if (result is null || string.IsNullOrWhiteSpace(result.AccessToken))
-            {
-                _message = "Dang nhap that bai. Kiem tra API da chay tai http://localhost:5000.";
-                return;
-            }
-
-            Session.SignIn(_model.TenDangNhap, result.AccessToken);
-            _message = "Dang nhap thanh cong.";
-        }
-        catch
-        {
-            _message = "Khong ket noi duoc API (http://localhost:5000). Hay chay API truoc roi thu lai.";
-        }
+        Console.WriteLine($"{user} - {pass}");
     }
 }

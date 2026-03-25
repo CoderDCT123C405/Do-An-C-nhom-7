@@ -2,9 +2,8 @@
 
 public partial class AppShell : Shell
 {
-	public AppShell(MainPage mainPage)
-	{
-		InitializeComponent();
-		HomeShellContent.Content = mainPage;
-	}
+    public AppShell()
+    {
+        InitializeComponent();
+    }
 }

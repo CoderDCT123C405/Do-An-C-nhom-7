@@ -1,110 +1,106 @@
-@page "/diem-tham-quan"
-@inject CmsApiClient ApiClient
-@inject CmsSession Session
+@page "/diemthamquan"
+@inject HttpClient Http
+<style>
+    .fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+    .card {
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-top: 20px;
+    }
 
-<PageTitle>Diem tham quan</PageTitle>
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
 
-<h1>Diem tham quan</h1>
+    .table th, .table td {
+        padding: 12px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+    }
 
-<EditForm Model="_createModel" OnValidSubmit="CreateAsync" FormName="diem-tham-quan-form">
-    <div class="row g-2">
-        <div class="col-md-3">
-            <label class="form-label">Ma dinh danh</label>
-            <InputText class="form-control" @bind-Value="_createModel.MaDinhDanh" />
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Ten diem</label>
-            <InputText class="form-control" @bind-Value="_createModel.TenDiem" />
-        </div>
-        <div class="col-md-2">
-            <label class="form-label">Ma loai</label>
-            <InputNumber class="form-control" @bind-Value="_createModel.MaLoai" />
-        </div>
-        <div class="col-md-3">
-            <label class="form-label">Dia chi</label>
-            <InputText class="form-control" @bind-Value="_createModel.DiaChi" />
-        </div>
-        <div class="col-md-2">
-            <label class="form-label">Vi do</label>
-            <InputNumber class="form-control" @bind-Value="_createModel.ViDo" />
-        </div>
-        <div class="col-md-2">
-            <label class="form-label">Kinh do</label>
-            <InputNumber class="form-control" @bind-Value="_createModel.KinhDo" />
-        </div>
-        <div class="col-md-2">
-            <label class="form-label">Ban kinh</label>
-            <InputNumber class="form-control" @bind-Value="_createModel.BanKinhKichHoat" />
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Mo ta ngan</label>
-            <InputText class="form-control" @bind-Value="_createModel.MoTaNgan" />
-        </div>
-        <div class="col-md-2 d-flex align-items-end">
-            <button class="btn btn-primary w-100" type="submit" disabled="@(!Session.IsAuthenticated)">Them</button>
-        </div>
+    .table th {
+        background-color: #f4f4f4;
+    }
+
+    input {
+        padding: 8px;
+        width: 100%;
+        margin-bottom: 12px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
+
+    button {
+        background-color: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+    }
+</style>
+
+<div class="fade-in">
+    <h2>Quản lý điểm tham quan</h2>
+
+    <div class="card">
+        <input @bind="search" placeholder="Tìm kiếm..." />
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th> 
+                    <th>Tên điểm</th>
+                    <th>Địa chỉ</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in filtered)
+                {
+                    <tr>
+                        <td>@item.MaDiem</td>
+                        <td>@item.TenDiem</td>
+                        <td>@item.DiaChi</td>
+                        <td>
+                            <button @onclick="() => Edit(item)">✏️</button>
+                            <button @onclick="() => Delete(item.MaDiem)">🗑️</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
-</EditForm>
-
-@if (!string.IsNullOrWhiteSpace(_message))
-{
-    <p class="mt-3">@_message</p>
-}
-
-<table class="table table-striped mt-3">
-    <thead>
-        <tr>
-            <th>Ma</th>
-            <th>Ten</th>
-            <th>Ma dinh danh</th>
-            <th>Toa do</th>
-            <th>Ma loai</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in _items)
-        {
-            <tr>
-                <td>@item.MaDiem</td>
-                <td>@item.TenDiem</td>
-                <td>@item.MaDinhDanh</td>
-                <td>@item.ViDo, @item.KinhDo</td>
-                <td>@item.MaLoai</td>
-            </tr>
-        }
-    </tbody>
-</table>
+</div>
 
 @code {
-    private readonly List<DiemThamQuanItem> _items = [];
-    private readonly DiemThamQuanCreate _createModel = new()
-    {
-        MaDinhDanh = "POI_DEMO",
-        TenDiem = "Diem Demo",
-        ViDo = 10.762622m,
-        KinhDo = 106.660172m,
-        MaLoai = 1
-    };
-    private string? _message;
+    List<Diem> list = new();
+    string search = "";
+
+    IEnumerable<Diem> filtered =>
+        list.Where(x => x.TenDiem?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? true);
 
     protected override async Task OnInitializedAsync()
     {
-        await ReloadAsync();
+        var data = await Http.GetFromJsonAsync<List<Diem>>("http://localhost:5000/api/diemthamquan");
+        list = data ?? new List<Diem>();
     }
 
-    private async Task ReloadAsync()
+    void Edit(Diem d) { }
+
+    async Task Delete(int id)
     {
-        _items.Clear();
-        _items.AddRange(await ApiClient.GetDiemAsync());
+        await Http.DeleteAsync($"http://localhost:5000/api/diemthamquan/{id}");
+        list.RemoveAll(x => x.MaDiem == id);
     }
 
-    private async Task CreateAsync()
-    {
-        var ok = await ApiClient.CreateDiemAsync(_createModel);
-        _message = ok ? "Da tao diem tham quan." : "Tao that bai (kiem tra token/du lieu).";
-        if (ok)
-        {
-            await ReloadAsync();
-        }
-    }
+    class Diem
+{
+    public int MaDiem { get; set; }
+    public string? TenDiem { get; set; }
+    public string? DiaChi { get; set; }
+}
 }

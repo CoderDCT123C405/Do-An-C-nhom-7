@@ -1,41 +1,21 @@
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">CMS Du Lich</a>
-    </div>
-</div>
+@using Microsoft.AspNetCore.Components.Routing
+<link href="NavMenu.razor.css" rel="stylesheet" />
+<nav class="menu">
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+    <NavLink href="/" class="item">
+        🏠 Trang chủ
+    </NavLink>
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Tong quan
-            </NavLink>
-        </div>
+    <NavLink href="/diemthamquan" class="item">
+        📍 Điểm tham quan
+    </NavLink>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="login">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Dang nhap
-            </NavLink>
-        </div>
+    <NavLink href="/loaidem" class="item">
+        🗂 Loại điểm
+    </NavLink>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="loai-diem">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Loai diem
-            </NavLink>
-        </div>
+    <NavLink href="/thongke" class="item">
+        📊 Thống kê
+    </NavLink>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="diem-tham-quan">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Diem tham quan
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="thong-ke">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Thong ke
-            </NavLink>
-        </div>
-    </nav>
-</div>
+</nav>

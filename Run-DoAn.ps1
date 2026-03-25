@@ -1,7 +1,8 @@
 param(
     [ValidateSet("online", "offline")]
     [string]$Mode = "offline",
-    [switch]$ResetOfflineDb
+    [switch]$ResetOfflineDb,
+    [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "SilentlyContinue"
@@ -43,9 +44,9 @@ if (Test-PortListening -Port $cmsPort) {
 }
 $cmsUrl = "http://localhost:$cmsPort"
 
-$dotnetHome = Join-Path (Get-Location) ".dotnet-home"
-New-Item -ItemType Directory -Path $dotnetHome -Force | Out-Null
-$env:DOTNET_CLI_HOME = $dotnetHome
+# $dotnetHome = Join-Path (Get-Location) ".dotnet-home"
+# New-Item -ItemType Directory -Path $dotnetHome -Force | Out-Null
+# $env:DOTNET_CLI_HOME = $dotnetHome
 $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = "1"
 $env:MSBUILDDISABLENODEREUSE = "1"
 $dbProvider = if ($Mode -eq "offline") { "Sqlite" } else { "SqlServer" }
@@ -88,27 +89,52 @@ function Invoke-BuildWithRetry {
     return $false
 }
 
-Write-Host "Mode: $Mode ($dbProvider)"
-Write-Host "Building API..."
-if (-not (Invoke-BuildWithRetry -ProjectPath "HeThongThuyetMinhDuLich.Api\HeThongThuyetMinhDuLich.Api.csproj" -BuildLogPath ".\api.build.log")) {
-    Write-Host "API build failed. Last log lines:"
-    Get-Content ".\api.build.log" -Tail 120
-    exit 1
+function Get-LatestDllPath {
+    param(
+        [string]$ProjectBinDebugDir,
+        [string]$DllName
+    )
+
+    return Get-ChildItem -Path $ProjectBinDebugDir -Recurse -Filter $DllName -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1 -ExpandProperty FullName
 }
 
-Write-Host "Building CMS..."
-if (-not (Invoke-BuildWithRetry -ProjectPath "HeThongThuyetMinhDuLich.Cms\HeThongThuyetMinhDuLich.Cms.csproj" -BuildLogPath ".\cms.build.log")) {
-    Write-Host "CMS build failed. Last log lines:"
-    Get-Content ".\cms.build.log" -Tail 120
-    exit 1
+function Test-RunnableDll {
+    param([string]$DllPath)
+
+    if (-not $DllPath) { return $false }
+    if (-not (Test-Path $DllPath)) { return $false }
+
+    $runtimeConfig = [System.IO.Path]::ChangeExtension($DllPath, ".runtimeconfig.json")
+    return (Test-Path $runtimeConfig)
+}
+
+Write-Host "Mode: $Mode ($dbProvider)"
+if (-not $SkipBuild) {
+    Write-Host "Building API..."
+    if (-not (Invoke-BuildWithRetry -ProjectPath "HeThongThuyetMinhDuLich.Api\HeThongThuyetMinhDuLich.Api.csproj" -BuildLogPath ".\api.build.log")) {
+        Write-Host "API build failed. Last log lines:"
+        Get-Content ".\api.build.log" -Tail 120
+        exit 1
+    }
+
+    Write-Host "Building CMS..."
+    if (-not (Invoke-BuildWithRetry -ProjectPath "HeThongThuyetMinhDuLich.Cms\HeThongThuyetMinhDuLich.Cms.csproj" -BuildLogPath ".\cms.build.log")) {
+        Write-Host "CMS build failed. Last log lines:"
+        Get-Content ".\cms.build.log" -Tail 120
+        exit 1
+    }
+} else {
+    Write-Host "Skip build: using existing binaries."
 }
 
 Write-Host "Starting API at http://localhost:5000 ..."
 $api = $null
 $apiProjectDir = Join-Path (Get-Location) "HeThongThuyetMinhDuLich.Api"
-$apiDll = Get-ChildItem -Path (Join-Path (Get-Location) "HeThongThuyetMinhDuLich.Api\bin\Debug") -Recurse -Filter "HeThongThuyetMinhDuLich.Api.dll" -ErrorAction SilentlyContinue |
-    Sort-Object LastWriteTime -Descending |
-    Select-Object -First 1 -ExpandProperty FullName
+$apiBinDebug = Join-Path (Get-Location) "HeThongThuyetMinhDuLich.Api\bin\Debug"
+$apiDll = Get-LatestDllPath -ProjectBinDebugDir $apiBinDebug -DllName "HeThongThuyetMinhDuLich.Api.dll"
+$apiProjectPath = "HeThongThuyetMinhDuLich.Api\HeThongThuyetMinhDuLich.Api.csproj"
 $existingApiPid = Get-ListeningPid -Port 5000
 $apiReused = $false
 if ($existingApiPid) {
@@ -122,9 +148,18 @@ if ($existingApiPid) {
 }
 
 if (-not $apiReused) {
-    if (-not $apiDll) {
-        Write-Host "API dll not found after build."
-        exit 1
+    if (-not (Test-RunnableDll -DllPath $apiDll)) {
+        Write-Host "API binaries are incomplete. Building API..."
+        if (-not (Invoke-BuildWithRetry -ProjectPath $apiProjectPath -BuildLogPath ".\api.build.log")) {
+            Write-Host "API build failed. Last log lines:"
+            Get-Content ".\api.build.log" -Tail 120
+            exit 1
+        }
+        $apiDll = Get-LatestDllPath -ProjectBinDebugDir $apiBinDebug -DllName "HeThongThuyetMinhDuLich.Api.dll"
+        if (-not (Test-RunnableDll -DllPath $apiDll)) {
+            Write-Host "API build completed but runnable binaries still missing."
+            exit 1
+        }
     }
     $api = Start-Process -FilePath "dotnet" `
         -ArgumentList "exec `"$apiDll`" --urls http://localhost:5000 --contentRoot `"$apiProjectDir`"" `
@@ -138,12 +173,21 @@ Start-Sleep -Seconds 3
 
 Write-Host "Starting CMS at $cmsUrl ..."
 $cmsProjectDir = Join-Path (Get-Location) "HeThongThuyetMinhDuLich.Cms"
-$cmsDll = Get-ChildItem -Path (Join-Path (Get-Location) "HeThongThuyetMinhDuLich.Cms\bin\Debug") -Recurse -Filter "HeThongThuyetMinhDuLich.Cms.dll" -ErrorAction SilentlyContinue |
-    Sort-Object LastWriteTime -Descending |
-    Select-Object -First 1 -ExpandProperty FullName
-if (-not $cmsDll) {
-    Write-Host "CMS dll not found after build."
-    exit 1
+$cmsBinDebug = Join-Path (Get-Location) "HeThongThuyetMinhDuLich.Cms\bin\Debug"
+$cmsDll = Get-LatestDllPath -ProjectBinDebugDir $cmsBinDebug -DllName "HeThongThuyetMinhDuLich.Cms.dll"
+$cmsProjectPath = "HeThongThuyetMinhDuLich.Cms\HeThongThuyetMinhDuLich.Cms.csproj"
+if (-not (Test-RunnableDll -DllPath $cmsDll)) {
+    Write-Host "CMS binaries are incomplete. Building CMS..."
+    if (-not (Invoke-BuildWithRetry -ProjectPath $cmsProjectPath -BuildLogPath ".\cms.build.log")) {
+        Write-Host "CMS build failed. Last log lines:"
+        Get-Content ".\cms.build.log" -Tail 120
+        exit 1
+    }
+    $cmsDll = Get-LatestDllPath -ProjectBinDebugDir $cmsBinDebug -DllName "HeThongThuyetMinhDuLich.Cms.dll"
+    if (-not (Test-RunnableDll -DllPath $cmsDll)) {
+        Write-Host "CMS build completed but runnable binaries still missing."
+        exit 1
+    }
 }
 $cms = Start-Process -FilePath "dotnet" `
     -ArgumentList "exec `"$cmsDll`" --urls $cmsUrl --contentRoot `"$cmsProjectDir`"" `

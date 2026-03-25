@@ -62,7 +62,7 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 await AdminSeedService.EnsureAdminAsync(app.Services, builder.Configuration, dbProvider);
-
+BCrypt.Net.BCrypt.Verify("Admin@123", "$2a$11$7wWNMnV8cda77j7wutI/vekJQb6l.8Aa642p3ilLMOkay232j1bh6");
 app.UseSwagger();
 app.UseSwaggerUI();
 

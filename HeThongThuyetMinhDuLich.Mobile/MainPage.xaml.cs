@@ -5,23 +5,23 @@ using Microsoft.Maui.Devices.Sensors;
 using Microsoft.Maui.Maps;
 using System.Collections.ObjectModel;
 using MauiMap = Microsoft.Maui.Controls.Maps.Map;
+using System.Linq;
 
 namespace HeThongThuyetMinhDuLich.Mobile;
 
 public partial class MainPage : ContentPage
 {
     private static readonly TimeSpan GeofenceCooldown = TimeSpan.FromMinutes(2);
-
     private readonly MobileApiClient _apiClient;
     private readonly ObservableCollection<DiemThamQuanItem> _diemThamQuan = [];
     private readonly ObservableCollection<NoiDungItem> _noiDung = [];
     private readonly Dictionary<int, DateTime> _lastAutoTriggerUtcByPoi = [];
     private MauiMap? _mapView;
-
+    bool isLoading = false;
     private IDispatcherTimer? _gpsTimer;
     private Location? _currentLocation;
     private DiemThamQuanItem? _nearestPoi;
-
+    private IDispatcherTimer? _syncTimer;
     public MainPage(MobileApiClient apiClient)
     {
         InitializeComponent();
@@ -31,6 +31,53 @@ public partial class MainPage : ContentPage
         InitializeMap();
     }
 
+    private bool _isSyncing;
+
+    private void StartSyncTimer()
+    {
+        if (_syncTimer is not null)
+            return;
+
+        _syncTimer = Dispatcher.CreateTimer();
+        _syncTimer.Interval = TimeSpan.FromSeconds(30);
+
+        _syncTimer.Tick += async (_, _) =>
+        {
+            if (_isSyncing) return; // 🔥 tránh chạy chồng
+
+            _isSyncing = true;
+
+            try
+            {
+                var items = await _apiClient.GetDiemThamQuanAsync();
+
+                // update nếu có thay đổi
+                if (items.Count != _diemThamQuan.Count ||
+                    !_diemThamQuan.Select(x => (x.MaDiem, x.NgayCapNhat))
+                        .SequenceEqual(items.Select(x => (x.MaDiem, x.NgayCapNhat))))
+                {
+                    _diemThamQuan.Clear();
+                    foreach (var item in items)
+                    {
+                        _diemThamQuan.Add(item);
+                    }
+
+                    RenderMapPins();
+                    UpdateNearestPoi();
+                }
+            }
+            catch
+            {
+                // tránh crash
+            }
+            finally
+            {
+                _isSyncing = false;
+            }
+        };
+
+        _syncTimer.Start();
+    }    
     private void InitializeMap()
     {
         if (DeviceInfo.Platform == DevicePlatform.WinUI)
@@ -57,23 +104,41 @@ public partial class MainPage : ContentPage
     }
 
     protected override async void OnAppearing()
+{
+    base.OnAppearing();
+
+    try
     {
-        base.OnAppearing();
+        // 🟢 Load + sync dữ liệu (API → SQLite → UI)
+        await LoadDiemThamQuanAsync();
 
-        if (_diemThamQuan.Count == 0)
-        {
-            await LoadDiemThamQuanAsync();
-        }
-
+        // 📍 Cập nhật GPS
         await RefreshGpsAsync();
+
+        // ⏱️ Timer GPS (đã có sẵn của bạn)
         StartGpsTimer();
+
+        // 🔄 Start sync timer (chỉ chạy 1 lần)
+        StartSyncTimer();
     }
+    catch (Exception ex)
+    {
+        await DisplayAlertAsync("Loi", $"Khoi dong that bai: {ex.Message}", "OK");
+    }
+}
 
     protected override void OnDisappearing()
+{
+    base.OnDisappearing();
+
+    StopGpsTimer();
+
+    if (_syncTimer is not null)
     {
-        base.OnDisappearing();
-        StopGpsTimer();
+        _syncTimer.Stop();
+        _syncTimer = null;
     }
+}
 
     private void StartGpsTimer()
     {

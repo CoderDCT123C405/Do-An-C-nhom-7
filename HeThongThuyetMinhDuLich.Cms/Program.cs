@@ -25,12 +25,13 @@ if (!app.Environment.IsDevelopment())
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 if (!app.Environment.IsDevelopment())
 {
-    app.UseHttpsRedirection();
+    // app.UseHttpsRedirection();
 }
-
+app.UseStaticFiles();
 app.UseAntiforgery();
 
-app.MapStaticAssets();
+app.MapGet("/health", () => Results.Ok("OK")); // 🔥 thêm dòng này
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

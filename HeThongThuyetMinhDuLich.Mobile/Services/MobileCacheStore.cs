@@ -14,12 +14,17 @@ public class MobileCacheStore
         _db = new SQLiteAsyncConnection(dbPath);
     }
 
+    // ================== POI ==================
+
     public async Task SavePoisAsync(IEnumerable<DiemThamQuanItem> items)
     {
         await EnsureInitializedAsync();
+
         await _db.RunInTransactionAsync(conn =>
         {
+            // 🔥 Clear toàn bộ (sync 1 chiều)
             conn.DeleteAll<CachedPoi>();
+
             foreach (var item in items)
             {
                 conn.InsertOrReplace(new CachedPoi
@@ -42,7 +47,9 @@ public class MobileCacheStore
     public async Task<IReadOnlyList<DiemThamQuanItem>> GetPoisAsync()
     {
         await EnsureInitializedAsync();
+
         var rows = await _db.Table<CachedPoi>().ToListAsync();
+
         return rows.Select(x => new DiemThamQuanItem
         {
             MaDiem = x.MaDiem,
@@ -58,12 +65,16 @@ public class MobileCacheStore
         }).ToList();
     }
 
+    // ================== NOI DUNG ==================
+
     public async Task SaveNoiDungAsync(int maDiem, IEnumerable<NoiDungItem> items)
     {
         await EnsureInitializedAsync();
+
         await _db.RunInTransactionAsync(conn =>
         {
             conn.Table<CachedNoiDung>().Delete(x => x.MaDiem == maDiem);
+
             foreach (var item in items)
             {
                 conn.InsertOrReplace(new CachedNoiDung
@@ -85,7 +96,11 @@ public class MobileCacheStore
     public async Task<IReadOnlyList<NoiDungItem>> GetNoiDungAsync(int maDiem)
     {
         await EnsureInitializedAsync();
-        var rows = await _db.Table<CachedNoiDung>().Where(x => x.MaDiem == maDiem).ToListAsync();
+
+        var rows = await _db.Table<CachedNoiDung>()
+                            .Where(x => x.MaDiem == maDiem)
+                            .ToListAsync();
+
         return rows.Select(x => new NoiDungItem
         {
             MaNoiDung = x.MaNoiDung,
@@ -100,19 +115,18 @@ public class MobileCacheStore
         }).ToList();
     }
 
+    // ================== INIT ==================
+
     private async Task EnsureInitializedAsync()
     {
-        if (_initialized)
-        {
-            return;
-        }
+        if (_initialized) return;
 
         await _db.CreateTableAsync<CachedPoi>();
         await _db.CreateTableAsync<CachedNoiDung>();
+
         _initialized = true;
     }
 }
-
 public class CachedPoi
 {
     [PrimaryKey]
@@ -132,8 +146,10 @@ public class CachedNoiDung
 {
     [PrimaryKey]
     public int MaNoiDung { get; set; }
+
     [Indexed]
     public int MaDiem { get; set; }
+
     public int MaNgonNgu { get; set; }
     public string? TenNgonNgu { get; set; }
     public string? TieuDe { get; set; }
