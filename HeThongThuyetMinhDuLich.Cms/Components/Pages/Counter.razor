@@ -2,7 +2,67 @@
 @rendermode InteractiveServer
 
 <PageTitle>Counter</PageTitle>
-
+<style>
+    .counter {
+        padding: 20px;
+        background-color: #f9f9f9;
+    }
+    .counter h1 {
+        font-size: 2.5em;
+        color: #333;
+        margin-bottom: 20px;
+    }
+    .counter p {
+        font-size: 1.5em;
+        color: #666;
+    }
+    .counter button {
+        font-size: 1.2em;
+        padding: 10px 20px;
+    }
+    .counter button:hover {
+        background-color: #007bff;
+        color: white;
+    }
+    .counter button:active {
+        background-color: #0056b3;
+        color: white;
+    }
+    .counter button:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
+    }
+    .counter button:disabled {
+        background-color: #ccc;
+        color: #666;
+        cursor: not-allowed;
+    }
+    .counter button:disabled:hover {
+        background-color: #ccc;
+        color: #666;
+    }
+    .counter button:disabled:active {
+        background-color: #ccc;
+        color: #666;
+    }
+    .counter button:disabled:focus {
+        outline: none;
+        box-shadow: none;
+    }
+    .counter button:disabled:focus:hover {
+        background-color: #ccc;
+        color: #666;
+    }
+    .counter button:disabled:focus:active {
+        background-color: #ccc;
+        color: #666;
+    }
+    .counter button:disabled:focus:active:hover {
+        background-color: #ccc;
+        color: #666;
+    }
+    
+</style>
 <h1>Counter</h1>
 
 <p role="status">Current count: @currentCount</p>

@@ -9,7 +9,7 @@ namespace HeThongThuyetMinhDuLich.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class LoaiDiemThamQuanController(DuLichDbContext dbContext) : ControllerBase
+public class LoaiDiemThamQuanController(DuLichDbContext dbContext, ILogger<LoaiDiemThamQuanController> logger) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<LoaiDiemThamQuan>>> GetAll()
@@ -32,16 +32,26 @@ public class LoaiDiemThamQuanController(DuLichDbContext dbContext) : ControllerB
     [Authorize(Roles = "Admin,BienTap")]
     public async Task<ActionResult<LoaiDiemThamQuan>> Create(LoaiDiemThamQuanDto model)
     {
+        var tenLoai = model.TenLoai.Trim();
+
         var entity = new LoaiDiemThamQuan
         {
-            TenLoai = model.TenLoai,
-            MoTa = model.MoTa,
+            TenLoai = tenLoai,
+            MoTa = model.MoTa?.Trim(),
             TrangThaiHoatDong = model.TrangThaiHoatDong,
             NgayTao = DateTime.UtcNow
         };
 
         dbContext.LoaiDiemThamQuans.Add(entity);
-        await dbContext.SaveChangesAsync();
+        try
+        {
+            await dbContext.SaveChangesAsync();
+            logger.LogInformation("LoaiDiem created: {MaLoai} - {TenLoai}", entity.MaLoai, entity.TenLoai);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            return Conflict(new { message = "Ten loai da ton tai." });
+        }
 
         return CreatedAtAction(nameof(GetById), new { id = entity.MaLoai }, entity);
     }
@@ -56,12 +66,21 @@ public class LoaiDiemThamQuanController(DuLichDbContext dbContext) : ControllerB
             return NotFound();
         }
 
-        item.TenLoai = model.TenLoai;
-        item.MoTa = model.MoTa;
+        item.TenLoai = model.TenLoai.Trim();
+        item.MoTa = model.MoTa?.Trim();
         item.TrangThaiHoatDong = model.TrangThaiHoatDong;
         item.NgayCapNhat = DateTime.UtcNow;
 
-        await dbContext.SaveChangesAsync();
+        try
+        {
+            await dbContext.SaveChangesAsync();
+            logger.LogInformation("LoaiDiem updated: {MaLoai} - {TenLoai}", item.MaLoai, item.TenLoai);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            return Conflict(new { message = "Ten loai da ton tai." });
+        }
+
         return NoContent();
     }
 
@@ -75,8 +94,30 @@ public class LoaiDiemThamQuanController(DuLichDbContext dbContext) : ControllerB
             return NotFound();
         }
 
-        dbContext.LoaiDiemThamQuans.Remove(item);
+        if (!item.TrangThaiHoatDong)
+        {
+            return Conflict(new { message = "Loai diem da o trang thai tam dung." });
+        }
+
+        var dangDuocSuDung = await dbContext.DiemThamQuans.AnyAsync(x => x.MaLoai == id && x.TrangThaiHoatDong);
+        if (dangDuocSuDung)
+        {
+            return Conflict(new { message = "Khong the an loai diem khi van con diem tham quan dang hoat dong." });
+        }
+
+        item.TrangThaiHoatDong = false;
+        item.NgayCapNhat = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
+        logger.LogInformation("LoaiDiem soft-deleted (inactive): {MaLoai}", id);
         return NoContent();
+    }
+
+    private static bool IsUniqueViolation(DbUpdateException ex)
+    {
+        var message = ex.InnerException?.Message ?? ex.Message;
+        return message.Contains("UNIQUE", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("2601", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("2627", StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -1,34 +1,55 @@
 ﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject CmsSession Session
 
-<div class="app-container">
-
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-        <div class="logo">
-            🎧 Audio CMS
-        </div>
-
-        <NavMenu />
-    </aside>
-
-    <!-- MAIN -->
-    <div class="main-content">
-
-        <!-- HEADER -->
-        <header class="header">
-            <div class="header-left">
-                <h4>📊 Dashboard</h4>
+<div class="shell @(IsLoginPage ? "shell-login" : string.Empty)">
+    @if (!IsLoginPage)
+    {
+        <aside class="sidebar glass">
+            <div class="brand">
+                <div class="brand-mark">AG</div>
+                <div>
+                    <h1>Audio Guide CMS</h1>
+                    <p>Admin Portal</p>
+                </div>
             </div>
 
-            <div class="header-right">
-                <span class="user">👤 Admin</span>
-            </div>
-        </header>
+            <NavMenu />
 
-        <!-- CONTENT -->
-        <section class="content">
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <strong>@(Session.HoTen ?? Session.TenDangNhap ?? "Admin")</strong>
+                    <span>@(Session.VaiTro ?? "Admin")</span>
+                </div>
+                <button class="btn btn-secondary" @onclick="Logout">Dang xuat</button>
+            </div>
+        </aside>
+    }
+
+    <main class="main @(IsLoginPage ? "login-main" : string.Empty)">
+        @if (!IsLoginPage)
+        {
+            <header class="topbar glass">
+                <div>
+                    <h2>Quan tri he thong thuyet minh du lich</h2>
+                    <p>Giam sat noi dung, du lieu va thong ke theo thoi gian thuc.</p>
+                </div>
+                <div class="status-pill">Online</div>
+            </header>
+        }
+
+        <section class="page-body">
             @Body
         </section>
-
-    </div>
+    </main>
 </div>
+
+@code {
+    private bool IsLoginPage => Navigation.Uri.EndsWith("/login", StringComparison.OrdinalIgnoreCase);
+
+    private void Logout()
+    {
+        Session.SignOut();
+        Navigation.NavigateTo("/login", true);
+    }
+}

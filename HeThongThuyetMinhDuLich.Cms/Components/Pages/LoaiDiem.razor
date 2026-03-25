@@ -1,30 +1,247 @@
-@page "/loaidiem"
-@inject HttpClient Http
+﻿@page "/loaidiem"
+@inject CmsApiClient ApiClient
+@inject CmsSession Session
+@inject NavigationManager Navigation
+@inject IJSRuntime Js
 
-<div class="fade-in">
-    <h2>Loại điểm</h2>
+<PageTitle>Loai diem</PageTitle>
+
+<div class="page-title">
+    <div>
+        <h3>Quan ly loai diem tham quan</h3>
+        <p>Tao, cap nhat va quan ly trang thai hoat dong cua loai diem.</p>
+    </div>
+    <button class="btn btn-secondary" @onclick="ToggleCreateForm">@(_showForm ? "Dong form" : "Them loai diem")</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="notice notice-error">@_error</div>
+}
+@if (!string.IsNullOrWhiteSpace(_success))
+{
+    <div class="notice notice-success">@_success</div>
+}
+
+<div class="@(_showForm ? "grid-2" : string.Empty)">
+    @if (_showForm)
+    {
+        <div class="card">
+            <h4>@(_editingId is null ? "Them loai diem" : $"Cap nhat loai diem #{_editingId}")</h4>
+
+            <EditForm Model="_form" OnValidSubmit="SaveAsync" style="display:grid;gap:10px;margin-top:10px;">
+                <DataAnnotationsValidator />
+
+                <div>
+                    <label>Ten loai</label>
+                    <InputText @bind-Value="_form.TenLoai" />
+                    <ValidationMessage For="() => _form.TenLoai" />
+                </div>
+
+                <div>
+                    <label>Mo ta</label>
+                    <InputTextArea @bind-Value="_form.MoTa" rows="3" />
+                    <ValidationMessage For="() => _form.MoTa" />
+                </div>
+
+                <label style="display:flex;gap:8px;align-items:center;">
+                    <InputCheckbox @bind-Value="_form.TrangThaiHoatDong" />
+                    Hoat dong
+                </label>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseForm">Huy</button>
+                    <button type="submit" class="btn btn-primary" disabled="@_isSaving">@(_isSaving ? "Dang luu..." : "Luu")</button>
+                </div>
+            </EditForm>
+        </div>
+    }
 
     <div class="card">
-        <ul>
-            @foreach (var item in list)
-            {
-                <li>@item.TenLoai</li>
-            }
-        </ul>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h4>Danh sach loai diem</h4>
+            <input placeholder="Tim theo ten loai..." style="max-width:220px;" @bind="_search" @bind:event="oninput" />
+        </div>
+
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Ma</th>
+                        <th>Ten loai</th>
+                        <th>Trang thai</th>
+                        <th>Hanh dong</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in FilteredItems)
+                    {
+                        <tr>
+                            <td>@item.MaLoai</td>
+                            <td>@item.TenLoai</td>
+                            <td>
+                                <span class="badge @(item.TrangThaiHoatDong ? "badge-success" : "badge-muted")">
+                                    @(item.TrangThaiHoatDong ? "Hoat dong" : "Tam dung")
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:8px;">
+                                    <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(item)">Sua</button>
+                                    <button type="button" class="btn btn-danger" @onclick="() => DeleteAsync(item)">An</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!FilteredItems.Any())
+                    {
+                        <tr>
+                            <td colspan="4">Khong co du lieu phu hop.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 @code {
-    List<Loai> list = new();
+    private readonly LoaiDiemThamQuanCreate _form = new();
+    private List<LoaiDiemThamQuanItem> _items = [];
+    private int? _editingId;
+    private bool _showForm;
+    private bool _isSaving;
+    private string _search = string.Empty;
+    private string? _error;
+    private string? _success;
 
-    class Loai
-    {
-        public string? TenLoai { get; set; }
-    }
+    private IEnumerable<LoaiDiemThamQuanItem> FilteredItems =>
+        _items.Where(x => string.IsNullOrWhiteSpace(_search)
+            || x.TenLoai.Contains(_search, StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
-        var data = await Http.GetFromJsonAsync<List<Loai>>("http://localhost:5000/api/loaidiemthamquan");
-        list = data ?? new List<Loai>();
+        if (!Session.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _items = (await ApiClient.GetLoaiDiemAsync()).OrderBy(x => x.TenLoai).ToList();
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _form.TenLoai = string.Empty;
+        _form.MoTa = string.Empty;
+        _form.TrangThaiHoatDong = true;
+    }
+
+    private void ToggleCreateForm()
+    {
+        if (_showForm && _editingId is null)
+        {
+            CloseForm();
+            return;
+        }
+
+        ResetForm();
+        _showForm = true;
+        _error = null;
+        _success = null;
+    }
+
+    private void CloseForm()
+    {
+        ResetForm();
+        _showForm = false;
+    }
+
+    private void StartEdit(LoaiDiemThamQuanItem item)
+    {
+        _editingId = item.MaLoai;
+        _form.TenLoai = item.TenLoai;
+        _form.MoTa = item.MoTa;
+        _form.TrangThaiHoatDong = item.TrangThaiHoatDong;
+        _showForm = true;
+        _error = null;
+        _success = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        _isSaving = true;
+        _error = null;
+        _success = null;
+
+        var payload = new LoaiDiemThamQuanCreate
+        {
+            TenLoai = _form.TenLoai.Trim(),
+            MoTa = _form.MoTa?.Trim(),
+            TrangThaiHoatDong = _form.TrangThaiHoatDong
+        };
+
+        ApiOperationResult result;
+        if (_editingId is null)
+        {
+            result = await ApiClient.CreateLoaiDiemAsync(payload);
+        }
+        else
+        {
+            result = await ApiClient.UpdateLoaiDiemAsync(_editingId.Value, payload);
+        }
+
+        _isSaving = false;
+
+        if (!result.Success)
+        {
+            _error = CleanError(result.ErrorMessage);
+            return;
+        }
+
+        _success = _editingId is null ? "Da tao loai diem moi." : "Da cap nhat loai diem.";
+        CloseForm();
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(LoaiDiemThamQuanItem item)
+    {
+        _error = null;
+        _success = null;
+
+        var confirmed = await Js.InvokeAsync<bool>("confirm", $"An loai diem '{item.TenLoai}'?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var result = await ApiClient.DeleteLoaiDiemAsync(item.MaLoai);
+        if (!result.Success)
+        {
+            _error = CleanError(result.ErrorMessage);
+            return;
+        }
+
+        _success = $"Da an loai diem '{item.TenLoai}'.";
+        await LoadAsync();
+    }
+
+    private static string CleanError(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return "Co loi xay ra. Vui long thu lai.";
+        }
+
+        return raw
+            .Replace("{", string.Empty)
+            .Replace("}", string.Empty)
+            .Replace("\"", string.Empty)
+            .Trim();
     }
 }

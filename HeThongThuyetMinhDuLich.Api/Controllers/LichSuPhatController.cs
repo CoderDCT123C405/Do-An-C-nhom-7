@@ -91,6 +91,7 @@ public class LichSuPhatController(DuLichDbContext dbContext) : ControllerBase
     }
 
     [HttpGet("thong-ke/luot-nghe-theo-diem")]
+    [Authorize(Roles = "Admin,BienTap")]
     public async Task<ActionResult<IEnumerable<object>>> ThongKeTheoDiem()
     {
         var items = await dbContext.LichSuPhats
@@ -110,6 +111,7 @@ public class LichSuPhatController(DuLichDbContext dbContext) : ControllerBase
     }
 
     [HttpGet("thong-ke/luot-nghe-theo-kich-hoat")]
+    [Authorize(Roles = "Admin,BienTap")]
     public async Task<ActionResult<IEnumerable<object>>> ThongKeTheoCachKichHoat()
     {
         var items = await dbContext.LichSuPhats

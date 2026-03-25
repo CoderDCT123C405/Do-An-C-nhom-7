@@ -1,22 +1,81 @@
-@page "/login"
+﻿@page "/login"
+@inject CmsApiClient ApiClient
+@inject CmsSession Session
+@inject NavigationManager Navigation
 
-<div class="fade-in" style="display:flex;justify-content:center;align-items:center;height:80vh">
-    <div class="card" style="width:300px">
-        <h3>Đăng nhập</h3>
+<PageTitle>Dang nhap Admin</PageTitle>
 
-        <input placeholder="Username" @bind="user" />
-        <input type="password" placeholder="Password" @bind="pass" />
-
-        <button @onclick="HandleLogin">Login</button>
+<div class="card glass" style="max-width:460px;margin:8vh auto;animation:rise-in .4s ease;">
+    <div class="page-title" style="margin-bottom:10px;">
+        <div>
+            <h3>Dang nhap Admin CMS</h3>
+            <p>Quan tri noi dung thuyet minh du lich an toan va nhanh.</p>
+        </div>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="notice notice-error">@_error</div>
+    }
+
+    <EditForm Model="_model" OnValidSubmit="HandleLoginAsync">
+        <DataAnnotationsValidator />
+
+        <div style="display:grid;gap:10px;">
+            <div>
+                <label for="username">Ten dang nhap</label>
+                <InputText id="username" @bind-Value="_model.TenDangNhap" />
+                <ValidationMessage For="() => _model.TenDangNhap" />
+            </div>
+
+            <div>
+                <label for="password">Mat khau</label>
+                <InputText id="password" type="password" @bind-Value="_model.MatKhau" />
+                <ValidationMessage For="() => _model.MatKhau" />
+            </div>
+        </div>
+
+        <div class="form-actions" style="margin-top:16px;justify-content:stretch;">
+            <button type="submit" class="btn btn-primary" style="width:100%;" disabled="@_isLoading">
+                @(_isLoading ? "Dang xu ly..." : "Dang nhap")
+            </button>
+        </div>
+    </EditForm>
 </div>
 
 @code {
-    string? user;
-    string? pass;
+    private readonly AdminLoginRequest _model = new();
+    private bool _isLoading;
+    private string? _error;
 
-    void HandleLogin()
+    protected override void OnInitialized()
     {
-        Console.WriteLine($"{user} - {pass}");
+        if (Session.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task HandleLoginAsync()
+    {
+        _error = null;
+        _isLoading = true;
+
+        var response = await ApiClient.LoginAsync(new AdminLoginRequest
+        {
+            TenDangNhap = _model.TenDangNhap.Trim(),
+            MatKhau = _model.MatKhau.Trim()
+        });
+
+        _isLoading = false;
+
+        if (response is null || string.IsNullOrWhiteSpace(response.Token))
+        {
+            _error = "Dang nhap that bai. Vui long kiem tra tai khoan hoac ket noi API.";
+            return;
+        }
+
+        Session.SignIn(response.TenDangNhap, response.Token, response.HoTen, response.VaiTro, response.HetHanLuc);
+        Navigation.NavigateTo("/");
     }
 }

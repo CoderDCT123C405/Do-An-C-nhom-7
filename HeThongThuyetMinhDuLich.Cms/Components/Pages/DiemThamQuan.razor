@@ -1,106 +1,339 @@
-@page "/diemthamquan"
-@inject HttpClient Http
-<style>
-    .fade-in {
-        animation: fadeIn 0.5s ease-in-out;
-    }
-    .card {
-        background: #fff;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-top: 20px;
-    }
+﻿@page "/diemthamquan"
+@inject CmsApiClient ApiClient
+@inject CmsSession Session
+@inject NavigationManager Navigation
+@inject IJSRuntime Js
 
-    .table {
-        width: 100%;
-        border-collapse: collapse;
-    }
+<PageTitle>Diem tham quan</PageTitle>
 
-    .table th, .table td {
-        padding: 12px;
-        border-bottom: 1px solid #ddd;
-        text-align: left;
-    }
-
-    .table th {
-        background-color: #f4f4f4;
-    }
-
-    input {
-        padding: 8px;
-        width: 100%;
-        margin-bottom: 12px;
-        border-radius: 4px;
-        border: 1px solid #ccc;
-    }
-
-    button {
-        background-color: transparent;
-        border: none;
-        cursor: pointer;
-        font-size: 16px;
-    }
-</style>
-
-<div class="fade-in">
-    <h2>Quản lý điểm tham quan</h2>
-
-    <div class="card">
-        <input @bind="search" placeholder="Tìm kiếm..." />
-
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>ID</th> 
-                    <th>Tên điểm</th>
-                    <th>Địa chỉ</th>
-                    <th>Hành động</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in filtered)
-                {
-                    <tr>
-                        <td>@item.MaDiem</td>
-                        <td>@item.TenDiem</td>
-                        <td>@item.DiaChi</td>
-                        <td>
-                            <button @onclick="() => Edit(item)">✏️</button>
-                            <button @onclick="() => Delete(item.MaDiem)">🗑️</button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+<div class="page-title">
+    <div>
+        <h3>Quan ly diem tham quan</h3>
+        <p>Quan ly toa do, ban kinh kich hoat va thong tin diem theo chuan API.</p>
     </div>
+    <button class="btn btn-secondary" @onclick="ToggleCreateForm">@(_showForm ? "Dong form" : "Them diem")</button>
 </div>
 
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="notice notice-error">@_error</div>
+}
+@if (!string.IsNullOrWhiteSpace(_success))
+{
+    <div class="notice notice-success">@_success</div>
+}
+
+<div class="@(_showForm ? "grid-2" : string.Empty)">
+    @if (_showForm)
+    {
+        <div class="card">
+            <h4>@(_editingId is null ? "Them diem tham quan" : $"Cap nhat diem #{_editingId}")</h4>
+
+            <EditForm Model="_form" OnValidSubmit="SaveAsync" style="display:grid;gap:10px;margin-top:10px;">
+                <DataAnnotationsValidator />
+
+                <div class="grid-2">
+                    <div>
+                        <label>Ma dinh danh</label>
+                        <InputText @bind-Value="_form.MaDinhDanh" />
+                        <ValidationMessage For="() => _form.MaDinhDanh" />
+                    </div>
+                    <div>
+                        <label>Ten diem</label>
+                        <InputText @bind-Value="_form.TenDiem" />
+                        <ValidationMessage For="() => _form.TenDiem" />
+                    </div>
+                </div>
+
+                <div>
+                    <label>Dia chi</label>
+                    <InputText @bind-Value="_form.DiaChi" />
+                    <ValidationMessage For="() => _form.DiaChi" />
+                </div>
+
+                <div>
+                    <label>Mo ta ngan</label>
+                    <InputTextArea @bind-Value="_form.MoTaNgan" rows="3" />
+                    <ValidationMessage For="() => _form.MoTaNgan" />
+                </div>
+
+                <div class="grid-3">
+                    <div>
+                        <label>Vi do</label>
+                        <InputNumber @bind-Value="_form.ViDo" />
+                        <ValidationMessage For="() => _form.ViDo" />
+                    </div>
+                    <div>
+                        <label>Kinh do</label>
+                        <InputNumber @bind-Value="_form.KinhDo" />
+                        <ValidationMessage For="() => _form.KinhDo" />
+                    </div>
+                    <div>
+                        <label>Ban kinh kich hoat (m)</label>
+                        <InputNumber @bind-Value="_form.BanKinhKichHoat" />
+                        <ValidationMessage For="() => _form.BanKinhKichHoat" />
+                    </div>
+                </div>
+
+                <div>
+                    <label>Loai diem</label>
+                    <InputSelect @bind-Value="_form.MaLoai">
+                        <option value="0">-- Chon loai diem --</option>
+                        @foreach (var loai in _loaiItems)
+                        {
+                            <option value="@loai.MaLoai">@loai.TenLoai</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => _form.MaLoai" />
+                </div>
+
+                <label style="display:flex;align-items:center;gap:6px;">
+                    <InputCheckbox @bind-Value="_form.TrangThaiHoatDong" />
+                    Hoat dong
+                </label>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseForm">Huy</button>
+                    <button type="submit" class="btn btn-primary" disabled="@_isSaving">@(_isSaving ? "Dang luu..." : "Luu")</button>
+                </div>
+            </EditForm>
+        </div>
+    }
+
+    <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+            <input placeholder="Tim ten diem..." @bind="_search" @bind:event="oninput" />
+            <select @bind="_filterLoai" style="max-width:220px;">
+                <option value="0">Tat ca loai</option>
+                @foreach (var loai in _loaiItems)
+                {
+                    <option value="@loai.MaLoai">@loai.TenLoai</option>
+                }
+            </select>
+        </div>
+
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Ma</th>
+                        <th>Ten diem</th>
+                        <th>Dia chi</th>
+                        <th>Loai</th>
+                        <th>Trang thai</th>
+                        <th>Hanh dong</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in FilteredItems)
+                    {
+                        <tr>
+                            <td>@item.MaDinhDanh</td>
+                            <td>@item.TenDiem</td>
+                            <td>@item.DiaChi</td>
+                            <td>@GetLoaiName(item.MaLoai)</td>
+                            <td>
+                                <span class="badge @(item.TrangThaiHoatDong ? "badge-success" : "badge-muted")">
+                                    @(item.TrangThaiHoatDong ? "Hoat dong" : "Tam dung")
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:8px;">
+                                    <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(item)">Sua</button>
+                                    <button type="button" class="btn btn-danger" @onclick="() => DeleteAsync(item)">An</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    
+                    @if (!FilteredItems.Any())
+                    {
+                        <tr>
+                            <td colspan="6">Khong co du lieu phu hop.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<button @onclick="() => TestClick()">Test</button>
+
+<p>@msg</p>
+
 @code {
-    List<Diem> list = new();
-    string search = "";
+    string msg = "";
 
-    IEnumerable<Diem> filtered =>
-        list.Where(x => x.TenDiem?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? true);
+    void TestClick()
+    {
+        msg = "Button da hoat dong!";
+    }
+}
+@code {
+    private readonly DiemThamQuanCreate _form = new();
+    private List<DiemThamQuanItem> _diemItems = [];
+    private List<LoaiDiemThamQuanItem> _loaiItems = [];
+    private int? _editingId;
+    private bool _showForm;
+    private bool _isSaving;
+    private string _search = string.Empty;
+    private int _filterLoai;
+    private string? _error;
+    private string? _success;
 
+    private IEnumerable<DiemThamQuanItem> FilteredItems => _diemItems.Where(x =>
+        (string.IsNullOrWhiteSpace(_search) || x.TenDiem.Contains(_search, StringComparison.OrdinalIgnoreCase))
+        && (_filterLoai == 0 || x.MaLoai == _filterLoai));
+
+    
     protected override async Task OnInitializedAsync()
     {
-        var data = await Http.GetFromJsonAsync<List<Diem>>("http://localhost:5000/api/diemthamquan");
-        list = data ?? new List<Diem>();
+        if (!Session.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        await LoadAsync();
     }
 
-    void Edit(Diem d) { }
-
-    async Task Delete(int id)
+    private async Task LoadAsync()
     {
-        await Http.DeleteAsync($"http://localhost:5000/api/diemthamquan/{id}");
-        list.RemoveAll(x => x.MaDiem == id);
+        _loaiItems = (await ApiClient.GetLoaiDiemAsync()).OrderBy(x => x.TenLoai).ToList();
+        _diemItems = (await ApiClient.GetDiemAsync()).OrderBy(x => x.TenDiem).ToList();
     }
 
-    class Diem
-{
-    public int MaDiem { get; set; }
-    public string? TenDiem { get; set; }
-    public string? DiaChi { get; set; }
-}
+    private void ResetForm()
+    {
+        _editingId = null;
+        _form.MaDinhDanh = string.Empty;
+        _form.TenDiem = string.Empty;
+        _form.MoTaNgan = string.Empty;
+        _form.ViDo = 0;
+        _form.KinhDo = 0;
+        _form.BanKinhKichHoat = 150;
+        _form.DiaChi = string.Empty;
+        _form.MaLoai = 0;
+        _form.TrangThaiHoatDong = true;
+    }
+
+    private void ToggleCreateForm()
+    {
+        if (_showForm && _editingId is null)
+        {
+            CloseForm();
+            return;
+        }
+
+        ResetForm();
+        _showForm = true;
+        _error = null;
+        _success = null;
+    }
+
+    private void CloseForm()
+    {
+        ResetForm();
+        _showForm = false;
+    }
+
+    private void StartEdit(DiemThamQuanItem item)
+    {
+        _editingId = item.MaDiem;
+        _form.MaDinhDanh = item.MaDinhDanh;
+        _form.TenDiem = item.TenDiem;
+        _form.MoTaNgan = item.MoTaNgan;
+        _form.ViDo = item.ViDo;
+        _form.KinhDo = item.KinhDo;
+        _form.BanKinhKichHoat = item.BanKinhKichHoat;
+        _form.DiaChi = item.DiaChi;
+        _form.MaLoai = item.MaLoai;
+        _form.TrangThaiHoatDong = item.TrangThaiHoatDong;
+        _showForm = true;
+        _error = null;
+        _success = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        _isSaving = true;
+        _error = null;
+        _success = null;
+
+        var payload = new DiemThamQuanCreate
+        {
+            MaDinhDanh = _form.MaDinhDanh.Trim(),
+            TenDiem = _form.TenDiem.Trim(),
+            MoTaNgan = _form.MoTaNgan?.Trim(),
+            ViDo = _form.ViDo,
+            KinhDo = _form.KinhDo,
+            BanKinhKichHoat = _form.BanKinhKichHoat,
+            DiaChi = _form.DiaChi?.Trim(),
+            MaLoai = _form.MaLoai,
+            TrangThaiHoatDong = _form.TrangThaiHoatDong
+        };
+
+        ApiOperationResult result;
+        if (_editingId is null)
+        {
+            result = await ApiClient.CreateDiemAsync(payload);
+        }
+        else
+        {
+            result = await ApiClient.UpdateDiemAsync(_editingId.Value, payload);
+        }
+
+        _isSaving = false;
+
+        if (!result.Success)
+        {
+            _error = CleanError(result.ErrorMessage);
+            return;
+        }
+
+        _success = _editingId is null ? "Da tao diem tham quan moi." : "Da cap nhat diem tham quan.";
+        CloseForm();
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(DiemThamQuanItem item)
+    {
+        _error = null;
+        _success = null;
+
+        var confirmed = await Js.InvokeAsync<bool>("confirm", $"An diem '{item.TenDiem}'?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var result = await ApiClient.DeleteDiemAsync(item.MaDiem);
+        if (!result.Success)
+        {
+            _error = CleanError(result.ErrorMessage);
+            return;
+        }
+
+        _success = $"Da an diem '{item.TenDiem}'.";
+        await LoadAsync();
+    }
+
+    private string GetLoaiName(int maLoai)
+    {
+        return _loaiItems.FirstOrDefault(x => x.MaLoai == maLoai)?.TenLoai ?? $"Loai #{maLoai}";
+    }
+
+    private static string CleanError(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return "Co loi xay ra. Vui long thu lai.";
+        }
+
+        return raw
+            .Replace("{", string.Empty)
+            .Replace("}", string.Empty)
+            .Replace("\"", string.Empty)
+            .Trim();
+    }
 }

@@ -1,21 +1,28 @@
-@using Microsoft.AspNetCore.Components.Routing
-<link href="NavMenu.razor.css" rel="stylesheet" />
+﻿@inject CmsSession Session
+
 <nav class="menu">
+    @if (!Session.IsAuthenticated)
+    {
+        <NavLink href="/login" class="item" Match="NavLinkMatch.All">
+            Dang nhap
+        </NavLink>
+    }
+    else
+    {
+        <NavLink href="/" class="item" Match="NavLinkMatch.All">
+            Tong quan
+        </NavLink>
 
-    <NavLink href="/" class="item">
-        🏠 Trang chủ
-    </NavLink>
+        <NavLink href="/diemthamquan" class="item">
+            Diem tham quan
+        </NavLink>
 
-    <NavLink href="/diemthamquan" class="item">
-        📍 Điểm tham quan
-    </NavLink>
+        <NavLink href="/loaidiem" class="item">
+            Loai diem
+        </NavLink>
 
-    <NavLink href="/loaidem" class="item">
-        🗂 Loại điểm
-    </NavLink>
-
-    <NavLink href="/thongke" class="item">
-        📊 Thống kê
-    </NavLink>
-
+        <NavLink href="/thongke" class="item">
+            Thong ke
+        </NavLink>
+    }
 </nav>

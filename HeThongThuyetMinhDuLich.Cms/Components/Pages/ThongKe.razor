@@ -1,34 +1,109 @@
-@page "/thongke"
-@inject HttpClient Http
+﻿@page "/thongke"
+@inject CmsApiClient ApiClient
+@inject CmsSession Session
+@inject NavigationManager Navigation
 
-<div class="fade-in">
-    <h2>Thống kê</h2>
+<PageTitle>Thong ke</PageTitle>
 
-    <div class="grid">
-        @foreach (var item in list)
-        {
-            <div class="card">
-                <h3>@item.TenDiem</h3>
-                <p>Lượt nghe: @item.Luot</p>
-            </div>
-        }
+<div class="page-title">
+    <div>
+        <h3>Thong ke luot nghe</h3>
+        <p>So lieu tong hop theo diem va cach kich hoat.</p>
+    </div>
+    <button class="btn btn-secondary" @onclick="LoadAsync" disabled="@_isLoading">Tai lai</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="notice notice-error">@_error</div>
+}
+
+<div class="grid-2">
+    <div class="card">
+        <h4>Theo diem tham quan</h4>
+        <div class="table-wrap" style="margin-top:10px;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Diem</th>
+                        <th>Luot nghe</th>
+                        <th>Tong thoi luong</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _theoDiem)
+                    {
+                        <tr>
+                            <td>@item.TenDiem</td>
+                            <td>@item.SoLuotNghe</td>
+                            <td>@item.TongThoiLuongDaNghe giay</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h4>Theo cach kich hoat</h4>
+        <div class="table-wrap" style="margin-top:10px;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Cach kich hoat</th>
+                        <th>So luot phat</th>
+                        <th>Tong thoi luong</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _theoKichHoat)
+                    {
+                        <tr>
+                            <td>@item.CachKichHoat</td>
+                            <td>@item.SoLuotPhat</td>
+                            <td>@item.TongThoiLuongDaNghe giay</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 @code {
-    List<ThongKeDto> list = new();
-
-    class ThongKeDto
-    {
-        public string? TenDiem { get; set; }
-        public int Luot { get; set; }
-    }
+    private List<ThongKeTheoDiemItem> _theoDiem = [];
+    private List<ThongKeTheoKichHoatItem> _theoKichHoat = [];
+    private bool _isLoading;
+    private string? _error;
 
     protected override async Task OnInitializedAsync()
     {
-        var data = await Http.GetFromJsonAsync<List<ThongKeDto>>(
-            "http://localhost:5000/api/thongke/luot-nghe-theo-diem");
+        if (!Session.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
 
-        list = data ?? new List<ThongKeDto>();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            _theoDiem = (await ApiClient.GetThongKeTheoDiemAsync()).ToList();
+            _theoKichHoat = (await ApiClient.GetThongKeTheoKichHoatAsync()).ToList();
+        }
+        catch
+        {
+            _error = "Khong tai duoc thong ke. Vui long thu lai.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
     }
 }

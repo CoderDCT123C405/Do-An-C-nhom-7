@@ -31,6 +31,7 @@ public static class AdminSeedService
         var section = configuration.GetSection("SeedAdmin");
         var username = section["Username"] ?? "admin";
         var password = section["Password"] ?? "Admin@123";
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
         var fullName = section["FullName"] ?? "System Admin";
         var role = section["Role"] ?? "Admin";
         var resetIfExists = bool.TryParse(section["ResetIfExists"], out var reset) && reset;
@@ -41,7 +42,7 @@ public static class AdminSeedService
             db.TaiKhoans.Add(new TaiKhoan
             {
                 TenDangNhap = username,
-                MatKhauMaHoa = password,
+                MatKhauMaHoa = passwordHash,
                 HoTen = fullName,
                 Email = "admin@local",
                 VaiTro = role,
@@ -52,7 +53,7 @@ public static class AdminSeedService
         }
         else if (resetIfExists)
         {
-            existing.MatKhauMaHoa = password;
+            existing.MatKhauMaHoa = passwordHash;
             existing.HoTen = fullName;
             existing.VaiTro = role;
             existing.TrangThaiHoatDong = true;

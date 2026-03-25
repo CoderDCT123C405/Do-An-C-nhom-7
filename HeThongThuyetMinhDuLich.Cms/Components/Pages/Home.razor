@@ -1,36 +1,80 @@
-@page "/"
+﻿@page "/"
+@inject CmsApiClient ApiClient
+@inject CmsSession Session
+@inject NavigationManager Navigation
 
-<div class="fade-in">
-    <h2>Dashboard</h2>
+<PageTitle>Tong quan</PageTitle>
 
-    <div class="grid">
-        <div class="card">
-            <h3>Tổng điểm</h3>
-            <h1>@tongDiem</h1>
-        </div>
+<div class="page-title">
+    <div>
+        <h3>Tong quan he thong</h3>
+        <p>Theo doi nhanh du lieu admin va hien trang van hanh.</p>
+    </div>
+    <button class="btn btn-secondary" @onclick="LoadAsync" disabled="@_isLoading">Tai lai</button>
+</div>
 
-        <div class="card">
-            <h3>Lượt nghe</h3>
-            <h1>@luotNghe</h1>
-        </div>
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="notice notice-error">@_error</div>
+}
 
-        <div class="card">
-            <h3>Người dùng</h3>
-            <h1>@nguoiDung</h1>
-        </div>
+<div class="grid-3">
+    <div class="card">
+        <small>Tong diem tham quan</small>
+        <div class="kpi-value">@_tongDiem</div>
+    </div>
+
+    <div class="card">
+        <small>Tong loai diem</small>
+        <div class="kpi-value">@_tongLoai</div>
+    </div>
+
+    <div class="card">
+        <small>Tong luot nghe</small>
+        <div class="kpi-value">@_tongLuotNghe</div>
     </div>
 </div>
 
 @code {
-    int tongDiem = 0;
-    int luotNghe = 0;
-    int nguoiDung = 0;
+    private bool _isLoading;
+    private string? _error;
+    private int _tongDiem;
+    private int _tongLoai;
+    private int _tongLuotNghe;
 
     protected override async Task OnInitializedAsync()
     {
-        // TODO: gọi API thật
-        tongDiem = 3;
-        luotNghe = 120;
-        nguoiDung = 25;
+        if (!Session.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            var diem = await ApiClient.GetDiemAsync();
+            var loai = await ApiClient.GetLoaiDiemAsync();
+            var thongKe = await ApiClient.GetThongKeTheoDiemAsync();
+
+            _tongDiem = diem.Count;
+            _tongLoai = loai.Count;
+            _tongLuotNghe = thongKe.Sum(x => x.SoLuotNghe);
+        }
+        catch
+        {
+            _error = "Khong tai duoc du lieu tong quan.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
     }
 }

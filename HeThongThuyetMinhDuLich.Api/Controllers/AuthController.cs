@@ -18,10 +18,18 @@ public class AuthController(DuLichDbContext dbContext, JwtTokenService jwtTokenS
     [HttpPost("admin/login")]
     public async Task<ActionResult<LoginResponse>> AdminLogin(AdminLoginRequest request)
     {
-        var taiKhoan = await dbContext.TaiKhoans
-            .FirstOrDefaultAsync(x => x.TenDangNhap == request.TenDangNhap && x.TrangThaiHoatDong);
+        if (string.IsNullOrWhiteSpace(request.TenDangNhap) || string.IsNullOrWhiteSpace(request.MatKhau))
+        {
+            return BadRequest(new { message = "Ten dang nhap va mat khau la bat buoc." });
+        }
 
-        if (taiKhoan is null || request.MatKhau != taiKhoan.MatKhauMaHoa)
+        var username = request.TenDangNhap.Trim();
+        var password = request.MatKhau.Trim();
+
+        var taiKhoan = await dbContext.TaiKhoans
+            .FirstOrDefaultAsync(x => x.TenDangNhap == username && x.TrangThaiHoatDong);
+
+        if (taiKhoan is null || !VerifyPassword(password, taiKhoan.MatKhauMaHoa))
         {
             return Unauthorized(new { message = "Ten dang nhap hoac mat khau khong dung." });
         }
@@ -75,5 +83,20 @@ public class AuthController(DuLichDbContext dbContext, JwtTokenService jwtTokenS
             nguoiDung.HoTen,
             nguoiDung.Email
         });
+    }
+
+    private static bool VerifyPassword(string rawPassword, string storedHashOrRaw)
+    {
+        if (string.IsNullOrWhiteSpace(storedHashOrRaw))
+        {
+            return false;
+        }
+
+        if (storedHashOrRaw.StartsWith("$2", StringComparison.Ordinal))
+        {
+            return BCrypt.Net.BCrypt.Verify(rawPassword, storedHashOrRaw);
+        }
+
+        return string.Equals(rawPassword, storedHashOrRaw, StringComparison.Ordinal);
     }
 }

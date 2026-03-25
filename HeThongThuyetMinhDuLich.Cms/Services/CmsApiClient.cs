@@ -1,3 +1,4 @@
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using HeThongThuyetMinhDuLich.Cms.Models;
@@ -13,11 +14,12 @@ public class CmsApiClient(
     private HttpClient CreateClient()
     {
         var client = httpClientFactory.CreateClient("Api");
-        client.BaseAddress = new Uri(apiOptions.Value.BaseUrl);
+        client.BaseAddress = new Uri(apiOptions.Value.BaseUrl.TrimEnd('/') + "/");
         if (!string.IsNullOrWhiteSpace(session.AccessToken))
         {
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", session.AccessToken);
         }
+
         return client;
     }
 
@@ -45,8 +47,7 @@ public class CmsApiClient(
         try
         {
             using var client = CreateClient();
-            return await client.GetFromJsonAsync<List<LoaiDiemThamQuanItem>>("api/loaidiemthamquan", cancellationToken)
-                ?? [];
+            return await client.GetFromJsonAsync<List<LoaiDiemThamQuanItem>>("api/loaidiemthamquan", cancellationToken) ?? [];
         }
         catch
         {
@@ -54,18 +55,22 @@ public class CmsApiClient(
         }
     }
 
-    public async Task<bool> CreateLoaiDiemAsync(LoaiDiemThamQuanCreate model, CancellationToken cancellationToken = default)
+    public async Task<ApiOperationResult> CreateLoaiDiemAsync(LoaiDiemThamQuanCreate model, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            using var client = CreateClient();
-            var response = await client.PostAsJsonAsync("api/loaidiemthamquan", model, cancellationToken);
-            return response.IsSuccessStatusCode;
-        }
-        catch
-        {
-            return false;
-        }
+        using var client = CreateClient();
+        return await SendAsync(() => client.PostAsJsonAsync("api/loaidiemthamquan", model, cancellationToken));
+    }
+
+    public async Task<ApiOperationResult> UpdateLoaiDiemAsync(int id, LoaiDiemThamQuanCreate model, CancellationToken cancellationToken = default)
+    {
+        using var client = CreateClient();
+        return await SendAsync(() => client.PutAsJsonAsync($"api/loaidiemthamquan/{id}", model, cancellationToken));
+    }
+
+    public async Task<ApiOperationResult> DeleteLoaiDiemAsync(int id, CancellationToken cancellationToken = default)
+    {
+        using var client = CreateClient();
+        return await SendAsync(() => client.DeleteAsync($"api/loaidiemthamquan/{id}", cancellationToken));
     }
 
     public async Task<IReadOnlyList<DiemThamQuanItem>> GetDiemAsync(CancellationToken cancellationToken = default)
@@ -73,8 +78,7 @@ public class CmsApiClient(
         try
         {
             using var client = CreateClient();
-            return await client.GetFromJsonAsync<List<DiemThamQuanItem>>("api/diemthamquan", cancellationToken)
-                ?? [];
+            return await client.GetFromJsonAsync<List<DiemThamQuanItem>>("api/diemthamquan", cancellationToken) ?? [];
         }
         catch
         {
@@ -82,18 +86,22 @@ public class CmsApiClient(
         }
     }
 
-    public async Task<bool> CreateDiemAsync(DiemThamQuanCreate model, CancellationToken cancellationToken = default)
+    public async Task<ApiOperationResult> CreateDiemAsync(DiemThamQuanCreate model, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            using var client = CreateClient();
-            var response = await client.PostAsJsonAsync("api/diemthamquan", model, cancellationToken);
-            return response.IsSuccessStatusCode;
-        }
-        catch
-        {
-            return false;
-        }
+        using var client = CreateClient();
+        return await SendAsync(() => client.PostAsJsonAsync("api/diemthamquan", model, cancellationToken));
+    }
+
+    public async Task<ApiOperationResult> UpdateDiemAsync(int id, DiemThamQuanCreate model, CancellationToken cancellationToken = default)
+    {
+        using var client = CreateClient();
+        return await SendAsync(() => client.PutAsJsonAsync($"api/diemthamquan/{id}", model, cancellationToken));
+    }
+
+    public async Task<ApiOperationResult> DeleteDiemAsync(int id, CancellationToken cancellationToken = default)
+    {
+        using var client = CreateClient();
+        return await SendAsync(() => client.DeleteAsync($"api/diemthamquan/{id}", cancellationToken));
     }
 
     public async Task<IReadOnlyList<ThongKeTheoDiemItem>> GetThongKeTheoDiemAsync(CancellationToken cancellationToken = default)
@@ -121,6 +129,35 @@ public class CmsApiClient(
         catch
         {
             return [];
+        }
+    }
+
+    private static async Task<ApiOperationResult> SendAsync(Func<Task<HttpResponseMessage>> action)
+    {
+        try
+        {
+            using var response = await action();
+            if (response.IsSuccessStatusCode)
+            {
+                return ApiOperationResult.Ok();
+            }
+
+            var payload = await response.Content.ReadAsStringAsync();
+            if (response.StatusCode == HttpStatusCode.Unauthorized || response.StatusCode == HttpStatusCode.Forbidden)
+            {
+                return ApiOperationResult.Fail("Ban khong co quyen thuc hien thao tac nay.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(payload))
+            {
+                return ApiOperationResult.Fail(payload);
+            }
+
+            return ApiOperationResult.Fail($"Yeu cau that bai ({(int)response.StatusCode}).");
+        }
+        catch
+        {
+            return ApiOperationResult.Fail("Khong the ket noi API. Vui long thu lai.");
         }
     }
 }
