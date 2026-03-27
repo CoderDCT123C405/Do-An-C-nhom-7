@@ -5,9 +5,9 @@
 ---
 
 ## 0. Thong tin chung
-- Ngay cap nhat: 26/03/2026
-- Trang thai: MVP + Admin CMS da nang cap theo huong doanh nghiep
-- Phien ban: v1.1
+- Ngay cap nhat: 27/03/2026
+- Trang thai: MVP + Admin CMS + huong dan van hanh da chuan hoa
+- Phien ban: v1.2
 
 ---
 
@@ -124,3 +124,52 @@ Ky thuat chinh:
 - Bo sung role/permission chi tiet hon
 - Bo sung test tu dong (integration + UI smoke test)
 - Hoan thien quy trinh CI/CD
+
+---
+
+## 9. Van hanh va chay he thong (chuan)
+### 9.1 Chay API + CMS bang 1 lenh
+- Tu thu muc goc solution:
+  - `powershell -ExecutionPolicy Bypass -File .\Run-DoAn.ps1 -Mode offline`
+- Muc tieu:
+  - API: `http://localhost:5000`
+  - CMS: tu dong gan cong trong dai 5256+
+
+### 9.2 Chay Mobile theo huong nhe (khuyen nghi tren may yeu)
+- Uu tien chay ban Windows thay vi Android emulator:
+  - `dotnet build .\HeThongThuyetMinhDuLich.Mobile\HeThongThuyetMinhDuLich.Mobile.csproj -f net10.0-windows10.0.19041.0`
+  - `dotnet run --project .\HeThongThuyetMinhDuLich.Mobile\HeThongThuyetMinhDuLich.Mobile.csproj -f net10.0-windows10.0.19041.0`
+- Khong dung `-r win-x64` trong luong chay thuong ngay neu gap loi runtime pack.
+
+### 9.3 Chay Mobile Android (khi can test thiet bi)
+- Co emulator:
+  - `powershell -ExecutionPolicy Bypass -File .\Run-Mobile.ps1`
+- Co dien thoai that:
+  - `powershell -ExecutionPolicy Bypass -File .\Run-Mobile.ps1 -SkipEmulator`
+
+---
+
+## 10. Su co thuong gap va cach xu ly nhanh
+### 10.1 CMS bao loi 404 static resource
+- Kiem tra API/CMS da chay dung script `Run-DoAn.ps1`
+- Reload trang sau khi service len
+- Neu van loi: restart lai API + CMS bang script de dong bo process/port
+
+### 10.2 `MSB3073` / code `9009` khi run Mobile Windows
+- Nguyen nhan: file `.exe` chua duoc tao nhung da run `--no-build`
+- Cach xu ly:
+  - build lai target windows
+  - run lai khong dung `--no-build` o lan dau
+
+### 10.3 `NU1102 Microsoft.NETCore.App.Runtime.Mono.win-x64`
+- Thuong do dung them `-r win-x64` khi chay MAUI Windows
+- Cach xu ly:
+  - bo `-r win-x64`
+  - `restore -> build -> run` voi framework windows
+
+### 10.4 Loi Android `XARDF7024` / access denied trong `obj\...\android`
+- Nguyen nhan: thu muc trung gian bi lock
+- Cach xu ly:
+  - tat emulator/adb
+  - clean lai dung target windows neu chi can test desktop
+  - neu test android, clean obj/bin roi build lai sau khi da giai phong process

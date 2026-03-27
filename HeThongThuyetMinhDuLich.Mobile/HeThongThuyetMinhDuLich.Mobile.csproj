@@ -78,4 +78,25 @@
 	<ItemGroup>
 		<MauiXaml Include="App.xaml" />
 	</ItemGroup>
+    <!-- Clear read-only attributes and remove the intermediate android directory before build.
+		 This avoids "Access to the path ... is denied" errors when the Android asset subfolders
+		 (e.g. language resource folders) are left with protected attributes. -->
+ <Target Name="Fix_AndroidAssetDir" BeforeTargets="BeforeBuild;PrepareForBuild">
+	  <PropertyGroup>
+     <_IntermediateAndroidDir>$(IntermediateOutputPath)android</_IntermediateAndroidDir>
+		<_IntermediateResDir>$(IntermediateOutputPath)res</_IntermediateResDir>
+	  </PropertyGroup>
+  <!-- Remove read-only attributes recursively, ignore errors -->
+    <Exec Command='if exist "$(IntermediateOutputPath)android" attrib -r /s /d "$(IntermediateOutputPath)android"' ContinueOnError="true" />
+	  <!-- Try to take ownership and grant full control, then remove -->
+	  <Exec Command='if exist "$(IntermediateOutputPath)android" takeown /f "$(IntermediateOutputPath)android" /r /d Y' ContinueOnError="true" />
+	  <Exec Command='if exist "$(IntermediateOutputPath)android" icacls "$(IntermediateOutputPath)android" /grant Everyone:F /t /c' ContinueOnError="true" />
+	  <Exec Command='if exist "$(IntermediateOutputPath)android" rd /s /q "$(IntermediateOutputPath)android"' ContinueOnError="true" />
+
+	  <!-- Repeat for res directory which can also cause access denied errors -->
+	  <Exec Command='if exist "$(IntermediateOutputPath)res" attrib -r /s /d "$(IntermediateOutputPath)res"' ContinueOnError="true" />
+	  <Exec Command='if exist "$(IntermediateOutputPath)res" takeown /f "$(IntermediateOutputPath)res" /r /d Y' ContinueOnError="true" />
+	  <Exec Command='if exist "$(IntermediateOutputPath)res" icacls "$(IntermediateOutputPath)res" /grant Everyone:F /t /c' ContinueOnError="true" />
+	  <Exec Command='if exist "$(IntermediateOutputPath)res" rd /s /q "$(IntermediateOutputPath)res"' ContinueOnError="true" />
+	</Target>
 </Project>

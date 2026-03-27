@@ -17,7 +17,6 @@ public partial class MainPage : ContentPage
     private readonly ObservableCollection<NoiDungItem> _noiDung = [];
     private readonly Dictionary<int, DateTime> _lastAutoTriggerUtcByPoi = [];
     private MauiMap? _mapView;
-    bool isLoading = false;
     private IDispatcherTimer? _gpsTimer;
     private Location? _currentLocation;
     private DiemThamQuanItem? _nearestPoi;
