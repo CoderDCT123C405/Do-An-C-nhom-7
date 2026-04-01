@@ -1,21 +1,20 @@
-# SO DO CAU TRUC THU MUC - Do An C# (HeThongThuyetMinhDuLich)
+﻿# SO DO CAU TRUC THU MUC - Do An C# (HeThongThuyetMinhDuLich)
 
-- Ngay cap nhat: 04/2025
-- Pham vi: cap nhat theo hien trang code sau dot SQLite + edge-tts + tach nhanh CMS narration + to chuc /docs/
+- Ngay cap nhat: 01/04/2026
+- Pham vi: cap nhat theo hien trang code sau dot SQLite + edge-tts + tach nhanh CMS narration
 
-## 1. Tong quan thu muc goc (sau to chuc)
+## 1. Tong quan thu muc goc
 
 ```
 Do An C#/
 |-- Do An C#.sln
-|-- docs/                    <- Moi: To chuc tat ca tai lieu
-|   |-- PRD.md
-|   |-- ThuMucCauTruc.md
-|   |-- TestCase.md
-|   |-- YeuCau.md
-|   |-- KienTrucVaAPI.md
-|   |-- BaoCao_Admin.md
-|   |-- TODO.md
+|-- PRD.md
+|-- YeuCau.md
+|-- TestCase.md
+|-- ThuMucCauTruc.md
+|-- KienTrucVaAPI.md
+|-- BaoCao_Admin.md
+|-- TODO.md
 |-- Run-DoAn.ps1
 |-- Clean-DoAn.ps1
 |-- fix-full.ps1
@@ -80,11 +79,7 @@ Cac nhom chinh:
     - `LoaiDiem.razor`
     - `DiemThamQuan.razor`
     - `ThongKe.razor`
-    - `MaQR.razor`          <- New
-    - `NgonNgu.razor`      <- New
-    - `NguoiDung.razor`    <- New
-    - `TaiKhoan.razor`     <- New
-    - `NoiDungThuyetMinh.razor` <- New (feature/tts)
+    - `Counter.razor`
 - `Services/`
   - `CmsApiClient.cs`
 - `CmsSession.cs`
@@ -99,6 +94,7 @@ Cap nhat noi bat:
 - Sua static path tuyet doi de tranh 404
 - Co `base href` va script Blazor dung chuan
 - On dinh event click cho cac nut thao tac
+- Nang cap giao dien admin + form an/hiem theo nhu cau
 - Nhanh `feature/tts` dang duoc dung de bo sung them man hinh `NoiDungThuyetMinh` va thao tac `Tao lai audio`
 
 ## 4. Chi tiet module Mobile
@@ -116,32 +112,30 @@ Vai tro:
 - Ung dung client cho nguoi dung cuoi
 - Ho tro offline-first voi SQLite cache
 
-## 5. Thu muc docs/ (Moi - 04/2025)
+## 5. Tai lieu va script lien quan van hanh
 
-Chua tat ca tai lieu du an:
-- `PRD.md`: Yeu cau san pham chi tiet + lich su update
-- `ThuMucCauTruc.md`: So do thu muc hien tai
-- `TestCase.md`: Testcase admin full
-- `YeuCau.md`: Phân tích ban dau
-- `KienTrucVaAPI.md`: Kiến trúc + API spec
-- `BaoCao_Admin.md`: Báo cáo triển khai
-- `TODO.md`: Backlog + progress tracking
+Tai lieu:
+- `PRD.md`: dinh nghia yeu cau va lich su nang cap
+- `TestCase.md`: bo testcase admin
+- `BaoCao_Admin.md`: tong hop ket qua trien khai admin
+- `TODO.md`: backlog/cong viec tiep theo
 
-Muc tieu: De quan ly, tracability cao, theo best practice.
+Script:
+- `Run-DoAn.ps1`: chay API + CMS
+- `Clean-DoAn.ps1`: don dep build artifact
+- `fix-full.ps1`: script ho tro sua loi moi truong
+- `Run-Mobile.ps1`: chay MAUI theo huong uu tien emulator Android hoac fallback Windows
 
-## 6. Ghi chu .gitignore
+## 6. Ghi chu quan ly source
 
-Da cap nhat de ignore:
-- `bin/`, `obj/`
-- `*.db-shm`, `*.db-wal`
-- `.dotnet-home/`
-- `HeThongThuyetMinhDuLich.Cms/.keys/`
-- `**/*.log`
-- File audio dev khong can thiet
+Nen bo qua khi commit:
+- thu muc `bin/`, `obj/`
+- file lock/runtime: `*.db-shm`, `*.db-wal`
+- log tam: `*.log`
+- key tam runtime cua CMS: `.keys/`
+- file backup SQLite: `*.bak`
+- audio generate trong luong dev neu khong muon day sample len remote
 
-## 7. Script van hanh (ko thay doi)
-
-- `Run-DoAn.ps1`: API + CMS
-- `Clean-DoAn.ps1`: Clean build
-- `Run-Mobile.ps1`: MAUI Android/Windows
-
+Muc tieu:
+- Nhanh gon repo
+- Tranh day file runtime khong can thiet len Git

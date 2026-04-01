@@ -1,13 +1,13 @@
-# PRODUCT REQUIREMENTS DOCUMENT (PRD)
+﻿# PRODUCT REQUIREMENTS DOCUMENT (PRD)
 
 ## HeThongThuyetMinhDuLich
 
 ---
 
 ## 0. Thong tin chung
-- Ngay cap nhat: 04/2025
+- Ngay cap nhat: 01/04/2026
 - Trang thai: MVP + Admin CMS + offline SQLite + edge-tts cho audio tu dong
-- Phien ban: v1.4 (Cap nhat CMS admin pages)
+- Phien ban: v1.3
 
 ---
 
@@ -119,16 +119,6 @@ Ky thuat chinh:
 - File audio sinh ra duoc luu trong `HeThongThuyetMinhDuLich.Api/wwwroot/audio/tts/`
 - Mobile va API da test thanh cong voi duong dan audio mau `/audio/tts/noidung-1.mp3`
 
-### Dot 6 - Bo sung CMS pages (04/2025)
-- Hoan thanh cac trang admin moi tren nhanh feature/tts:
-  - MaQR.razor
-  - NgonNgu.razor  
-  - NguoiDung.razor
-  - TaiKhoan.razor
-  - NoiDungThuyetMinh.razor
-- Cap nhat CmsModels.cs va CmsApiClient.cs de ho tro cac entity moi
-- To chuc tai lieu vao thu muc /docs/
-
 ---
 
 ## 6. Nguyen tac an toan du lieu
@@ -220,4 +210,3 @@ Ky thuat chinh:
 - Cach xu ly:
   - dung dang `--rate=-8%`
   - tuong tu voi `--pitch=-8Hz`, `--volume=+0%`
-
