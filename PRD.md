@@ -5,171 +5,525 @@
 ---
 
 ## 0. Thong tin chung
-- Ngay cap nhat: 27/03/2026
-- Trang thai: MVP + Admin CMS + huong dan van hanh da chuan hoa
-- Phien ban: v1.2
+- Ngay cap nhat: 01/04/2026
+- Trang thai: MVP da chay duoc end-to-end (API + CMS + Mobile)
+- Phien ban: v1.3 (as-is theo code hien tai)
 
 ---
 
 ## 1. Tong quan he thong
-He thong gom 3 module:
-- Mobile App (.NET MAUI): tra cuu diem, nghe thuyet minh, ho tro offline-first
-- Web API (ASP.NET Core): cung cap API, auth, CRUD, thong ke
-- CMS (Blazor Server): quan tri du lieu, dashboard, thao tac admin
+He thong gom 3 module trong solution `Do An C#.sln`:
+- `HeThongThuyetMinhDuLich.Api` (ASP.NET Core Web API, `net8.0`)
+- `HeThongThuyetMinhDuLich.Cms` (Blazor Server, `net10.0`)
+- `HeThongThuyetMinhDuLich.Mobile` (.NET MAUI, `net10.0-android`, them `net10.0-windows10.0.19041.0` tren Windows)
 
-Muc tieu:
-- Quan tri diem tham quan/loai diem nhanh, an toan du lieu
-- API ro rang, co validate, de tich hop
-- UI admin hien dai, thao tac muot, dung duoc trong moi truong that
-
----
-
-## 2. Kien truc tong the
-- SQL Server <-> ASP.NET Core API <-> CMS / Mobile
-- Mobile ho tro cache SQLite de doc offline
-- CMS su dung server-side interactive rendering
-
-Ky thuat chinh:
-- RESTful API
-- Dependency Injection
-- Layered Architecture
-- Offline-first cho Mobile
+Muc tieu hien tai:
+- Quan tri du lieu diem tham quan va loai diem qua CMS
+- Cung cap API cho quan tri va mobile (auth, CRUD, tra cuu, thong ke)
+- Mobile ho tro online/offline, GPS geofence, tra cuu QR, phat noi dung (audio/TTS)
 
 ---
 
-## 3. Pham vi chuc nang
-### 3.1 API
-- Auth dang nhap (admin)
-- CRUD LoaiDiemThamQuan
-- CRUD DiemThamQuan
-- Endpoint lich su, thong ke co ban
-- Validate input + xu ly conflict
+## 2. Kien truc va cong nghe
+- Kien truc: `CMS/Mobile <-> API <-> SQL Server hoac SQLite`
+- API su dung Entity Framework Core (SqlServer + Sqlite), JWT auth, Swagger
+- Mobile su dung SQLite cache (`sqlite-net-pcl`) theo huong offline-first
+- CMS su dung Blazor interactive server-side, goi API qua `CmsApiClient`
 
-### 3.2 CMS Admin
-- Dang nhap/duyet phien admin
-- Dashboard tong quan
-- Quan ly Loai diem (them, sua, tim kiem, an)
-- Quan ly Diem tham quan (them, sua, tim kiem, loc, an)
-- Giao dien menu + layout admin thong nhat
-
-### 3.3 Mobile
-- Hien thi diem
-- Tim diem gan
-- Dong bo offline-first
+Ghi chu van hanh:
+- `Run-DoAn.ps1` co ho tro `-Mode offline|online`, default `offline` (Sqlite)
+- Khi offline, API seed admin + du lieu demo qua `AdminSeedService`
 
 ---
 
-## 4. Yeu cau phi chuc nang
-- UI co tinh on dinh, khong vo style khi tai lai
-- Event click phai hoat dong on dinh tren Blazor interactive
-- API tra ve ma loi ro rang cho truong hop conflict/du lieu khong hop le
-- Uu tien an toan du lieu: soft delete thay vi xoa cung
+## 3. Pham vi chuc nang da trien khai
+### 3.1 API (da co trong code)
+- Auth:
+  - `POST /api/auth`
+  - `POST /api/auth/admin/login`
+  - `POST /api/auth/user/login`
+  - `POST /api/auth/user/register`
+- CRUD du lieu cot loi:
+  - `LoaiDiemThamQuan`
+  - `DiemThamQuan`
+  - `NoiDungThuyetMinh`
+  - `NgonNgu`
+  - `NguoiDung`
+  - `TaiKhoan`
+  - `MaQr`
+  - `LichSuPhat`
+- API nghiep vu cho Mobile:
+  - `GET /api/diemthamquan/gan-day`
+  - `GET /api/noidung/{maDiem}`
+  - `GET /api/maqr/{giaTriQr}` (alias QR lookup)
+  - `POST /api/lichsuphat`
+- API media:
+  - `POST /api/hinhanhdiemthamquan/upload`
+  - `GET /api/hinhanhdiemthamquan/diem/{maDiem}`
+  - `DELETE /api/hinhanhdiemthamquan/{id}`
+- API thong ke:
+  - `GET /api/lichsuphat/thong-ke/luot-nghe-theo-diem`
+  - `GET /api/lichsuphat/thong-ke/luot-nghe-theo-kich-hoat`
+
+### 3.2 CMS Admin (da co trong code)
+- Dang nhap admin bang JWT (`/login`)
+- Trang tong quan (`/`)
+- Quan ly Loai diem (`/loaidiem`):
+  - them, sua, tim kiem, an (soft delete)
+- Quan ly Diem tham quan (`/diemthamquan`):
+  - them, sua, tim kiem, loc theo loai, an (soft delete)
+- Thong ke (`/thongke`):
+  - theo diem
+  - theo cach kich hoat
+- Da chuan hoa static path va script Blazor de tranh loi 404 tai nguyen
+
+### 3.3 Mobile (da co trong code)
+- Tai danh sach diem tham quan tu API
+- Luu cache SQLite va doc cache khi offline
+- Xac dinh vi tri GPS, tim diem gan nhat, cap nhat dinh ky
+- Geofence auto-trigger va cooldown
+- Tra cuu QR
+- Phat noi dung qua audio URL hoac TTS
+- Ghi lich su phat ve API
 
 ---
 
-## 5. Cap nhat qua trinh thuc hien (thuc te da lam)
-### Dot 1 - Hoan thien bo testcase admin
-- Xay dung bo testcase cho luong admin: dang nhap, CRUD, tim kiem, loc, thong ke, bao ve du lieu
-- Bo sung testcase cho tinh huong loi va tinh huong bien (du lieu trung, du lieu rong, rang buoc xoa)
-
-### Dot 2 - Nang cap API theo huong doanh nghiep
-- AuthController: bo sung validate input, chuan hoa xu ly login
-- AdminSeedService: seed tai khoan admin co hash
-- LoaiDiemThamQuanController:
-  - validate ten loai
-  - xu ly conflict khi trung ten
-  - bo sung soft delete (an)
-  - chan xoa/an khi con diem dang hoat dong
-- DiemThamQuanController:
-  - validate thong tin diem
-  - xu ly conflict du lieu
-  - soft delete bang TrangThaiHoatDong = false
-
-### Dot 3 - Nang cap CMS Admin UI/UX va do on dinh
-- Chuyen App.razor sang cau truc day du (head/body/base href)
-- Dung duong dan static tuyet doi:
-  - /app.css
-  - /_framework/blazor.web.js
-  - /favicon.png
-- Sua tinh trang click event khong bat duoc do render mode/script
-- Cai thien layout/menu/trang Home/Login/LoaiDiem/DiemThamQuan/ThongKe
-- Form "Them" chi mo khi can (an/hiem theo nut)
-- Tim kiem/loc/sua/xoa duoc dong bo theo luong su dung that
-
-### Dot 4 - Xu ly su co runtime va van hanh
-- Xu ly loi lock file dotnet khi build/chay
-- Tach ro van de login va van de static resource 404
-- Chuan hoa script restart API/CMS de giam xung dot process
+## 4. Quy tac nghiep vu va rang buoc hien tai
+- `LoaiDiemThamQuan` va `DiemThamQuan`: dang uu tien soft delete (`TrangThaiHoatDong = false`)
+- Khong cho an `LoaiDiemThamQuan` neu con `DiemThamQuan` dang hoat dong thuoc loai do
+- API co xu ly conflict cho cac truong hop trung du lieu chinh (ten loai, ma dinh danh)
+- Auth dung JWT, role chinh: `Admin`, `BienTap`
 
 ---
 
-## 6. Nguyen tac an toan du lieu
-- Uu tien soft delete cho du lieu danh muc va diem
-- Khong cho thao tac an/xoa neu vi pham rang buoc nghiep vu
-- Ghi nhan va tra thong bao loi ro rang cho nguoi dung
+## 5. Yeu cau phi chuc nang hien tai
+- Uu tien on dinh thao tac CMS (event click, static resources, luong form)
+- Co script run tong hop de giam xung dot process/port khi chay API + CMS
+- Mobile co co che fallback cache khi mat ket noi
+- Du lieu demo duoc seed tu dong trong mode offline de test nhanh
 
 ---
 
-## 7. Tieu chi chap nhan (Acceptance)
-- Admin thao tac duoc them/sua/tim/loc/an tren LoaiDiem va Diem
-- Cac nut tren CMS bat su kien click on dinh
-- Khong con loi 404 do static path sai cau hinh
-- API tra ket qua dung cho testcase chinh va testcase bien
-- Du lieu khong bi mat do xoa cung ngoai y muon
+## 6. Gioi han / no ky thuat can ghi nhan
+- Phan quyen chua dong nhat tren toan bo endpoint (mot so CRUD van mo rong hon can thiet)
+- Chua co test tu dong (unit/integration/UI) trong repo hien tai
+- Chua co script `Run-Mobile.ps1` trong thu muc goc (tai lieu cu co de cap, code hien tai chay mobile bang lenh `dotnet run`)
+- API project dang `net8.0` trong khi CMS/Mobile dang `net10.0` (co the can dong bo sau)
 
 ---
 
-## 8. Huong phat trien tiep
-- Bo sung audit log cho thao tac admin
-- Bo sung role/permission chi tiet hon
-- Bo sung test tu dong (integration + UI smoke test)
-- Hoan thien quy trinh CI/CD
+## 7. Tieu chi chap nhan MVP hien tai
+- Chay duoc API + CMS bang `Run-DoAn.ps1`
+- CMS dang nhap va thao tac duoc tren Loai diem + Diem tham quan
+- Thong ke tren CMS lay duoc tu `LichSuPhat`
+- Mobile tai duoc diem, xem noi dung, trigger GPS/QR va gui lich su phat
+- Khong xoa cung Loai diem/Diem trong luong quan tri thong thuong
 
 ---
 
-## 9. Van hanh va chay he thong (chuan)
-### 9.1 Chay API + CMS bang 1 lenh
+## 8. Van hanh va chay he thong (hien tai)
+### 8.1 API + CMS
 - Tu thu muc goc solution:
   - `powershell -ExecutionPolicy Bypass -File .\Run-DoAn.ps1 -Mode offline`
-- Muc tieu:
-  - API: `http://localhost:5000`
-  - CMS: tu dong gan cong trong dai 5256+
+- Dich vu muc tieu:
+  - API: `http://localhost:5000/swagger/index.html`
+  - CMS: `http://localhost:5256` (hoac port trong dai 5256-5275 neu 5256 ban)
 
-### 9.2 Chay Mobile theo huong nhe (khuyen nghi tren may yeu)
-- Uu tien chay ban Windows thay vi Android emulator:
-  - `dotnet build .\HeThongThuyetMinhDuLich.Mobile\HeThongThuyetMinhDuLich.Mobile.csproj -f net10.0-windows10.0.19041.0`
-  - `dotnet run --project .\HeThongThuyetMinhDuLich.Mobile\HeThongThuyetMinhDuLich.Mobile.csproj -f net10.0-windows10.0.19041.0`
-- Khong dung `-r win-x64` trong luong chay thuong ngay neu gap loi runtime pack.
+### 8.2 Mobile Windows (khuyen nghi khi may yeu)
+- `dotnet build .\HeThongThuyetMinhDuLich.Mobile\HeThongThuyetMinhDuLich.Mobile.csproj -f net10.0-windows10.0.19041.0`
+- `dotnet run --project .\HeThongThuyetMinhDuLich.Mobile\HeThongThuyetMinhDuLich.Mobile.csproj -f net10.0-windows10.0.19041.0`
 
-### 9.3 Chay Mobile Android (khi can test thiet bi)
-- Co emulator:
-  - `powershell -ExecutionPolicy Bypass -File .\Run-Mobile.ps1`
-- Co dien thoai that:
-  - `powershell -ExecutionPolicy Bypass -File .\Run-Mobile.ps1 -SkipEmulator`
+### 8.3 Mobile Android
+- Chay truc tiep:
+  - `dotnet build .\HeThongThuyetMinhDuLich.Mobile\HeThongThuyetMinhDuLich.Mobile.csproj -f net10.0-android`
+  - `dotnet run --project .\HeThongThuyetMinhDuLich.Mobile\HeThongThuyetMinhDuLich.Mobile.csproj -f net10.0-android`
 
 ---
 
-## 10. Su co thuong gap va cach xu ly nhanh
-### 10.1 CMS bao loi 404 static resource
-- Kiem tra API/CMS da chay dung script `Run-DoAn.ps1`
-- Reload trang sau khi service len
-- Neu van loi: restart lai API + CMS bang script de dong bo process/port
+## 9. Dinh huong tiep theo
+- Dong bo phan quyen endpoint theo role nghiep vu
+- Bo sung audit log cho thao tac admin
+- Bo sung test tu dong (API integration + UI smoke)
+- Can nhac dong bo target framework giua 3 module
 
-### 10.2 `MSB3073` / code `9009` khi run Mobile Windows
-- Nguyen nhan: file `.exe` chua duoc tao nhung da run `--no-build`
-- Cach xu ly:
-  - build lai target windows
-  - run lai khong dung `--no-build` o lan dau
+## Phần cần làm
+# 📘 HUONG DAN FULL PRO MAX – QR + GPS + AUDIO (HE THONG THUYET MINH DU LICH)
 
-### 10.3 `NU1102 Microsoft.NETCore.App.Runtime.Mono.win-x64`
-- Thuong do dung them `-r win-x64` khi chay MAUI Windows
-- Cach xu ly:
-  - bo `-r win-x64`
-  - `restore -> build -> run` voi framework windows
+---
 
-### 10.4 Loi Android `XARDF7024` / access denied trong `obj\...\android`
-- Nguyen nhan: thu muc trung gian bi lock
-- Cach xu ly:
-  - tat emulator/adb
-  - clean lai dung target windows neu chi can test desktop
-  - neu test android, clean obj/bin roi build lai sau khi da giai phong process
+# 🎯 MUC TIEU
+
+Xay dung module **PRO MAX** cho Mobile (.NET MAUI):
+
+* Scan QR → load POI → play audio
+* GPS tu dong kich hoat (geofence)
+* Map + navigation
+* Offline-first
+* Audio player native
+* Multi-language
+
+---
+
+# 🧠 KIEN TRUC TONG THE
+
+```
+QR Scan / GPS
+      ↓
+Xac dinh POI
+      ↓
+Load NoiDung (API / SQLite)
+      ↓
+Phat Audio
+      ↓
+Luu Lich Su
+```
+
+---
+
+# 🚀 PHAN 1: QR MODULE (FULL)
+
+## 1. Cai thu vien
+
+```
+dotnet add package ZXing.Net.Maui
+```
+
+---
+
+## 2. MauiProgram.cs
+
+```csharp
+builder.UseBarcodeReader();
+```
+
+---
+
+## 3. UI Scan
+
+* Camera full screen
+* Overlay khung scan
+* Text huong dan
+
+---
+
+## 4. Xu ly scan
+
+```csharp
+bool _isScanning = true;
+string _lastQr = "";
+
+private async void OnDetected(object sender, BarcodeDetectionEventArgs e)
+{
+    if (!_isScanning) return;
+
+    var qr = e.Results.FirstOrDefault()?.Value;
+
+    if (qr == _lastQr) return;
+
+    _lastQr = qr;
+    _isScanning = false;
+
+    await HandleQr(qr);
+
+    await Task.Delay(2000);
+    _isScanning = true;
+}
+```
+
+---
+
+## 5. Flow xu ly
+
+```csharp
+async Task HandleQr(string qr)
+{
+    var poi = await qrService.GetByQrAsync(qr);
+
+    if (poi == null) return;
+
+    await audioService.PlayAsync(poi.AudioUrl);
+    await SaveHistory(poi, "qr");
+}
+```
+
+---
+
+# 🌐 PHAN 2: OFFLINE-FIRST
+
+## Nguyen tac
+
+* Online → goi API
+* Offline → SQLite
+
+---
+
+## QrService
+
+```csharp
+try
+{
+    var data = await http.GetFromJsonAsync<Poi>("api/qr/" + qr);
+    await cache.Save(data);
+    return data;
+}
+catch
+{
+    return await cache.Get(qr);
+}
+```
+
+---
+
+# 📍 PHAN 3: GPS + GEOFENCE
+
+## Lay vi tri
+
+```csharp
+var location = await Geolocation.GetLastKnownLocationAsync();
+```
+
+---
+
+## Tinh khoang cach
+
+```csharp
+double distance = Location.CalculateDistance(
+    userLocation,
+    poiLocation,
+    DistanceUnits.Meters);
+```
+
+---
+
+## Trigger geofence
+
+```csharp
+if (distance <= poi.Radius)
+{
+    TriggerPoi(poi);
+}
+```
+
+---
+
+## Cooldown
+
+```csharp
+if (DateTime.Now - lastTrigger < TimeSpan.FromSeconds(30))
+    return;
+```
+
+---
+
+# 🗺️ PHAN 4: MAP + NAVIGATION
+
+## Hien thi map
+
+```csharp
+Map.Pins.Add(new Pin
+{
+    Label = poi.Name,
+    Location = new Location(poi.Lat, poi.Lng)
+});
+```
+
+---
+
+## Move den POI
+
+```csharp
+Map.MoveToRegion(MapSpan.FromCenterAndRadius(
+    new Location(poi.Lat, poi.Lng),
+    Distance.FromMeters(100)));
+```
+
+---
+
+## Navigation Google Maps
+
+```csharp
+await Launcher.OpenAsync(
+    $"https://www.google.com/maps/dir/?api=1&destination={lat},{lng}");
+```
+
+---
+
+# 🔊 PHAN 5: AUDIO PLAYER NATIVE (PRO)
+
+## Interface
+
+```csharp
+public interface IAudioService
+{
+    Task Play(string url);
+    Task Pause();
+    Task Stop();
+}
+```
+
+---
+
+## Basic implement
+
+```csharp
+public async Task Play(string url)
+{
+    await Launcher.Default.OpenAsync(url);
+}
+```
+
+---
+
+## Nang cap (PRO MAX)
+
+* Play / Pause
+* Seek bar
+* Background play
+* Fade in/out
+
+---
+
+## Fade audio
+
+```csharp
+await audio.Stop();
+await Task.Delay(300);
+await audio.Play(newUrl);
+```
+
+---
+
+# 🧾 PHAN 6: LUU LICH SU
+
+```csharp
+await http.PostAsJsonAsync("api/lichsu", new
+{
+    MaDiem = poi.Id,
+    CachKichHoat = type, // gps / qr
+    ThoiGianBatDau = DateTime.Now
+});
+```
+
+---
+
+# 🌍 PHAN 7: MULTI LANGUAGE
+
+## Lay theo ngon ngu
+
+```csharp
+var lang = Preferences.Get("lang", "vi");
+
+var data = await http.GetAsync($"api/poi/{id}?lang={lang}");
+```
+
+---
+
+## Auto switch
+
+* Detect device language
+* Fallback ve "vi"
+
+---
+
+# 🔄 PHAN 8: SYNC BACKGROUND
+
+## Timer 30s
+
+```csharp
+timer.Interval = TimeSpan.FromSeconds(30);
+timer.Tick += async (_, _) => await Sync();
+```
+
+---
+
+## Sync logic
+
+```csharp
+var newData = await api.GetUpdated(lastSyncTime);
+await sqlite.Upsert(newData);
+```
+
+---
+
+# ⚠️ PHAN 9: LOI THUONG GAP
+
+## 1. Scan khong chay
+
+* Chua cap camera permission
+
+## 2. API khong goi duoc
+
+* Android dung: 10.0.2.2
+
+## 3. Audio khong phat
+
+* URL sai / offline
+
+## 4. GPS sai vi tri
+
+* Emulator loi → dung may that
+
+---
+
+# 🧪 PHAN 10: TEST FULL
+
+### Test QR
+
+* Scan QR_POI001
+* Load dung POI
+* Phat audio
+
+### Test GPS
+
+* Di vao vung POI
+* Tu dong phat
+
+### Test offline
+
+* Tat mang
+* Van load du lieu
+
+---
+
+# 🏆 KET QUA PRO MAX
+
+Ban se co:
+
+* ✅ QR scan realtime
+* ✅ GPS tu dong thuyet minh
+* ✅ Map + navigation
+* ✅ Audio native
+* ✅ Offline-first
+* ✅ Sync tu dong
+* ✅ Multi-language
+
+---
+
+# 🚀 NANG CAP TIEP (NEU CAN)
+
+* AI voice (Text → speech xịn)
+* Download audio offline
+* AR scan (camera + overlay POI)
+* CMS realtime dashboard
+
+---
+
+# 🔥 KET LUAN
+
+He thong cua ban da dat muc:
+
+👉 DO AN TOT NGHIEP LOAI XIN (PRO MAX)
+
+* Kien truc dung chuan
+* Offline-first xịn
+* Trai nghiem nhu app du lich that
+
+---
+
+👉 Neu ban muon:
+
+* UI dep hon (nhu app thuong mai)
+* Dong goi APK
+* Viet bao cao
+
+
