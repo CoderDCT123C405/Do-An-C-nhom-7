@@ -29,6 +29,23 @@ Sua chuoi ket noi trong file `appsettings.json`:
 }
 ```
 
+## Cau hinh edge-tts
+
+Can cai `edge-tts` tren may chay API. Cau hinh trong `appsettings.Development.json`:
+
+```json
+"EdgeTts": {
+  "Executable": "edge-tts",
+  "Voice": "vi-VN-HoaiMyNeural",
+  "AutoGenerateOnSave": false
+}
+```
+
+Sau khi cai `edge-tts`, co the tao audio:
+
+- Cho 1 noi dung: `POST /api/NoiDungThuyetMinh/{id}/generate-audio`
+- Batch toan bo noi dung: `POST /api/NoiDungThuyetMinh/generate-audio`
+
 ## Lenh chay de xuat
 
 ```powershell

@@ -5,9 +5,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text.Json.Serialization;
 using System.Text;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
+
 builder.Logging.AddConsole();
 
 builder.Services.AddControllers()
@@ -19,6 +21,8 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.Configure<EdgeTtsSettings>(builder.Configuration.GetSection("EdgeTts"));
+builder.Services.AddSingleton<EdgeTtsService>();
 
 var dbProvider = builder.Configuration["Database:Provider"] ?? "SqlServer";
 builder.Services.AddDbContext<DuLichDbContext>(options =>
@@ -27,7 +31,13 @@ builder.Services.AddDbContext<DuLichDbContext>(options =>
     {
         var sqliteConn = builder.Configuration.GetConnectionString("SqliteConnection")
             ?? "Data Source=HeThongThuyetMinhDuLich.offline.db";
-        options.UseSqlite(sqliteConn);
+        var sqliteBuilder = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder(sqliteConn);
+        if (!string.IsNullOrWhiteSpace(sqliteBuilder.DataSource) && !Path.IsPathRooted(sqliteBuilder.DataSource))
+        {
+            sqliteBuilder.DataSource = Path.Combine(builder.Environment.ContentRootPath, sqliteBuilder.DataSource);
+        }
+
+        options.UseSqlite(sqliteBuilder.ConnectionString);
     }
     else
     {

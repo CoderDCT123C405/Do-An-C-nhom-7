@@ -1,6 +1,7 @@
 using HeThongThuyetMinhDuLich.Api.Data;
 using HeThongThuyetMinhDuLich.Api.Models;
 using HeThongThuyetMinhDuLich.Api.Models.Dtos;
+using HeThongThuyetMinhDuLich.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,9 @@ namespace HeThongThuyetMinhDuLich.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class NoiDungThuyetMinhController(DuLichDbContext dbContext) : ControllerBase
+public class NoiDungThuyetMinhController(
+    DuLichDbContext dbContext,
+    EdgeTtsService edgeTtsService) : ControllerBase
 {
     [HttpGet("diem/{maDiem:int}")]
     public async Task<ActionResult<IEnumerable<object>>> GetByDiem(int maDiem)
@@ -83,6 +86,7 @@ public class NoiDungThuyetMinhController(DuLichDbContext dbContext) : Controller
 
         dbContext.NoiDungThuyetMinhs.Add(entity);
         await dbContext.SaveChangesAsync();
+        await TryAutoGenerateAudioAsync(entity);
 
         return CreatedAtAction(nameof(GetByDiemAndNgonNgu), new { maDiem = entity.MaDiem, maNgonNgu = entity.MaNgonNgu }, entity);
     }
@@ -110,7 +114,82 @@ public class NoiDungThuyetMinhController(DuLichDbContext dbContext) : Controller
         item.NgayCapNhat = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
+        await TryAutoGenerateAudioAsync(item);
         return NoContent();
+    }
+
+    [HttpPost("{id:int}/generate-audio")]
+    [Authorize(Roles = "Admin,BienTap")]
+    public async Task<ActionResult<object>> GenerateAudio(int id, CancellationToken cancellationToken)
+    {
+        var item = await dbContext.NoiDungThuyetMinhs.FindAsync([id], cancellationToken);
+        if (item is null)
+        {
+            return NotFound();
+        }
+
+        if (!edgeTtsService.IsConfigured)
+        {
+            return BadRequest(new { message = "edge-tts chưa được cấu hình. Hãy kiểm tra EdgeTts:Executable." });
+        }
+
+        var oldPath = item.DuongDanAmThanh;
+        item.DuongDanAmThanh = await edgeTtsService.GenerateAudioAsync(item, cancellationToken);
+        item.NgayCapNhat = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        if (!string.Equals(oldPath, item.DuongDanAmThanh, StringComparison.OrdinalIgnoreCase))
+        {
+            edgeTtsService.DeleteManagedAudio(oldPath);
+        }
+
+        return Ok(new
+        {
+            item.MaNoiDung,
+            item.TieuDe,
+            item.DuongDanAmThanh
+        });
+    }
+
+    [HttpPost("generate-audio")]
+    [Authorize(Roles = "Admin,BienTap")]
+    public async Task<ActionResult<object>> GenerateAudioBatch([FromQuery] bool overwrite = false, CancellationToken cancellationToken = default)
+    {
+        if (!edgeTtsService.IsConfigured)
+        {
+            return BadRequest(new { message = "edge-tts chưa được cấu hình. Hãy kiểm tra EdgeTts:Executable." });
+        }
+
+        var items = await dbContext.NoiDungThuyetMinhs
+            .Where(x => x.TrangThaiHoatDong && !string.IsNullOrWhiteSpace(x.NoiDungVanBan))
+            .OrderBy(x => x.MaNoiDung)
+            .ToListAsync(cancellationToken);
+
+        var generated = 0;
+        foreach (var item in items)
+        {
+            if (!overwrite && !string.IsNullOrWhiteSpace(item.DuongDanAmThanh))
+            {
+                continue;
+            }
+
+            var oldPath = item.DuongDanAmThanh;
+            item.DuongDanAmThanh = await edgeTtsService.GenerateAudioAsync(item, cancellationToken);
+            item.NgayCapNhat = DateTime.UtcNow;
+            generated++;
+
+            if (overwrite && !string.Equals(oldPath, item.DuongDanAmThanh, StringComparison.OrdinalIgnoreCase))
+            {
+                edgeTtsService.DeleteManagedAudio(oldPath);
+            }
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Ok(new
+        {
+            TongNoiDung = items.Count,
+            DaSinhAudio = generated
+        });
     }
 
     [HttpDelete("{id:int}")]
@@ -123,8 +202,29 @@ public class NoiDungThuyetMinhController(DuLichDbContext dbContext) : Controller
             return NotFound();
         }
 
+        edgeTtsService.DeleteManagedAudio(item.DuongDanAmThanh);
         dbContext.NoiDungThuyetMinhs.Remove(item);
         await dbContext.SaveChangesAsync();
         return NoContent();
+    }
+
+    private async Task TryAutoGenerateAudioAsync(NoiDungThuyetMinh item)
+    {
+        if (!edgeTtsService.IsConfigured ||
+            !string.IsNullOrWhiteSpace(item.DuongDanAmThanh) ||
+            string.IsNullOrWhiteSpace(item.NoiDungVanBan))
+        {
+            return;
+        }
+
+        var settings = HttpContext?.RequestServices.GetService<IConfiguration>();
+        if (!bool.TryParse(settings?["EdgeTts:AutoGenerateOnSave"], out var autoGenerate) || !autoGenerate)
+        {
+            return;
+        }
+
+        item.DuongDanAmThanh = await edgeTtsService.GenerateAudioAsync(item);
+        item.NgayCapNhat = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync();
     }
 }
