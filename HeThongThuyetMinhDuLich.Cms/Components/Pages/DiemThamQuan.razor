@@ -23,7 +23,7 @@
     <div class="notice notice-success">@_success</div>
 }
 
-<div class="@(_showForm ? "grid-2" : string.Empty)">
+<div class="card">
     @if (_showForm)
     {
         <div class="card">
@@ -88,8 +88,8 @@
                 </div>
 
                 <label style="display:flex;align-items:center;gap:6px;">
-                    <InputCheckbox @bind-Value="_form.TrangThaiHoatDong" />
-                    Hoat dong
+                    Trạng thái hoạt động
+                    <InputCheckbox @bind-Value="_form.TrangThaiHoatDong" style=""/>
                 </label>
 
                 <div class="form-actions">

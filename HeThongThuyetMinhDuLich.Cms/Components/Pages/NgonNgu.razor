@@ -1,0 +1,243 @@
+@page "/ngonngu"
+@inject CmsApiClient ApiClient
+@inject CmsSession Session
+@inject NavigationManager Navigation
+@inject IJSRuntime Js
+
+<PageTitle>Quan ly Ngon Ngu</PageTitle>
+
+<div class="page-title">
+    <div>
+        <h3>Quan ly Ngon Ngu</h3>
+        <p>Danh sach va quan ly cac ngon ngu ho tro trong he thong.</p>
+    </div>
+    <button class="btn btn-primary" @onclick="ToggleCreateForm">@(_showForm ? "Dong form" : "Them Ngon Ngu")</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="notice notice-error">@_error</div>
+}
+@if (!string.IsNullOrWhiteSpace(_success))
+{
+    <div class="notice notice-success">@_success</div>
+}
+
+<div class="card">
+    @if (_showForm)
+    {
+        <div class="card">
+            <h4>@(_editingId is null ? "Them Ngon Ngu" : $"Cap nhat Ngon Ngu #{_editingId}")</h4>
+
+            <EditForm Model="_form" OnValidSubmit="SaveAsync" style="display:grid;gap:10px;margin-top:10px;">
+                <DataAnnotationsValidator />
+
+                <div>
+                    <label>Ma Ngon Ngu Quoc Te</label>
+                    <InputText @bind-Value="_form.MaNgonNguQuocTe" />
+                    <ValidationMessage For="() => _form.MaNgonNguQuocTe" />
+                </div>
+
+                <div>
+                    <label>Ten Ngon Ngu</label>
+                    <InputText @bind-Value="_form.TenNgonNgu" />
+                    <ValidationMessage For="() => _form.TenNgonNgu" />
+                </div>
+
+                <label style="display:flex;align-items:center;gap:6px;">
+                    <InputCheckbox @bind-Value="_form.LaMacDinh" />
+                    La ngon ngu mac dinh
+                </label>
+
+                <label style="display:flex;align-items:center;gap:6px;">
+                    Trạng thái hoạt động
+                    <InputCheckbox @bind-Value="_form.TrangThaiHoatDong" style=""/>  
+                </label>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseForm">Huy</button>
+                    <button type="submit" class="btn btn-primary" disabled="@_isSaving">@(_isSaving ? "Dang luu..." : "Luu")</button>
+                </div>
+            </EditForm>
+        </div>
+    }
+
+    <div class="card">
+        <h4>Danh sach Ngon Ngu</h4>
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Ma</th>
+                        <th>Ma Quoc Te</th>
+                        <th>Ten Ngon Ngu</th>
+                        <th>La Mac Dinh</th>
+                        <th>Trang Thai</th>
+                        <th>Hanh dong</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _ngonNguItems)
+                    {
+                        <tr>
+                            <td>@item.MaNgonNgu</td>
+                            <td>@item.MaNgonNguQuocTe</td>
+                            <td>@item.TenNgonNgu</td>
+                            <td>@(item.LaMacDinh ? "Co" : "Khong")</td>
+                            <td>@(item.TrangThaiHoatDong ? "Hoat dong" : "Tam dung")</td>
+                            <td>
+                                <div style="display:flex;gap:8px;">
+                                    <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(item)">Sua</button>
+                                    <button type="button" class="btn btn-danger" @onclick="() => DeleteAsync(item)">Xoa</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                    @if (!_ngonNguItems.Any())
+                    {
+                        <tr>
+                            <td colspan="6">Khong co du lieu phu hop.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly NgonNguCreate _form = new();
+    private List<NgonNguItem> _ngonNguItems = new();
+    private int? _editingId;
+    private bool _showForm;
+    private bool _isSaving;
+    private string? _error;
+    private string? _success;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _ngonNguItems = (await ApiClient.GetNgonNguAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Loi khi tai du lieu: {ex.Message}";
+        }
+    }
+
+    private void ToggleCreateForm()
+    {
+        if (_showForm && _editingId is null)
+        {
+            CloseForm();
+            return;
+        }
+
+        ResetForm();
+        _showForm = true;
+        _error = null;
+        _success = null;
+    }
+
+    private void CloseForm()
+    {
+        ResetForm();
+        _showForm = false;
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _form.MaNgonNguQuocTe = string.Empty;
+        _form.TenNgonNgu = string.Empty;
+        _form.LaMacDinh = false;
+        _form.TrangThaiHoatDong = true;
+    }
+
+    private void StartEdit(NgonNguItem item)
+    {
+        _editingId = item.MaNgonNgu;
+        _form.MaNgonNguQuocTe = item.MaNgonNguQuocTe;
+        _form.TenNgonNgu = item.TenNgonNgu;
+        _form.LaMacDinh = item.LaMacDinh;
+        _form.TrangThaiHoatDong = item.TrangThaiHoatDong;
+        _showForm = true;
+        _error = null;
+        _success = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        _isSaving = true;
+        _error = null;
+        _success = null;
+
+        var payload = new NgonNguCreate
+        {
+            MaNgonNguQuocTe = _form.MaNgonNguQuocTe.Trim(),
+            TenNgonNgu = _form.TenNgonNgu.Trim(),
+            LaMacDinh = _form.LaMacDinh,
+            TrangThaiHoatDong = _form.TrangThaiHoatDong
+        };
+
+        ApiOperationResult result;
+        if (_editingId is null)
+        {
+            result = await ApiClient.CreateNgonNguAsync(payload);
+        }
+        else
+        {
+            result = await ApiClient.UpdateNgonNguAsync(_editingId.Value, payload);
+        }
+
+        _isSaving = false;
+
+        if (!result.Success)
+        {
+            _error = result.ErrorMessage;
+            return;
+        }
+
+        _success = _editingId is null ? "Da tao Ngon Ngu moi." : "Da cap nhat Ngon Ngu.";
+        CloseForm();
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(NgonNguItem item)
+    {
+        if (!await Js.InvokeAsync<bool>("confirm", $"Ban co chac muon xoa Ngon Ngu {item.TenNgonNgu}?"))
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await ApiClient.DeleteNgonNguAsync(item.MaNgonNgu);
+            if (!result.Success)
+            {
+                _error = result.ErrorMessage;
+                return;
+            }
+
+            _success = "Da xoa Ngon Ngu thanh cong.";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Loi khi xoa Ngon Ngu: {ex.Message}";
+        }
+    }
+}

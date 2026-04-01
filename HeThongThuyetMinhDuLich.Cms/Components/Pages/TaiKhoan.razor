@@ -1,0 +1,245 @@
+@page "/taikhoan"
+@inject CmsApiClient ApiClient
+@inject CmsSession Session
+@inject NavigationManager Navigation
+@inject IJSRuntime Js
+
+<PageTitle>Quan ly Tai Khoan</PageTitle>
+
+<div class="page-title">
+    <div>
+        <h3>Quan ly Tai Khoan</h3>
+        <p>Danh sach va quan ly thong tin tai khoan trong he thong.</p>
+    </div>
+    <button class="btn btn-primary" @onclick="ToggleCreateForm">@(_showForm ? "Dong form" : "Them Tai Khoan")</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="notice notice-error">@_error</div>
+}
+@if (!string.IsNullOrWhiteSpace(_success))
+{
+    <div class="notice notice-success">@_success</div>
+}
+
+<div class="card">
+    @if (_showForm)
+    {
+        <div class="card">
+            <h4>@(_editingId is null ? "Them Tai Khoan" : $"Cap nhat Tai Khoan #{_editingId}")</h4>
+
+            <EditForm Model="_form" OnValidSubmit="SaveAsync" style="display:grid;gap:10px;margin-top:10px;">
+                <DataAnnotationsValidator />
+
+                <div>
+                    <label>Ten Tai Khoan</label>
+                    <InputText @bind-Value="_form.TenTaiKhoan" />
+                    <ValidationMessage For="() => _form.TenTaiKhoan" />
+                </div>
+
+                <div>
+                    <label>Mat Khau</label>
+                    <InputText @bind-Value="_form.MatKhau" type="password" />
+                    <ValidationMessage For="() => _form.MatKhau" />
+                </div>
+
+                <div>
+                    <label>Vai Tro</label>
+                    <InputSelect @bind-Value="_form.VaiTro">
+                        <option value="">-- Chon Vai Tro --</option>
+                        <option value="Admin">Admin</option>
+                        <option value="User">User</option>
+                    </InputSelect>
+                    <ValidationMessage For="() => _form.VaiTro" />
+                </div>
+
+                <label style="display:flex;align-items:center;gap:6px;">
+                    Trạng thái hoạt động
+                    <InputCheckbox @bind-Value="_form.TrangThaiHoatDong" style=""/>  
+                </label>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseForm">Huy</button>
+                    <button type="submit" class="btn btn-primary" disabled="@_isSaving">@(_isSaving ? "Dang luu..." : "Luu")</button>
+                </div>
+            </EditForm>
+        </div>
+    }
+
+    <div class="card">
+        <h4>Danh sach Tai Khoan</h4>
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Ma</th>
+                        <th>Ten Tai Khoan</th>
+                        <th>Vai Tro</th>
+                        <th>Trang Thai</th>
+                        <th>Hanh dong</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _taiKhoanItems)
+                    {
+                        <tr>
+                            <td>@item.MaTaiKhoan</td>
+                            <td>@item.TenTaiKhoan</td>
+                            <td>@item.VaiTro</td>
+                            <td>@(item.TrangThaiHoatDong ? "Hoat dong" : "Tam dung")</td>
+                            <td>
+                                <div style="display:flex;gap:8px;">
+                                    <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(item)">Sua</button>
+                                    <button type="button" class="btn btn-danger" @onclick="() => DeleteAsync(item)">Xoa</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                    @if (!_taiKhoanItems.Any())
+                    {
+                        <tr>
+                            <td colspan="5">Khong co du lieu phu hop.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly TaiKhoanCreate _form = new();
+    private List<TaiKhoanItem> _taiKhoanItems = new();
+    private int? _editingId;
+    private bool _showForm;
+    private bool _isSaving;
+    private string? _error;
+    private string? _success;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _taiKhoanItems = (await ApiClient.GetTaiKhoanAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Loi khi tai du lieu: {ex.Message}";
+        }
+    }
+
+    private void ToggleCreateForm()
+    {
+        if (_showForm && _editingId is null)
+        {
+            CloseForm();
+            return;
+        }
+
+        ResetForm();
+        _showForm = true;
+        _error = null;
+        _success = null;
+    }
+
+    private void CloseForm()
+    {
+        ResetForm();
+        _showForm = false;
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _form.TenTaiKhoan = string.Empty;
+        _form.MatKhau = string.Empty;
+        _form.VaiTro = string.Empty;
+        _form.TrangThaiHoatDong = true;
+    }
+
+    private void StartEdit(TaiKhoanItem item)
+    {
+        _editingId = item.MaTaiKhoan;
+        _form.TenTaiKhoan = item.TenTaiKhoan;
+        _form.VaiTro = item.VaiTro;
+        _form.TrangThaiHoatDong = item.TrangThaiHoatDong;
+        _showForm = true;
+        _error = null;
+        _success = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        _isSaving = true;
+        _error = null;
+        _success = null;
+
+        var payload = new TaiKhoanCreate
+        {
+            TenTaiKhoan = _form.TenTaiKhoan.Trim(),
+            MatKhau = _form.MatKhau.Trim(),
+            VaiTro = _form.VaiTro,
+            TrangThaiHoatDong = _form.TrangThaiHoatDong
+        };
+
+        ApiOperationResult result;
+        if (_editingId is null)
+        {
+            result = await ApiClient.CreateTaiKhoanAsync(payload);
+        }
+        else
+        {
+            result = await ApiClient.UpdateTaiKhoanAsync(_editingId.Value, payload);
+        }
+
+        _isSaving = false;
+
+        if (!result.Success)
+        {
+            _error = result.ErrorMessage;
+            return;
+        }
+
+        _success = _editingId is null ? "Da tao Tai Khoan moi." : "Da cap nhat Tai Khoan.";
+        CloseForm();
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(TaiKhoanItem item)
+    {
+        if (!await Js.InvokeAsync<bool>("confirm", $"Ban co chac muon xoa Tai Khoan {item.TenTaiKhoan}?"))
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await ApiClient.DeleteTaiKhoanAsync(item.MaTaiKhoan);
+            if (!result.Success)
+            {
+                _error = result.ErrorMessage;
+                return;
+            }
+
+            _success = "Da xoa Tai Khoan thanh cong.";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Loi khi xoa Tai Khoan: {ex.Message}";
+        }
+    }
+}

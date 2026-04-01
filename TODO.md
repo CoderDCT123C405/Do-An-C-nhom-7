@@ -1,24 +1,14 @@
-# TODO - Cập nhật sơ đồ cấu trúc thư mục Do An C#
+# TODO - Progress Tracking for Task: Update PRD, organize docs, git push
 
-## Danh sách các bước cần hoàn thành:
+## Pending Steps (Approved Plan):
+- [ ] 1. Create /docs/ directory
+- [ ] 2. Move root .md docs to /docs/
+- [x] 3. Update docs/PRD.md with recent progress (new CMS pages)
+  - [x] 4. Update .gitignore for new ignores
+- [x] 5. Update docs/ThuMucCauTruc.md to reflect /docs/
+- [ ] 6. Git add all changes
+- [ ] 7. Git commit "docs: organize into /docs/, update PRD v1.4"
+- [ ] 8. Git push origin feature/tts
+- [ ] 9. Verify git status clean
 
-### 1. [✅] Tạo TODO.md
-   - Tạo file theo dõi tiến độ.
-
-### 2. [✅] Cập nhật ThuMucCauTruc.md
-   - Vẽ sơ đồ cây thư mục chi tiết (dùng Markdown tree).
-   - Thêm sơ đồ Mermaid high-level.
-   - Bảng tóm tắt từng file: Tên | Loại | Tóm tắt nội dung | Chức năng | File tạm?
-   - Liệt kê file tạm có thể xóa. **HOÀN THÀNH ✅**
-
-### 3. [ ] Cập nhật PRD.md (tùy chọn)
-   - Cập nhật phần tổng quan cấu trúc.
-
-### 4. [ ] Kiểm tra và hoàn tất
-   - Chạy `code ThuMucCauTruc.md`.
-   - Gợi ý cleanup file tạm.
-
-**Trạng thái hiện tại:** Bước 2 hoàn thành. Sẵn sàng bước 3-4.
-**Ngày cập nhật:** `date`
-
-
+**Notes:** Use /docs/ (English standard). Updates in Vietnamese. Git push uses existing remote, assume credentials cached.

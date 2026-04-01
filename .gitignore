@@ -8,3 +8,7 @@ obj/
 *.log
 *.db
 *.db3
+**/*.db-shm
+**/*.db-wal
+.dotnet-home/
+HeThongThuyetMinhDuLich.Cms/.keys/

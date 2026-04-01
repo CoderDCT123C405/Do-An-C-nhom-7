@@ -7,8 +7,8 @@
 
 <div class="page-title">
     <div>
-        <h3>Thong ke luot nghe</h3>
-        <p>So lieu tong hop theo diem va cach kich hoat.</p>
+        <h3>Thong ke va lich su phat</h3>
+        <p>So lieu tong hop va lich su phat thuyet minh.</p>
     </div>
     <button class="btn btn-secondary" @onclick="LoadAsync" disabled="@_isLoading">Tai lai</button>
 </div>
@@ -70,9 +70,41 @@
     </div>
 </div>
 
+<div class="card">
+    <h4>Lich su phat thuyet minh</h4>
+    <div class="table-wrap" style="margin-top:10px;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Ma Lich Su</th>
+                    <th>Ten Nguoi Dung</th>
+                    <th>Diem Tham Quan</th>
+                    <th>Noi Dung</th>
+                    <th>Thoi Gian Bat Dau</th>
+                    <th>Thoi Luong Da Nghe</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in _lichSuPhat)
+                {
+                    <tr>
+                        <td>@item.MaLichSuPhat</td>
+                        <td>@item.TenNguoiDung</td>
+                        <td>@item.TenDiem</td>
+                        <td>@item.TieuDeNoiDung</td>
+                        <td>@item.ThoiGianBatDau</td>
+                        <td>@item.ThoiLuongDaNghe giay</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
 @code {
     private List<ThongKeTheoDiemItem> _theoDiem = [];
     private List<ThongKeTheoKichHoatItem> _theoKichHoat = [];
+    private List<LichSuPhatItem> _lichSuPhat = [];
     private bool _isLoading;
     private string? _error;
 
@@ -96,10 +128,11 @@
         {
             _theoDiem = (await ApiClient.GetThongKeTheoDiemAsync()).ToList();
             _theoKichHoat = (await ApiClient.GetThongKeTheoKichHoatAsync()).ToList();
+            _lichSuPhat = (await ApiClient.GetLichSuPhatAsync()).ToList();
         }
-        catch
+        catch (Exception ex)
         {
-            _error = "Khong tai duoc thong ke. Vui long thu lai.";
+            _error = $"Loi khi tai du lieu: {ex.Message}";
         }
         finally
         {

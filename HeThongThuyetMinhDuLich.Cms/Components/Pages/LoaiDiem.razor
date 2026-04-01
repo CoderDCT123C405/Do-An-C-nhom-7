@@ -23,7 +23,7 @@
     <div class="notice notice-success">@_success</div>
 }
 
-<div class="@(_showForm ? "grid-2" : string.Empty)">
+<div class="@(_showForm ? "card" : string.Empty)">
     @if (_showForm)
     {
         <div class="card">
@@ -45,8 +45,8 @@
                 </div>
 
                 <label style="display:flex;gap:8px;align-items:center;">
-                    <InputCheckbox @bind-Value="_form.TrangThaiHoatDong" />
-                    Hoat dong
+                    Trạng thái hoạt động
+                    <InputCheckbox @bind-Value="_form.TrangThaiHoatDong" style=""/>
                 </label>
 
                 <div class="form-actions">
@@ -131,7 +131,15 @@
 
     private async Task LoadAsync()
     {
-        _items = (await ApiClient.GetLoaiDiemAsync()).OrderBy(x => x.TenLoai).ToList();
+        try
+        {
+            _items = (await ApiClient.GetLoaiDiemAsync()).OrderBy(x => x.TenLoai).ToList();
+        }
+        catch (Exception ex)
+        {
+            _error = "Không thể tải dữ liệu. Vui lòng thử lại sau.";
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
     }
 
     private void ResetForm()
@@ -179,34 +187,44 @@
         _error = null;
         _success = null;
 
-        var payload = new LoaiDiemThamQuanCreate
+        try
         {
-            TenLoai = _form.TenLoai.Trim(),
-            MoTa = _form.MoTa?.Trim(),
-            TrangThaiHoatDong = _form.TrangThaiHoatDong
-        };
+            var payload = new LoaiDiemThamQuanCreate
+            {
+                TenLoai = _form.TenLoai.Trim(),
+                MoTa = _form.MoTa?.Trim(),
+                TrangThaiHoatDong = _form.TrangThaiHoatDong
+            };
 
-        ApiOperationResult result;
-        if (_editingId is null)
-        {
-            result = await ApiClient.CreateLoaiDiemAsync(payload);
+            ApiOperationResult result;
+            if (_editingId is null)
+            {
+                result = await ApiClient.CreateLoaiDiemAsync(payload);
+            }
+            else
+            {
+                result = await ApiClient.UpdateLoaiDiemAsync(_editingId.Value, payload);
+            }
+
+            if (!result.Success)
+            {
+                _error = CleanError(result.ErrorMessage);
+                return;
+            }
+
+            _success = _editingId is null ? "Đã tạo loại điểm mới." : "Đã cập nhật loại điểm.";
+            CloseForm();
+            await LoadAsync();
         }
-        else
+        catch (Exception ex)
         {
-            result = await ApiClient.UpdateLoaiDiemAsync(_editingId.Value, payload);
+            _error = "Không thể lưu dữ liệu. Vui lòng thử lại sau.";
+            Console.WriteLine($"Error saving data: {ex.Message}");
         }
-
-        _isSaving = false;
-
-        if (!result.Success)
+        finally
         {
-            _error = CleanError(result.ErrorMessage);
-            return;
+            _isSaving = false;
         }
-
-        _success = _editingId is null ? "Da tao loai diem moi." : "Da cap nhat loai diem.";
-        CloseForm();
-        await LoadAsync();
     }
 
     private async Task DeleteAsync(LoaiDiemThamQuanItem item)
@@ -214,21 +232,29 @@
         _error = null;
         _success = null;
 
-        var confirmed = await Js.InvokeAsync<bool>("confirm", $"An loai diem '{item.TenLoai}'?");
-        if (!confirmed)
+        try
         {
-            return;
-        }
+            var confirmed = await Js.InvokeAsync<bool>("confirm", $"Ẩn loại điểm '{item.TenLoai}'?");
+            if (!confirmed)
+            {
+                return;
+            }
 
-        var result = await ApiClient.DeleteLoaiDiemAsync(item.MaLoai);
-        if (!result.Success)
+            var result = await ApiClient.DeleteLoaiDiemAsync(item.MaLoai);
+            if (!result.Success)
+            {
+                _error = CleanError(result.ErrorMessage);
+                return;
+            }
+
+            _success = $"Đã ẩn loại điểm '{item.TenLoai}'.";
+            await LoadAsync();
+        }
+        catch (Exception ex)
         {
-            _error = CleanError(result.ErrorMessage);
-            return;
+            _error = "Không thể xóa dữ liệu. Vui lòng thử lại sau.";
+            Console.WriteLine($"Error deleting data: {ex.Message}");
         }
-
-        _success = $"Da an loai diem '{item.TenLoai}'.";
-        await LoadAsync();
     }
 
     private static string CleanError(string? raw)
