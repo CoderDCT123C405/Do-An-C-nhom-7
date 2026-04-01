@@ -1,141 +1,85 @@
-﻿# SO DO CAU TRUC THU MUC - Do An C# (HeThongThuyetMinhDuLich)
+# SO DO CAU TRUC THU MUC - Do An C#
 
 - Ngay cap nhat: 01/04/2026
-- Pham vi: cap nhat theo hien trang code sau dot SQLite + edge-tts + tach nhanh CMS narration
+- Pham vi: hien trang source code trong workspace
 
-## 1. Tong quan thu muc goc
+## 1. Thu muc goc
 
 ```
 Do An C#/
+|-- docs/
+|-- HeThongThuyetMinhDuLich.Api/
+|-- HeThongThuyetMinhDuLich.Cms/
+|-- HeThongThuyetMinhDuLich.Mobile/
 |-- Do An C#.sln
-|-- PRD.md
-|-- YeuCau.md
-|-- TestCase.md
-|-- ThuMucCauTruc.md
-|-- KienTrucVaAPI.md
-|-- BaoCao_Admin.md
-|-- TODO.md
 |-- Run-DoAn.ps1
 |-- Clean-DoAn.ps1
 |-- fix-full.ps1
-|-- Run-Mobile.ps1
-|-- global.json
 |-- HeThongThuyetMinhDuLich.sql
-|-- HeThongThuyetMinhDuLich.Api/
-|-- HeThongThuyetMinhDuLich.Cms/
-`-- HeThongThuyetMinhDuLich.Mobile/
+|-- HeThongThuyetMinhDuLich.offline.db
+`-- *.log / *.db-shm / *.db-wal (runtime files)
 ```
 
-## 2. Chi tiet module API
+## 2. Thu muc docs
+
+Duong dan: `docs/`
+
+- `PRD.md`: tai lieu yeu cau san pham va cap nhat qua trinh trien khai
+- `YeuCau.md`: phan tich/thiet ke tong quan ban dau
+- `KienTrucVaAPI.md`: mo ta kien truc va danh sach API cot loi
+- `TestCase.md`: bo test case cho CMS admin
+- `ThuMucCauTruc.md`: tai lieu cau truc thu muc (file nay)
+- `TODO.md`: backlog cong viec tiep theo
+
+## 3. Module API
 
 Duong dan: `HeThongThuyetMinhDuLich.Api/`
 
-Cac nhom chinh:
-- `Controllers/`
-  - `AuthController.cs`
-  - `LoaiDiemThamQuanController.cs`
-  - `DiemThamQuanController.cs`
-  - `NoiDungThuyetMinhController.cs`
-  - `LichSuPhatController.cs`
-  - cac controller lien quan khac
-- `Models/`
-  - entity + DTO auth/du lieu
-- `Services/`
-  - `AdminSeedService.cs`
-  - `EdgeTtsService.cs`
-  - `EdgeTtsSettings.cs`
-  - service nghiep vu khac
-- `Data/`
-  - `DuLichDbContext.cs`
-- `Program.cs`
-  - cau hinh DI, auth, pipeline
-- `wwwroot/`
-  - `audio/tts/`
-    - noi luu file mp3 do `edge-tts` sinh ra
+Thanh phan chinh:
+- `Controllers/`: Auth, LoaiDiem, Diem, NoiDungThuyetMinh, MaQR, NgonNgu, NguoiDung, LichSuPhat, ...
+- `Services/`: `JwtTokenService`, `AdminSeedService`, `EdgeTtsService`, `EdgeTtsSettings`
+- `Data/`: `DuLichDbContext`
+- `Models/`: entity + DTO
+- `wwwroot/audio/tts/`: luu file mp3 generate boi edge-tts
 
-Cap nhat noi bat:
-- Tang validate input va conflict handling
-- Bo sung/hoan thien soft delete theo nghiep vu
-- Chuan hoa luong login admin
-- Bo sung luong sinh audio local bang `edge-tts`
-- Tu dong xoa file audio cu khi noi dung bi thay the hoac xoa
+Ghi chu:
+- Co endpoint generate audio thu cong:
+  - `POST /api/NoiDungThuyetMinh/{id}/generate-audio`
+  - `POST /api/NoiDungThuyetMinh/generate-audio`
+- Auto generate audio co the bat/tat qua `EdgeTts:AutoGenerateOnSave`
 
-## 3. Chi tiet module CMS
+## 4. Module CMS
 
 Duong dan: `HeThongThuyetMinhDuLich.Cms/`
 
-Cac nhom chinh:
-- `Components/`
-  - `App.razor`
-  - `Routes.razor`
-  - `Layout/`
-    - `MainLayout.razor`
-    - `MainLayout.razor.css`
-    - `NavMenu.razor`
-    - `NavMenu.razor.css`
-  - `Pages/`
-    - `Home.razor`
-    - `Login.razor`
-    - `LoaiDiem.razor`
-    - `DiemThamQuan.razor`
-    - `ThongKe.razor`
-    - `Counter.razor`
-- `Services/`
-  - `CmsApiClient.cs`
-- `CmsSession.cs`
-- `Models/`
-  - `CmsModels.cs`
-- `wwwroot/`
-  - `app.css`
-  - `favicon.png`
-- `Program.cs`
+Thanh phan chinh:
+- `Components/Layout/`: layout + nav menu
+- `Components/Pages/`: `Login`, `Home`, `LoaiDiem`, `DiemThamQuan`, `NoiDungThuyetMinh`, `ThongKe`, ...
+- `Services/`: `CmsApiClient`, `ApiSettings`, `CmsSession`
+- `Models/`: model cho giao dien quan tri
+- `wwwroot/`: static files (`app.css`, `favicon.png`)
 
-Cap nhat noi bat:
-- Sua static path tuyet doi de tranh 404
-- Co `base href` va script Blazor dung chuan
-- On dinh event click cho cac nut thao tac
-- Nang cap giao dien admin + form an/hiem theo nhu cau
-- Nhanh `feature/tts` dang duoc dung de bo sung them man hinh `NoiDungThuyetMinh` va thao tac `Tao lai audio`
-
-## 4. Chi tiet module Mobile
+## 5. Module Mobile
 
 Duong dan: `HeThongThuyetMinhDuLich.Mobile/`
 
-Cac nhom chinh:
-- `Platforms/` (Android/iOS/Windows/MacCatalyst)
-- `Resources/` (icon, splash, style, image)
-- `Services/` (sync/cache/api)
-- `Models/`
-- `MauiProgram.cs`
+Thanh phan chinh:
+- `Platforms/`: Android, iOS, Windows, MacCatalyst
+- `Services/`: `MobileApiClient`, `MobileCacheStore`, `SyncService`
+- `Models/`: model du lieu app
+- `Resources/`: icon, splash, style, image
+- `AppShell.xaml`, `MainPage.xaml`, `MauiProgram.cs`
 
-Vai tro:
-- Ung dung client cho nguoi dung cuoi
-- Ho tro offline-first voi SQLite cache
+## 6. Script van hanh
 
-## 5. Tai lieu va script lien quan van hanh
+- `Run-DoAn.ps1`: build + run API/CMS, tu dong xu ly port 5000/5256
+- `Clean-DoAn.ps1`: don dep artifact build va log
+- `fix-full.ps1`: script xu ly loi moi truong runtime/build
 
-Tai lieu:
-- `PRD.md`: dinh nghia yeu cau va lich su nang cap
-- `TestCase.md`: bo testcase admin
-- `BaoCao_Admin.md`: tong hop ket qua trien khai admin
-- `TODO.md`: backlog/cong viec tiep theo
+## 7. Ghi chu quan ly source
 
-Script:
-- `Run-DoAn.ps1`: chay API + CMS
-- `Clean-DoAn.ps1`: don dep build artifact
-- `fix-full.ps1`: script ho tro sua loi moi truong
-- `Run-Mobile.ps1`: chay MAUI theo huong uu tien emulator Android hoac fallback Windows
-
-## 6. Ghi chu quan ly source
-
-Nen bo qua khi commit:
-- thu muc `bin/`, `obj/`
-- file lock/runtime: `*.db-shm`, `*.db-wal`
-- log tam: `*.log`
-- key tam runtime cua CMS: `.keys/`
-- file backup SQLite: `*.bak`
-- audio generate trong luong dev neu khong muon day sample len remote
-
-Muc tieu:
-- Nhanh gon repo
-- Tranh day file runtime khong can thiet len Git
+Nhom file runtime nen bo qua khi commit:
+- `bin/`, `obj/`
+- `*.log`
+- `*.db-shm`, `*.db-wal`
+- file output tam hoac lock file trong qua trinh build/run
