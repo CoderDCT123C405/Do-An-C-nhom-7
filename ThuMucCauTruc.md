@@ -1,7 +1,7 @@
 ﻿# SO DO CAU TRUC THU MUC - Do An C# (HeThongThuyetMinhDuLich)
 
-- Ngay cap nhat: 26/03/2026
-- Pham vi: cap nhat theo hien trang code sau dot nang cap API + CMS admin
+- Ngay cap nhat: 01/04/2026
+- Pham vi: cap nhat theo hien trang code sau dot SQLite + edge-tts + tach nhanh CMS narration
 
 ## 1. Tong quan thu muc goc
 
@@ -18,6 +18,8 @@ Do An C#/
 |-- Run-DoAn.ps1
 |-- Clean-DoAn.ps1
 |-- fix-full.ps1
+|-- Run-Mobile.ps1
+|-- global.json
 |-- HeThongThuyetMinhDuLich.sql
 |-- HeThongThuyetMinhDuLich.Api/
 |-- HeThongThuyetMinhDuLich.Cms/
@@ -33,22 +35,30 @@ Cac nhom chinh:
   - `AuthController.cs`
   - `LoaiDiemThamQuanController.cs`
   - `DiemThamQuanController.cs`
+  - `NoiDungThuyetMinhController.cs`
   - `LichSuPhatController.cs`
   - cac controller lien quan khac
 - `Models/`
   - entity + DTO auth/du lieu
 - `Services/`
   - `AdminSeedService.cs`
+  - `EdgeTtsService.cs`
+  - `EdgeTtsSettings.cs`
   - service nghiep vu khac
 - `Data/`
   - `DuLichDbContext.cs`
 - `Program.cs`
   - cau hinh DI, auth, pipeline
+- `wwwroot/`
+  - `audio/tts/`
+    - noi luu file mp3 do `edge-tts` sinh ra
 
 Cap nhat noi bat:
 - Tang validate input va conflict handling
 - Bo sung/hoan thien soft delete theo nghiep vu
 - Chuan hoa luong login admin
+- Bo sung luong sinh audio local bang `edge-tts`
+- Tu dong xoa file audio cu khi noi dung bi thay the hoac xoa
 
 ## 3. Chi tiet module CMS
 
@@ -72,7 +82,7 @@ Cac nhom chinh:
     - `Counter.razor`
 - `Services/`
   - `CmsApiClient.cs`
-  - `CmsSession.cs`
+- `CmsSession.cs`
 - `Models/`
   - `CmsModels.cs`
 - `wwwroot/`
@@ -85,6 +95,7 @@ Cap nhat noi bat:
 - Co `base href` va script Blazor dung chuan
 - On dinh event click cho cac nut thao tac
 - Nang cap giao dien admin + form an/hiem theo nhu cau
+- Nhanh `feature/tts` dang duoc dung de bo sung them man hinh `NoiDungThuyetMinh` va thao tac `Tao lai audio`
 
 ## 4. Chi tiet module Mobile
 
@@ -113,6 +124,7 @@ Script:
 - `Run-DoAn.ps1`: chay API + CMS
 - `Clean-DoAn.ps1`: don dep build artifact
 - `fix-full.ps1`: script ho tro sua loi moi truong
+- `Run-Mobile.ps1`: chay MAUI theo huong uu tien emulator Android hoac fallback Windows
 
 ## 6. Ghi chu quan ly source
 
@@ -121,6 +133,8 @@ Nen bo qua khi commit:
 - file lock/runtime: `*.db-shm`, `*.db-wal`
 - log tam: `*.log`
 - key tam runtime cua CMS: `.keys/`
+- file backup SQLite: `*.bak`
+- audio generate trong luong dev neu khong muon day sample len remote
 
 Muc tieu:
 - Nhanh gon repo

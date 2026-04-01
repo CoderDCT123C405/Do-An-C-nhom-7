@@ -5,9 +5,9 @@
 ---
 
 ## 0. Thong tin chung
-- Ngay cap nhat: 27/03/2026
-- Trang thai: MVP + Admin CMS + huong dan van hanh da chuan hoa
-- Phien ban: v1.2
+- Ngay cap nhat: 01/04/2026
+- Trang thai: MVP + Admin CMS + offline SQLite + edge-tts cho audio tu dong
+- Phien ban: v1.3
 
 ---
 
@@ -19,6 +19,7 @@ He thong gom 3 module:
 
 Muc tieu:
 - Quan tri diem tham quan/loai diem nhanh, an toan du lieu
+- Ho tro sinh audio thuyet minh tu dong bang `edge-tts` de giam phu thuoc TTS tren tung may
 - API ro rang, co validate, de tich hop
 - UI admin hien dai, thao tac muot, dung duoc trong moi truong that
 
@@ -27,6 +28,7 @@ Muc tieu:
 ## 2. Kien truc tong the
 - SQL Server <-> ASP.NET Core API <-> CMS / Mobile
 - Mobile ho tro cache SQLite de doc offline
+- API co the sinh file audio vao `wwwroot/audio/tts` va mobile uu tien phat audio co san
 - CMS su dung server-side interactive rendering
 
 Ky thuat chinh:
@@ -42,6 +44,11 @@ Ky thuat chinh:
 - Auth dang nhap (admin)
 - CRUD LoaiDiemThamQuan
 - CRUD DiemThamQuan
+- CRUD NoiDungThuyetMinh
+- Sinh audio tu dong bang `edge-tts` khi tao/sua noi dung neu bat `EdgeTts:AutoGenerateOnSave`
+- Endpoint tao lai audio thu cong:
+  - `POST /api/NoiDungThuyetMinh/{id}/generate-audio`
+  - `POST /api/NoiDungThuyetMinh/generate-audio`
 - Endpoint lich su, thong ke co ban
 - Validate input + xu ly conflict
 
@@ -50,12 +57,14 @@ Ky thuat chinh:
 - Dashboard tong quan
 - Quan ly Loai diem (them, sua, tim kiem, an)
 - Quan ly Diem tham quan (them, sua, tim kiem, loc, an)
+- CMS narration/TTS dang duoc tach thanh nhanh rieng `feature/tts` de bo sung man hinh quan ly `NoiDungThuyetMinh`
 - Giao dien menu + layout admin thong nhat
 
 ### 3.3 Mobile
 - Hien thi diem
 - Tim diem gan
 - Dong bo offline-first
+- Uu tien phat `DuongDanAmThanh` neu API/CMS da sinh file audio san
 
 ---
 
@@ -64,6 +73,7 @@ Ky thuat chinh:
 - Event click phai hoat dong on dinh tren Blazor interactive
 - API tra ve ma loi ro rang cho truong hop conflict/du lieu khong hop le
 - Uu tien an toan du lieu: soft delete thay vi xoa cung
+- Audio duoc quan ly theo file trong `wwwroot/audio/tts`, co xoa file cu khi tao lai audio moi
 
 ---
 
@@ -101,17 +111,27 @@ Ky thuat chinh:
 - Tach ro van de login va van de static resource 404
 - Chuan hoa script restart API/CMS de giam xung dot process
 
+### Dot 5 - SQLite demo + edge-tts
+- Chuan hoa lai file SQLite offline va du lieu seed tieng Viet co dau
+- Bo sung `Run-Mobile.ps1` de chay MAUI theo luong nhe hon tren may Windows
+- Thay huong OpenAI TTS bang `edge-tts` de tranh chi phi API va giu code gon
+- API tu dong sinh lai audio khi tao/sua `NoiDungThuyetMinh` neu `EdgeTts:AutoGenerateOnSave = true`
+- File audio sinh ra duoc luu trong `HeThongThuyetMinhDuLich.Api/wwwroot/audio/tts/`
+- Mobile va API da test thanh cong voi duong dan audio mau `/audio/tts/noidung-1.mp3`
+
 ---
 
 ## 6. Nguyen tac an toan du lieu
 - Uu tien soft delete cho du lieu danh muc va diem
 - Khong cho thao tac an/xoa neu vi pham rang buoc nghiep vu
 - Ghi nhan va tra thong bao loi ro rang cho nguoi dung
+- Chi xoa file audio do he thong quan ly khi thay the hoac xoa noi dung
 
 ---
 
 ## 7. Tieu chi chap nhan (Acceptance)
 - Admin thao tac duoc them/sua/tim/loc/an tren LoaiDiem va Diem
+- Admin/API tao va cap nhat duoc `NoiDungThuyetMinh`, co the sinh audio va tao lai audio
 - Cac nut tren CMS bat su kien click on dinh
 - Khong con loi 404 do static path sai cau hinh
 - API tra ket qua dung cho testcase chinh va testcase bien
@@ -124,13 +144,15 @@ Ky thuat chinh:
 - Bo sung role/permission chi tiet hon
 - Bo sung test tu dong (integration + UI smoke test)
 - Hoan thien quy trinh CI/CD
+- Hoan thien trang CMS cho `NoiDungThuyetMinh` va nut `Tao lai audio`
 
 ---
 
 ## 9. Van hanh va chay he thong (chuan)
 ### 9.1 Chay API + CMS bang 1 lenh
 - Tu thu muc goc solution:
-  - `powershell -ExecutionPolicy Bypass -File .\Run-DoAn.ps1 -Mode offline`
+  - `powershell -ExecutionPolicy Bypass -File .\Run-DoAn.ps1 -Mode online`
+  - Neu can reset SQLite demo: `powershell -ExecutionPolicy Bypass -File .\Run-DoAn.ps1 -Mode offline -ResetOfflineDb`
 - Muc tieu:
   - API: `http://localhost:5000`
   - CMS: tu dong gan cong trong dai 5256+
@@ -146,6 +168,15 @@ Ky thuat chinh:
   - `powershell -ExecutionPolicy Bypass -File .\Run-Mobile.ps1`
 - Co dien thoai that:
   - `powershell -ExecutionPolicy Bypass -File .\Run-Mobile.ps1 -SkipEmulator`
+
+### 9.4 Chay edge-tts local
+- Cai Python 3.12 tren may dev
+- Cai `edge-tts`:
+  - `python -m pip install edge-tts`
+- Cau hinh `EdgeTts:Executable` trong `HeThongThuyetMinhDuLich.Api/appsettings.Development.json`
+- Khi can generate audio thu cong:
+  - dang nhap admin lay JWT
+  - goi `POST /api/NoiDungThuyetMinh/{id}/generate-audio`
 
 ---
 
@@ -173,3 +204,9 @@ Ky thuat chinh:
   - tat emulator/adb
   - clean lai dung target windows neu chi can test desktop
   - neu test android, clean obj/bin roi build lai sau khi da giai phong process
+
+### 10.5 `edge-tts: error: argument --rate: expected one argument`
+- Nguyen nhan: truyen tham so theo dang tach roi, vi du `--rate -8%`
+- Cach xu ly:
+  - dung dang `--rate=-8%`
+  - tuong tu voi `--pitch=-8Hz`, `--volume=+0%`

@@ -86,7 +86,7 @@ public class NoiDungThuyetMinhController(
 
         dbContext.NoiDungThuyetMinhs.Add(entity);
         await dbContext.SaveChangesAsync();
-        await TryAutoGenerateAudioAsync(entity);
+        await SyncAudioAfterSaveAsync(entity, previousText: null, previousPath: null);
 
         return CreatedAtAction(nameof(GetByDiemAndNgonNgu), new { maDiem = entity.MaDiem, maNgonNgu = entity.MaNgonNgu }, entity);
     }
@@ -101,6 +101,9 @@ public class NoiDungThuyetMinhController(
             return NotFound();
         }
 
+        var previousText = item.NoiDungVanBan;
+        var previousPath = item.DuongDanAmThanh;
+
         item.MaNgonNgu = model.MaNgonNgu;
         item.MaDiem = model.MaDiem;
         item.TieuDe = model.TieuDe;
@@ -114,7 +117,7 @@ public class NoiDungThuyetMinhController(
         item.NgayCapNhat = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
-        await TryAutoGenerateAudioAsync(item);
+        await SyncAudioAfterSaveAsync(item, previousText, previousPath);
         return NoContent();
     }
 
@@ -208,23 +211,52 @@ public class NoiDungThuyetMinhController(
         return NoContent();
     }
 
-    private async Task TryAutoGenerateAudioAsync(NoiDungThuyetMinh item)
+    private async Task SyncAudioAfterSaveAsync(NoiDungThuyetMinh item, string? previousText, string? previousPath)
     {
+        var currentPath = item.DuongDanAmThanh;
+        var textChanged = !string.Equals(previousText, item.NoiDungVanBan, StringComparison.Ordinal);
+
         if (!edgeTtsService.IsConfigured ||
-            !string.IsNullOrWhiteSpace(item.DuongDanAmThanh) ||
             string.IsNullOrWhiteSpace(item.NoiDungVanBan))
         {
+            if (!string.Equals(previousPath, currentPath, StringComparison.OrdinalIgnoreCase))
+            {
+                edgeTtsService.DeleteManagedAudio(previousPath);
+            }
             return;
         }
 
         var settings = HttpContext?.RequestServices.GetService<IConfiguration>();
         if (!bool.TryParse(settings?["EdgeTts:AutoGenerateOnSave"], out var autoGenerate) || !autoGenerate)
         {
+            if (!string.Equals(previousPath, currentPath, StringComparison.OrdinalIgnoreCase))
+            {
+                edgeTtsService.DeleteManagedAudio(previousPath);
+            }
+            return;
+        }
+
+        var shouldGenerate =
+            string.IsNullOrWhiteSpace(currentPath) ||
+            previousText is null ||
+            textChanged;
+
+        if (!shouldGenerate)
+        {
+            if (!string.Equals(previousPath, currentPath, StringComparison.OrdinalIgnoreCase))
+            {
+                edgeTtsService.DeleteManagedAudio(previousPath);
+            }
             return;
         }
 
         item.DuongDanAmThanh = await edgeTtsService.GenerateAudioAsync(item);
         item.NgayCapNhat = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
+
+        if (!string.Equals(previousPath, item.DuongDanAmThanh, StringComparison.OrdinalIgnoreCase))
+        {
+            edgeTtsService.DeleteManagedAudio(previousPath);
+        }
     }
 }

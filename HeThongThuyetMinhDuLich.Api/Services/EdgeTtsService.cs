@@ -42,12 +42,9 @@ public class EdgeTtsService(
         startInfo.ArgumentList.Add(item.NoiDungVanBan);
         startInfo.ArgumentList.Add("--voice");
         startInfo.ArgumentList.Add(_settings.Voice);
-        startInfo.ArgumentList.Add("--rate");
-        startInfo.ArgumentList.Add(_settings.Rate);
-        startInfo.ArgumentList.Add("--volume");
-        startInfo.ArgumentList.Add(_settings.Volume);
-        startInfo.ArgumentList.Add("--pitch");
-        startInfo.ArgumentList.Add(_settings.Pitch);
+        startInfo.ArgumentList.Add($"--rate={_settings.Rate}");
+        startInfo.ArgumentList.Add($"--volume={_settings.Volume}");
+        startInfo.ArgumentList.Add($"--pitch={_settings.Pitch}");
         startInfo.ArgumentList.Add("--write-media");
         startInfo.ArgumentList.Add(fullPath);
 
