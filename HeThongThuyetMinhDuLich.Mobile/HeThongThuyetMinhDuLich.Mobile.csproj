@@ -78,6 +78,10 @@
 	<ItemGroup>
 		<MauiXaml Include="App.xaml" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Removed redundant AndroidResource Include="Resources\**" -->
+	</ItemGroup>
     <!-- Clear read-only attributes and remove the intermediate android directory before build.
 		 This avoids "Access to the path ... is denied" errors when the Android asset subfolders
 		 (e.g. language resource folders) are left with protected attributes. -->
@@ -99,4 +103,14 @@
 	  <Exec Command='if exist "$(IntermediateOutputPath)res" icacls "$(IntermediateOutputPath)res" /grant Everyone:F /t /c' ContinueOnError="true" />
 	  <Exec Command='if exist "$(IntermediateOutputPath)res" rd /s /q "$(IntermediateOutputPath)res"' ContinueOnError="true" />
 	</Target>
+	<Target Name="EnsureResDirectory" BeforeTargets="PrepareForBuild">
+  <MakeDir Directories="$(IntermediateOutputPath)res" />
+</Target>
+	<Target Name="EnsureColorsXml" BeforeTargets="PrepareForBuild">
+  <MakeDir Directories="$(IntermediateOutputPath)res\values" />
+  <Copy SourceFiles="Resources\values\colors.xml" DestinationFolder="$(IntermediateOutputPath)res\values" />
+</Target>
+	<ItemGroup>
+		<AndroidResource Include="Resources\values\colors.xml" LogicalName="values/colors.xml" />
+	</ItemGroup>
 </Project>

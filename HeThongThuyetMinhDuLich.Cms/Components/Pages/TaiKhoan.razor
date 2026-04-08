@@ -4,6 +4,8 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime Js
 
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
 <PageTitle>Quan ly Tai Khoan</PageTitle>
 
 <div class="page-title">
@@ -29,7 +31,7 @@
         <div class="card">
             <h4>@(_editingId is null ? "Them Tai Khoan" : $"Cap nhat Tai Khoan #{_editingId}")</h4>
 
-            <EditForm Model="_form" OnValidSubmit="SaveAsync" style="display:grid;gap:10px;margin-top:10px;">
+            <EditForm Model="_form" OnValidSubmit="SaveAsync" FormName="tai-khoan-form" style="display:grid;gap:10px;margin-top:10px;">
                 <DataAnnotationsValidator />
 
                 <div>

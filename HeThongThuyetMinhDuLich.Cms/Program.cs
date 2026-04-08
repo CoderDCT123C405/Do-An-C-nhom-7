@@ -1,6 +1,7 @@
-using HeThongThuyetMinhDuLich.Cms.Components;
 using HeThongThuyetMinhDuLich.Cms.Services;
+using HeThongThuyetMinhDuLich.Cms.Components;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Components.Web;
 using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -41,10 +42,10 @@ if (!app.Environment.IsDevelopment())
 }
 app.UseStaticFiles();
 app.UseAntiforgery();
-
-app.MapGet("/health", () => Results.Ok("OK")); // 🔥 thêm dòng này
+app.MapStaticAssets();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+

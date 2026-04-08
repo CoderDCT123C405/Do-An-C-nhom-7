@@ -1,52 +1,54 @@
-﻿@page "/login"
+@page "/login"
+@using HeThongThuyetMinhDuLich.Cms.Models
+@using Microsoft.AspNetCore.Components.Forms
+
 @inject CmsApiClient ApiClient
 @inject CmsSession Session
 @inject NavigationManager Navigation
 
-<PageTitle>Dang nhap Admin</PageTitle>
+<PageTitle>Dang nhap</PageTitle>
 
-<div class="card glass" style="max-width:460px;margin:8vh auto;animation:rise-in .4s ease;">
-    <div class="page-title" style="margin-bottom:10px;">
-        <div>
-            <h3>Dang nhap Admin CMS</h3>
-            <p>Quan tri noi dung thuyet minh du lich an toan va nhanh.</p>
+<div style="min-height:calc(100vh - 56px);display:grid;place-items:center;">
+    <div class="card" style="width:min(460px, 96vw);display:grid;gap:14px;">
+        <div class="page-title" style="margin-bottom:0;">
+            <div>
+                <h3>Dang nhap he thong</h3>
+                <p>Nhap thong tin tai khoan quan tri de tiep tuc.</p>
+            </div>
         </div>
-    </div>
 
-    @if (!string.IsNullOrWhiteSpace(_error))
-    {
-        <div class="notice notice-error">@_error</div>
-    }
+        @if (!string.IsNullOrWhiteSpace(_loginError))
+        {
+            <div class="notice notice-error">@_loginError</div>
+        }
 
-    <EditForm Model="_model" OnValidSubmit="HandleLoginAsync">
-        <DataAnnotationsValidator />
+        <EditForm Model="_loginModel" OnValidSubmit="HandleLoginAsync" FormName="login-form" style="display:grid;gap:10px;">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
 
-        <div style="display:grid;gap:10px;">
             <div>
                 <label for="username">Ten dang nhap</label>
-                <InputText id="username" @bind-Value="_model.TenDangNhap" />
-                <ValidationMessage For="() => _model.TenDangNhap" />
+                <InputText id="username" @bind-Value="_loginModel.TenDangNhap" autocomplete="username" />
             </div>
 
             <div>
                 <label for="password">Mat khau</label>
-                <InputText id="password" type="password" @bind-Value="_model.MatKhau" />
-                <ValidationMessage For="() => _model.MatKhau" />
+                <InputText id="password" @bind-Value="_loginModel.MatKhau" type="password" autocomplete="current-password" />
             </div>
-        </div>
 
-        <div class="form-actions" style="margin-top:16px;justify-content:stretch;">
-            <button type="submit" class="btn btn-primary" style="width:100%;" disabled="@_isLoading">
-                @(_isLoading ? "Dang xu ly..." : "Dang nhap")
-            </button>
-        </div>
-    </EditForm>
+            <div class="form-actions" style="margin-top:6px;">
+                <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+                    @(_isSubmitting ? "Dang dang nhap..." : "Dang nhap")
+                </button>
+            </div>
+        </EditForm>
+    </div>
 </div>
 
 @code {
-    private readonly AdminLoginRequest _model = new();
-    private bool _isLoading;
-    private string? _error;
+    private readonly AdminLoginRequest _loginModel = new();
+    private string? _loginError;
+    private bool _isSubmitting;
 
     protected override void OnInitialized()
     {
@@ -58,24 +60,30 @@
 
     private async Task HandleLoginAsync()
     {
-        _error = null;
-        _isLoading = true;
+        _isSubmitting = true;
+        _loginError = null;
 
-        var response = await ApiClient.LoginAsync(new AdminLoginRequest
+        try
         {
-            TenDangNhap = _model.TenDangNhap.Trim(),
-            MatKhau = _model.MatKhau.Trim()
-        });
+            var result = await ApiClient.LoginAsync(_loginModel);
+            if (result is null || string.IsNullOrWhiteSpace(result.Token))
+            {
+                _loginError = "Dang nhap that bai. Vui long kiem tra lai ten dang nhap/mat khau.";
+                return;
+            }
 
-        _isLoading = false;
-
-        if (response is null || string.IsNullOrWhiteSpace(response.Token))
-        {
-            _error = "Dang nhap that bai. Vui long kiem tra tai khoan hoac ket noi API.";
-            return;
+            var expiresAt = result.HetHanLuc == default ? (DateTime?)null : result.HetHanLuc;
+            Session.SignIn(result.TenDangNhap, result.Token, result.HoTen, result.VaiTro, expiresAt);
+            Navigation.NavigateTo("/");
         }
-
-        Session.SignIn(response.TenDangNhap, response.Token, response.HoTen, response.VaiTro, response.HetHanLuc);
-        Navigation.NavigateTo("/");
+        catch
+        {
+            _loginError = "Khong the ket noi den may chu dang nhap.";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
     }
 }
+

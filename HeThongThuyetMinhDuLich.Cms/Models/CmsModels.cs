@@ -77,7 +77,7 @@ public class DiemThamQuanCreate
     [Range(-180, 180, ErrorMessage = "Kinh do khong hop le.")]
     public decimal KinhDo { get; set; }
 
-    [Range(typeof(decimal), "0.01", "1000000", ErrorMessage = "Ban kinh kich hoat phai > 0.")]
+    [Range(0.01, 1000000, ErrorMessage = "Ban kinh kich hoat phai > 0.")]
     public decimal BanKinhKichHoat { get; set; } = 150;
 
     [StringLength(255)]
@@ -160,9 +160,6 @@ public class NoiDungThuyetMinhCreate
 
     public bool ChoPhepTTS { get; set; } = true;
 
-    [Range(0, int.MaxValue, ErrorMessage = "Thoi luong khong hop le.")]
-    public int? ThoiLuongGiay { get; set; }
-
     public bool TrangThaiHoatDong { get; set; } = true;
 }
 
@@ -199,7 +196,7 @@ public class MaQRCreate
     public int MaDiem { get; set; }
 
     [Required(ErrorMessage = "Gia tri QR la bat buoc.")]
-    [StringLength(50)]
+    [StringLength(255)]
     public string GiaTriQR { get; set; } = string.Empty;
 }
 

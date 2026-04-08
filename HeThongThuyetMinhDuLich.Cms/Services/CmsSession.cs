@@ -2,7 +2,7 @@
 
 public class CmsSession
 {
-    private const bool BypassLogin = true;
+    private const bool BypassLogin = false; // FIX Ở ĐÂY
 
     public string? AccessToken { get; private set; }
     public string? TenDangNhap { get; private set; }
@@ -12,8 +12,8 @@ public class CmsSession
 
     public bool IsAuthenticated =>
         BypassLogin
-        || !string.IsNullOrWhiteSpace(AccessToken)
-        && (!HetHanLuc.HasValue || HetHanLuc.Value > DateTime.UtcNow);
+        || (!string.IsNullOrWhiteSpace(AccessToken)
+        && (!HetHanLuc.HasValue || HetHanLuc.Value > DateTime.UtcNow));
 
     public void SignIn(string tenDangNhap, string accessToken, string? hoTen, string? vaiTro, DateTime? hetHanLuc)
     {

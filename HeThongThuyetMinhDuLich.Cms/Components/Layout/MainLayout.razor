@@ -1,6 +1,7 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @inject NavigationManager Navigation
 @inject CmsSession Session
+@using Microsoft.AspNetCore.Components
 
 <div class="shell @(IsLoginPage ? "shell-login" : string.Empty)">
     @if (!IsLoginPage)
@@ -50,6 +51,7 @@
     private void Logout()
     {
         Session.SignOut();
-        Navigation.NavigateTo("/login", true);
+        Navigation.NavigateTo("/login");
     }
 }
+

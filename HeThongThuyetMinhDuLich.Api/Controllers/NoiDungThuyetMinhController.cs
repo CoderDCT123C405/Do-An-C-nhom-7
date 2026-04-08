@@ -12,7 +12,8 @@ namespace HeThongThuyetMinhDuLich.Api.Controllers;
 [Route("api/[controller]")]
 public class NoiDungThuyetMinhController(
     DuLichDbContext dbContext,
-    EdgeTtsService edgeTtsService) : ControllerBase
+    EdgeTtsService edgeTtsService,
+    ILogger<NoiDungThuyetMinhController> logger) : ControllerBase
 {
     [HttpGet("diem/{maDiem:int}")]
     public async Task<ActionResult<IEnumerable<object>>> GetByDiem(int maDiem)
@@ -137,7 +138,9 @@ public class NoiDungThuyetMinhController(
         }
 
         var oldPath = item.DuongDanAmThanh;
-        item.DuongDanAmThanh = await edgeTtsService.GenerateAudioAsync(item, cancellationToken);
+        var (newPath, duration) = await edgeTtsService.GenerateAudioAsync(item, cancellationToken);
+        item.DuongDanAmThanh = newPath;
+        item.ThoiLuongGiay = duration;
         item.NgayCapNhat = DateTime.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -177,7 +180,9 @@ public class NoiDungThuyetMinhController(
             }
 
             var oldPath = item.DuongDanAmThanh;
-            item.DuongDanAmThanh = await edgeTtsService.GenerateAudioAsync(item, cancellationToken);
+            var (newPath, duration) = await edgeTtsService.GenerateAudioAsync(item, cancellationToken);
+            item.DuongDanAmThanh = newPath;
+            item.ThoiLuongGiay = duration;
             item.NgayCapNhat = DateTime.UtcNow;
             generated++;
 
@@ -215,10 +220,18 @@ public class NoiDungThuyetMinhController(
     {
         var currentPath = item.DuongDanAmThanh;
         var textChanged = !string.Equals(previousText, item.NoiDungVanBan, StringComparison.Ordinal);
+        var isUpdate = previousText is not null || previousPath is not null;
 
         if (!edgeTtsService.IsConfigured ||
             string.IsNullOrWhiteSpace(item.NoiDungVanBan))
         {
+            if (isUpdate)
+            {
+                edgeTtsService.DeleteManagedAudio(previousPath);
+                item.DuongDanAmThanh = null;
+                item.ThoiLuongGiay = null;
+            }
+
             if (!string.Equals(previousPath, currentPath, StringComparison.OrdinalIgnoreCase))
             {
                 edgeTtsService.DeleteManagedAudio(previousPath);
@@ -237,6 +250,7 @@ public class NoiDungThuyetMinhController(
         }
 
         var shouldGenerate =
+            isUpdate ||
             string.IsNullOrWhiteSpace(currentPath) ||
             previousText is null ||
             textChanged;
@@ -250,13 +264,34 @@ public class NoiDungThuyetMinhController(
             return;
         }
 
-        item.DuongDanAmThanh = await edgeTtsService.GenerateAudioAsync(item);
-        item.NgayCapNhat = DateTime.UtcNow;
-        await dbContext.SaveChangesAsync();
-
-        if (!string.Equals(previousPath, item.DuongDanAmThanh, StringComparison.OrdinalIgnoreCase))
+        // Update flow: remove previous managed file first, then generate a fresh one.
+        if (isUpdate)
         {
             edgeTtsService.DeleteManagedAudio(previousPath);
+            item.DuongDanAmThanh = null;
+            item.ThoiLuongGiay = null;
+        }
+
+        try
+        {
+            var (newPath, duration) = await edgeTtsService.GenerateAudioAsync(item);
+            item.DuongDanAmThanh = newPath;
+            item.ThoiLuongGiay = duration;
+            item.NgayCapNhat = DateTime.UtcNow;
+            await dbContext.SaveChangesAsync();
+
+            if (!string.Equals(previousPath, item.DuongDanAmThanh, StringComparison.OrdinalIgnoreCase))
+            {
+                edgeTtsService.DeleteManagedAudio(previousPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Khong tao duoc audio tu dong cho noi dung {MaNoiDung}.", item.MaNoiDung);
+            item.DuongDanAmThanh = null;
+            item.ThoiLuongGiay = null;
+            item.NgayCapNhat = DateTime.UtcNow;
+            await dbContext.SaveChangesAsync();
         }
     }
 }

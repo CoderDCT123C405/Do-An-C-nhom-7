@@ -2,7 +2,7 @@
 @inject CmsApiClient ApiClient
 @inject CmsSession Session
 @inject NavigationManager Navigation
-@inject IJSRuntime Js
+@inject IConfiguration Config
 
 <PageTitle>Noi dung thuyet minh</PageTitle>
 
@@ -11,7 +11,6 @@
         <h3>Quan ly noi dung thuyet minh</h3>
         <p>Them, sua noi dung va tao lai audio edge-tts truc tiep tu CMS.</p>
     </div>
-    <button class="btn btn-secondary" @onclick="ToggleCreateForm">@(_showForm ? "Dong form" : "Them noi dung")</button>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(_error))
@@ -28,6 +27,7 @@
         <div>
             <label>Diem tham quan</label>
             <select value="@_selectedMaDiem" @onchange="OnDiemChanged">
+                <option value="0">Tat ca diem</option>
                 @foreach (var diem in _diemItems)
                 {
                     <option value="@diem.MaDiem">@diem.TenDiem (@diem.MaDinhDanh)</option>
@@ -36,8 +36,11 @@
         </div>
         <div style="display:flex;gap:8px;align-items:flex-end;">
             <button class="btn btn-secondary" @onclick="LoadNoiDungAsync" disabled="@_isLoading">Tai lai</button>
-            <button class="btn btn-primary" @onclick="GenerateBatchAudioAsync" disabled="@_isBusy">Tao audio cho nhung muc chua co</button>
         </div>
+    </div>
+    <div>
+        <label>Tim kiem noi dung</label>
+        <input placeholder="Tim theo tieu de/noi dung..." @bind="_search" @bind:event="oninput" />
     </div>
 </div>
 
@@ -87,11 +90,7 @@
             </div>
 
             <div class="grid-2">
-                <div>
-                    <label>Thoi luong (giay)</label>
-                    <InputNumber @bind-Value="_form.ThoiLuongGiay" />
-                    <ValidationMessage For="() => _form.ThoiLuongGiay" />
-                </div>
+                <div></div>
                 <div style="display:grid;gap:8px;align-content:center;">
                     <label style="display:flex;align-items:center;gap:8px;">
                         <InputCheckbox @bind-Value="_form.ChoPhepTTS" />
@@ -120,39 +119,56 @@
             <thead>
                 <tr>
                     <th>Ma</th>
+                    <th>Diem tham quan</th>
                     <th>Tieu de</th>
                     <th>Ngon ngu</th>
-                    <th>Audio</th>
+                    <th style="min-width:340px;">Audio</th>
                     <th>Trang thai</th>
                     <th>Hanh dong</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var item in _noiDungItems)
+                @foreach (var item in FilteredNoiDungItems)
                 {
                     <tr>
                         <td>@item.MaNoiDung</td>
+                        <td>@GetTenDiem(item.MaDiem)</td>
                         <td>@item.TieuDe</td>
                         <td>@(item.TenNgonNgu ?? $"Ngon ngu #{item.MaNgonNgu}")</td>
-                        <td>@(string.IsNullOrWhiteSpace(item.DuongDanAmThanh) ? "Chua co" : item.DuongDanAmThanh)</td>
+                        <td>
+                            @if (string.IsNullOrWhiteSpace(item.DuongDanAmThanh))
+                            {
+                                <button type="button"
+                                        class="btn btn-secondary"
+                                        style="min-width:132px;"
+                                        disabled="@_generatingAudioIds.Contains(item.MaNoiDung)"
+                                        @onclick="() => GenerateAudioAsync(item.MaNoiDung)">
+                                    @(_generatingAudioIds.Contains(item.MaNoiDung) ? "Dang tao..." : "Tao audio")
+                                </button>
+                            }
+                            else
+                            {
+                                <audio controls preload="none" style="max-width:340px;width:100%;border-radius:12px;background:#f8fafc;border:1px solid #d9e2ef;padding:2px;">
+                                    <source src="@ResolveAudioUrl(item.DuongDanAmThanh)" type="audio/mpeg" />
+                                    Trinh duyet khong ho tro phat audio.
+                                </audio>
+                            }
+                        </td>
                         <td>
                             <span class="badge @(item.TrangThaiHoatDong ? "badge-success" : "badge-muted")">
                                 @(item.TrangThaiHoatDong ? "Hoat dong" : "Tam dung")
                             </span>
                         </td>
                         <td>
-                            <div style="display:flex;gap:8px;">
-                                <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(item)">Sua</button>
-                                <button type="button" class="btn btn-primary" @onclick="() => RegenerateAudioAsync(item)" disabled="@_isBusy">Tao lai audio</button>
-                            </div>
+                            <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(item)">Sua</button>
                         </td>
                     </tr>
                 }
 
-                @if (!_noiDungItems.Any())
+                @if (!FilteredNoiDungItems.Any())
                 {
                     <tr>
-                        <td colspan="6">Chua co noi dung cho diem dang chon.</td>
+                        <td colspan="7">Chua co noi dung cho bo loc hien tai.</td>
                     </tr>
                 }
             </tbody>
@@ -172,6 +188,14 @@
     private bool _isBusy;
     private string? _error;
     private string? _success;
+    private string _search = "";
+    private readonly HashSet<int> _generatingAudioIds = [];
+
+    private IEnumerable<NoiDungThuyetMinhItem> FilteredNoiDungItems =>
+        _noiDungItems.Where(x =>
+            string.IsNullOrWhiteSpace(_search)
+            || (!string.IsNullOrWhiteSpace(x.TieuDe) && x.TieuDe.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase))
+            || (!string.IsNullOrWhiteSpace(x.NoiDungVanBan) && x.NoiDungVanBan.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase)));
 
     protected override async Task OnInitializedAsync()
     {
@@ -193,9 +217,9 @@
         _diemItems.AddRange((await ApiClient.GetDiemAsync()).OrderBy(x => x.TenDiem));
         _ngonNguItems.AddRange((await ApiClient.GetNgonNguAsync()).Where(x => x.TrangThaiHoatDong).OrderBy(x => x.TenNgonNgu));
 
-        if (_selectedMaDiem <= 0 && _diemItems.Count > 0)
+        if (_selectedMaDiem < 0)
         {
-            _selectedMaDiem = _diemItems[0].MaDiem;
+            _selectedMaDiem = 0;
         }
     }
 
@@ -216,16 +240,28 @@
 
         try
         {
-            if (_selectedMaDiem <= 0)
+            if (_selectedMaDiem == 0)
             {
-                _noiDungItems = [];
-                return;
-            }
+                var allItems = new List<NoiDungThuyetMinhItem>();
+                foreach (var diem in _diemItems)
+                {
+                    var byDiem = await ApiClient.GetNoiDungTheoDiemAsync(diem.MaDiem);
+                    allItems.AddRange(byDiem);
+                }
 
-            _noiDungItems = (await ApiClient.GetNoiDungTheoDiemAsync(_selectedMaDiem))
-                .OrderBy(x => x.MaNgonNgu)
-                .ThenBy(x => x.TieuDe)
-                .ToList();
+                _noiDungItems = allItems
+                    .OrderBy(x => x.MaDiem)
+                    .ThenBy(x => x.MaNgonNgu)
+                    .ThenBy(x => x.TieuDe)
+                    .ToList();
+            }
+            else
+            {
+                _noiDungItems = (await ApiClient.GetNoiDungTheoDiemAsync(_selectedMaDiem))
+                    .OrderBy(x => x.MaNgonNgu)
+                    .ThenBy(x => x.TieuDe)
+                    .ToList();
+            }
         }
         catch
         {
@@ -246,22 +282,8 @@
         _form.NoiDungVanBan = string.Empty;
         _form.DuongDanAmThanh = string.Empty;
         _form.ChoPhepTTS = true;
-        _form.ThoiLuongGiay = null;
+        // _form.ThoiLuongGiay auto-calculated
         _form.TrangThaiHoatDong = true;
-    }
-
-    private void ToggleCreateForm()
-    {
-        if (_showForm && _editingId is null)
-        {
-            CloseForm();
-            return;
-        }
-
-        ResetForm();
-        _showForm = true;
-        _error = null;
-        _success = null;
     }
 
     private void CloseForm()
@@ -279,7 +301,7 @@
         _form.NoiDungVanBan = item.NoiDungVanBan;
         _form.DuongDanAmThanh = item.DuongDanAmThanh;
         _form.ChoPhepTTS = item.ChoPhepTTS;
-        _form.ThoiLuongGiay = item.ThoiLuongGiay;
+        // ThoiLuongGiay auto-calculated by backend
         _form.TrangThaiHoatDong = item.TrangThaiHoatDong;
         _showForm = true;
         _error = null;
@@ -300,7 +322,7 @@
             NoiDungVanBan = _form.NoiDungVanBan?.Trim(),
             DuongDanAmThanh = string.IsNullOrWhiteSpace(_form.DuongDanAmThanh) ? null : _form.DuongDanAmThanh.Trim(),
             ChoPhepTTS = _form.ChoPhepTTS,
-            ThoiLuongGiay = _form.ThoiLuongGiay,
+            // ThoiLuongGiay auto-calculated, omit
             TrangThaiHoatDong = _form.TrangThaiHoatDong
         };
 
@@ -321,72 +343,45 @@
             return;
         }
 
-        // Sau khi luu, CMS chu dong goi generate audio de dam bao co file moi.
-        var targetId = _editingId ?? result.ResourceId;
-        if (targetId.HasValue)
+        if (_selectedMaDiem > 0)
         {
-            var generateResult = await ApiClient.GenerateAudioForNoiDungAsync(targetId.Value);
-            if (!generateResult.Success)
-            {
-                _isBusy = false;
-                _error = "Luu thanh cong nhung tao audio that bai: " + CleanError(generateResult.ErrorMessage);
-                await LoadNoiDungAsync();
-                return;
-            }
+            _selectedMaDiem = payload.MaDiem;
         }
-
-        _selectedMaDiem = payload.MaDiem;
         _success = _editingId is null
-            ? "Da tao noi dung moi va tao audio thanh cong."
-            : "Da cap nhat noi dung va tao lai audio thanh cong.";
+            ? "Da tao noi dung moi. Audio se duoc tao tu dong."
+            : "Da cap nhat noi dung. Audio cu se duoc thay the tu dong.";
 
         CloseForm();
         await LoadNoiDungAsync();
         _isBusy = false;
     }
 
-    private async Task RegenerateAudioAsync(NoiDungThuyetMinhItem item)
+    private async Task GenerateAudioAsync(int maNoiDung)
     {
+        if (_generatingAudioIds.Contains(maNoiDung))
+        {
+            return;
+        }
+
+        _generatingAudioIds.Add(maNoiDung);
         _error = null;
         _success = null;
-
-        var confirmed = await Js.InvokeAsync<bool>("confirm", $"Tao lai audio cho noi dung '{item.TieuDe}'?");
-        if (!confirmed)
+        try
         {
-            return;
+            var result = await ApiClient.GenerateAudioForNoiDungAsync(maNoiDung);
+            if (!result.Success)
+            {
+                _error = CleanError(result.ErrorMessage);
+                return;
+            }
+
+            _success = "Da tao audio thanh cong.";
+            await LoadNoiDungAsync();
         }
-
-        _isBusy = true;
-        var result = await ApiClient.GenerateAudioForNoiDungAsync(item.MaNoiDung);
-        _isBusy = false;
-
-        if (!result.Success)
+        finally
         {
-            _error = CleanError(result.ErrorMessage);
-            return;
+            _generatingAudioIds.Remove(maNoiDung);
         }
-
-        _success = $"Da tao lai audio cho '{item.TieuDe}'.";
-        await LoadNoiDungAsync();
-    }
-
-    private async Task GenerateBatchAudioAsync()
-    {
-        _error = null;
-        _success = null;
-        _isBusy = true;
-
-        var result = await ApiClient.GenerateAudioBatchAsync(overwrite: false);
-        _isBusy = false;
-
-        if (!result.Success)
-        {
-            _error = CleanError(result.ErrorMessage);
-            return;
-        }
-
-        _success = "Da yeu cau tao audio cho cac noi dung chua co file.";
-        await LoadNoiDungAsync();
     }
 
     private static string CleanError(string? raw)
@@ -401,5 +396,27 @@
             .Replace("}", string.Empty)
             .Replace("\"", string.Empty)
             .Trim();
+    }
+
+    private string ResolveAudioUrl(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return "#";
+        }
+
+        if (Uri.TryCreate(path, UriKind.Absolute, out var absolute))
+        {
+            return absolute.ToString();
+        }
+
+        var baseUrl = Config["Api:BaseUrl"] ?? "http://localhost:5000/";
+        return $"{baseUrl.TrimEnd('/')}/{path.TrimStart('/')}";
+    }
+
+    private string GetTenDiem(int maDiem)
+    {
+        var diem = _diemItems.FirstOrDefault(x => x.MaDiem == maDiem);
+        return diem is null ? $"Diem #{maDiem}" : $"{diem.TenDiem} ({diem.MaDinhDanh})";
     }
 }

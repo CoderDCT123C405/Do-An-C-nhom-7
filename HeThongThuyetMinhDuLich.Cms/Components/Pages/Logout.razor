@@ -1,0 +1,12 @@
+@inject NavigationManager NavigationManager
+
+<button @onclick="HandleLogout">Logout</button>
+
+@code {
+    private void HandleLogout()
+    {
+        // Replace with actual logout logic
+        // For example, clearing authentication tokens or session data
+        NavigationManager.NavigateTo("/login", true);
+    }
+}

@@ -3,6 +3,7 @@
 @inject CmsSession Session
 @inject NavigationManager Navigation
 @inject IJSRuntime Js
+@inject IConfiguration Config
 
 <PageTitle>Diem tham quan</PageTitle>
 
@@ -11,7 +12,7 @@
         <h3>Quan ly diem tham quan</h3>
         <p>Quan ly toa do, ban kinh kich hoat va thong tin diem theo chuan API.</p>
     </div>
-    <button class="btn btn-secondary" @onclick="ToggleCreateForm">@(_showForm ? "Dong form" : "Them diem")</button>
+    <button type="button" class="btn btn-secondary" @onclick="ToggleCreateForm">@(_showForm ? "Dong form" : "Them diem")</button>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(_error))
@@ -29,49 +30,52 @@
         <div class="card">
             <h4>@(_editingId is null ? "Them diem tham quan" : $"Cap nhat diem #{_editingId}")</h4>
 
-            <EditForm Model="_form" OnValidSubmit="SaveAsync" style="display:grid;gap:10px;margin-top:10px;">
+            <EditForm Model="_form" OnValidSubmit="SaveAsync" FormName="diem-tham-quan-form" Enhance style="display:grid;gap:10px;margin-top:10px;">
                 <DataAnnotationsValidator />
 
                 <div class="grid-2">
                     <div>
                         <label>Ma dinh danh</label>
                         <InputText @bind-Value="_form.MaDinhDanh" />
-                        <ValidationMessage For="() => _form.MaDinhDanh" />
                     </div>
                     <div>
                         <label>Ten diem</label>
                         <InputText @bind-Value="_form.TenDiem" />
-                        <ValidationMessage For="() => _form.TenDiem" />
                     </div>
                 </div>
 
                 <div>
                     <label>Dia chi</label>
                     <InputText @bind-Value="_form.DiaChi" />
-                    <ValidationMessage For="() => _form.DiaChi" />
                 </div>
 
                 <div>
                     <label>Mo ta ngan</label>
                     <InputTextArea @bind-Value="_form.MoTaNgan" rows="3" />
-                    <ValidationMessage For="() => _form.MoTaNgan" />
                 </div>
+
+                @if (_editingId is null)
+                {
+                    <div>
+                        <label>Noi dung thuyet minh</label>
+                        <InputTextArea @bind-Value="_thuyetMinhNoiDung"
+                                       rows="6"
+                                       placeholder="Nhap noi dung thuyet minh de he thong tu tao audio va QR..." />
+                    </div>
+                }
 
                 <div class="grid-3">
                     <div>
                         <label>Vi do</label>
                         <InputNumber @bind-Value="_form.ViDo" />
-                        <ValidationMessage For="() => _form.ViDo" />
                     </div>
                     <div>
                         <label>Kinh do</label>
                         <InputNumber @bind-Value="_form.KinhDo" />
-                        <ValidationMessage For="() => _form.KinhDo" />
                     </div>
                     <div>
                         <label>Ban kinh kich hoat (m)</label>
                         <InputNumber @bind-Value="_form.BanKinhKichHoat" />
-                        <ValidationMessage For="() => _form.BanKinhKichHoat" />
                     </div>
                 </div>
 
@@ -84,108 +88,133 @@
                             <option value="@loai.MaLoai">@loai.TenLoai</option>
                         }
                     </InputSelect>
-                    <ValidationMessage For="() => _form.MaLoai" />
                 </div>
 
                 <label style="display:flex;align-items:center;gap:6px;">
-                    Trạng thái hoạt động
-                    <InputCheckbox @bind-Value="_form.TrangThaiHoatDong" style=""/>
+                    Trang thai hoat dong
+                    <InputCheckbox @bind-Value="_form.TrangThaiHoatDong" />
                 </label>
 
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" @onclick="CloseForm">Huy</button>
-                    <button type="submit" class="btn btn-primary" disabled="@_isSaving">@(_isSaving ? "Dang luu..." : "Luu")</button>
+                    <button type="submit" class="btn btn-primary" disabled="@_isSaving">
+                        @(_isSaving ? "Dang luu..." : "Luu")
+                    </button>
                 </div>
             </EditForm>
         </div>
     }
 
+    <!-- SEARCH -->
     <div class="card">
-        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
-            <input placeholder="Tim ten diem..." @bind="_search" @bind:event="oninput" />
-            <select @bind="_filterLoai" style="max-width:220px;">
-                <option value="0">Tat ca loai</option>
-                @foreach (var loai in _loaiItems)
-                {
-                    <option value="@loai.MaLoai">@loai.TenLoai</option>
-                }
-            </select>
-        </div>
-
-        <div class="table-wrap">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Ma</th>
-                        <th>Ten diem</th>
-                        <th>Dia chi</th>
-                        <th>Loai</th>
-                        <th>Trang thai</th>
-                        <th>Hanh dong</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in FilteredItems)
+        <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;">
+            <div style="flex:1 1 300px;min-width:220px;">
+                <label>Tim kiem</label>
+                <input placeholder="Tim ten diem..."
+                       @bind="_search"
+                       @bind:event="oninput" />
+            </div>
+            <div style="width:240px;max-width:100%;">
+                <label>Loc loai</label>
+                <select @bind="_filterLoai">
+                    <option value="0">Tat ca loai</option>
+                    @foreach (var loai in _loaiItems)
                     {
-                        <tr>
-                            <td>@item.MaDinhDanh</td>
-                            <td>@item.TenDiem</td>
-                            <td>@item.DiaChi</td>
-                            <td>@GetLoaiName(item.MaLoai)</td>
-                            <td>
-                                <span class="badge @(item.TrangThaiHoatDong ? "badge-success" : "badge-muted")">
-                                    @(item.TrangThaiHoatDong ? "Hoat dong" : "Tam dung")
-                                </span>
-                            </td>
-                            <td>
-                                <div style="display:flex;gap:8px;">
-                                    <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(item)">Sua</button>
-                                    <button type="button" class="btn btn-danger" @onclick="() => DeleteAsync(item)">An</button>
-                                </div>
-                            </td>
-                        </tr>
+                        <option value="@loai.MaLoai">@loai.TenLoai</option>
                     }
-                    
-                    @if (!FilteredItems.Any())
-                    {
-                        <tr>
-                            <td colspan="6">Khong co du lieu phu hop.</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                </select>
+            </div>
         </div>
     </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Ma</th>
+                    <th>Ten diem</th>
+                    <th>Dia chi</th>
+                    <th>Loai</th>
+                    <th>QR Scan</th>
+                    <th>Trang thai</th>
+                    <th>Hanh dong</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in FilteredItems)
+                {
+                    <tr>
+                        <td>@item.MaDinhDanh</td>
+                        <td>@item.TenDiem</td>
+                        <td>@item.DiaChi</td>
+                        <td>@GetLoaiName(item.MaLoai)</td>
+                        <td>
+                            @if (TryGetAudioUrlForDiem(item.MaDiem, out var audioUrl))
+                            {
+                                <img src="@BuildQrImageUrl(audioUrl)"
+                                     alt="QR diem @item.MaDiem"
+                                     width="84"
+                                     height="84"
+                                     style="border:1px solid #d9e2ef;border-radius:8px;background:#fff;padding:4px;"
+                                     title="Quet de phat audio" />
+                            }
+                            else
+                            {
+                                <span>Chua co audio</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge @(item.TrangThaiHoatDong ? "badge-success" : "badge-muted")">
+                                @(item.TrangThaiHoatDong ? "Hoat dong" : "Tam dung")
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:8px;">
+                                <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(item)">Sua</button>
+                                <button type="button" class="btn btn-danger" @onclick="() => DeleteAsync(item)">An</button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+
+                @if (!FilteredItems.Any())
+                {
+                    <tr>
+                        <td colspan="7">Khong co quan</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 </div>
-<button @onclick="() => TestClick()">Test</button>
 
-<p>@msg</p>
-
-@code {
-    string msg = "";
-
-    void TestClick()
-    {
-        msg = "Button da hoat dong!";
-    }
-}
 @code {
     private readonly DiemThamQuanCreate _form = new();
-    private List<DiemThamQuanItem> _diemItems = [];
-    private List<LoaiDiemThamQuanItem> _loaiItems = [];
+    private List<DiemThamQuanItem> _diemItems = new();
+    private List<LoaiDiemThamQuanItem> _loaiItems = new();
+    private List<NgonNguItem> _ngonNguItems = new();
+    private List<MaQRItem> _qrItems = new();
+    private readonly Dictionary<int, string> _audioUrlByDiem = new();
+
     private int? _editingId;
     private bool _showForm;
     private bool _isSaving;
-    private string _search = string.Empty;
+
+    private string _search = "";
     private int _filterLoai;
+
     private string? _error;
     private string? _success;
+    private string _qrGiaTri = "";
+    private string _thuyetMinhNoiDung = "";
 
     private IEnumerable<DiemThamQuanItem> FilteredItems => _diemItems.Where(x =>
-        (string.IsNullOrWhiteSpace(_search) || x.TenDiem.Contains(_search, StringComparison.OrdinalIgnoreCase))
+        (string.IsNullOrWhiteSpace(_search) ||
+         (!string.IsNullOrWhiteSpace(x.TenDiem) &&
+          x.TenDiem.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase)))
         && (_filterLoai == 0 || x.MaLoai == _filterLoai));
 
-    
     protected override async Task OnInitializedAsync()
     {
         if (!Session.IsAuthenticated)
@@ -200,35 +229,39 @@
     private async Task LoadAsync()
     {
         _loaiItems = (await ApiClient.GetLoaiDiemAsync()).OrderBy(x => x.TenLoai).ToList();
+        _ngonNguItems = (await ApiClient.GetNgonNguAsync()).Where(x => x.TrangThaiHoatDong).ToList();
         _diemItems = (await ApiClient.GetDiemAsync()).OrderBy(x => x.TenDiem).ToList();
+        _qrItems = (await ApiClient.GetMaQRAsync()).ToList();
+        await LoadAudioUrlsByDiemAsync();
     }
 
     private void ResetForm()
     {
         _editingId = null;
-        _form.MaDinhDanh = string.Empty;
-        _form.TenDiem = string.Empty;
-        _form.MoTaNgan = string.Empty;
+        _form.MaDinhDanh = "";
+        _form.TenDiem = "";
+        _form.MoTaNgan = "";
         _form.ViDo = 0;
         _form.KinhDo = 0;
         _form.BanKinhKichHoat = 150;
-        _form.DiaChi = string.Empty;
+        _form.DiaChi = "";
         _form.MaLoai = 0;
         _form.TrangThaiHoatDong = true;
+        _qrGiaTri = "";
+        _thuyetMinhNoiDung = "";
     }
 
     private void ToggleCreateForm()
     {
-        if (_showForm && _editingId is null)
-        {
-            CloseForm();
-            return;
-        }
+        _showForm = !_showForm;
 
-        ResetForm();
-        _showForm = true;
-        _error = null;
-        _success = null;
+        if (_showForm)
+        {
+            ResetForm();
+            _editingId = null;
+            _error = null;
+            _success = null;
+        }
     }
 
     private void CloseForm()
@@ -249,9 +282,8 @@
         _form.DiaChi = item.DiaChi;
         _form.MaLoai = item.MaLoai;
         _form.TrangThaiHoatDong = item.TrangThaiHoatDong;
+        _qrGiaTri = _qrItems.FirstOrDefault(x => x.MaDiem == item.MaDiem)?.GiaTriQR ?? "";
         _showForm = true;
-        _error = null;
-        _success = null;
     }
 
     private async Task SaveAsync()
@@ -259,6 +291,14 @@
         _isSaving = true;
         _error = null;
         _success = null;
+        var isCreating = _editingId is null;
+
+        if (isCreating && string.IsNullOrWhiteSpace(_thuyetMinhNoiDung))
+        {
+            _isSaving = false;
+            _error = "Vui long nhap noi dung thuyet minh khi them diem moi.";
+            return;
+        }
 
         var payload = new DiemThamQuanCreate
         {
@@ -274,66 +314,198 @@
         };
 
         ApiOperationResult result;
-        if (_editingId is null)
+        if (isCreating)
         {
             result = await ApiClient.CreateDiemAsync(payload);
         }
+        else if (_editingId is int editingId)
+        {
+            result = await ApiClient.UpdateDiemAsync(editingId, payload);
+        }
         else
         {
-            result = await ApiClient.UpdateDiemAsync(_editingId.Value, payload);
+            _isSaving = false;
+            _error = "Khong xac dinh duoc diem can cap nhat.";
+            return;
         }
 
         _isSaving = false;
 
         if (!result.Success)
         {
-            _error = CleanError(result.ErrorMessage);
+            _error = result.ErrorMessage;
             return;
         }
 
-        _success = _editingId is null ? "Da tao diem tham quan moi." : "Da cap nhat diem tham quan.";
+        await LoadAsync();
+        var savedPoint = _diemItems.FirstOrDefault(x =>
+            string.Equals(x.MaDinhDanh, payload.MaDinhDanh, StringComparison.OrdinalIgnoreCase));
+
+        if (savedPoint is not null)
+        {
+            ApiOperationResult qrResult;
+            if (isCreating)
+            {
+                qrResult = await CreateNarrationAndQrForNewPointAsync(savedPoint);
+            }
+            else
+            {
+                qrResult = await UpsertQrForPointAsync(savedPoint.MaDiem, _qrGiaTri);
+            }
+
+            if (!qrResult.Success)
+            {
+                _success = "Da luu diem va noi dung. Tuy nhien chua tao duoc audio/QR, ban co the thu lai sau.";
+                CloseForm();
+                await LoadAsync();
+                return;
+            }
+        }
+
+        _success = "Luu thanh cong";
         CloseForm();
         await LoadAsync();
     }
 
     private async Task DeleteAsync(DiemThamQuanItem item)
     {
-        _error = null;
-        _success = null;
+        var confirmed = await Js.InvokeAsync<bool>("confirm", $"An '{item.TenDiem}'?");
+        if (!confirmed) return;
 
-        var confirmed = await Js.InvokeAsync<bool>("confirm", $"An diem '{item.TenDiem}'?");
-        if (!confirmed)
-        {
-            return;
-        }
-
-        var result = await ApiClient.DeleteDiemAsync(item.MaDiem);
-        if (!result.Success)
-        {
-            _error = CleanError(result.ErrorMessage);
-            return;
-        }
-
-        _success = $"Da an diem '{item.TenDiem}'.";
+        await ApiClient.DeleteDiemAsync(item.MaDiem);
         await LoadAsync();
     }
 
     private string GetLoaiName(int maLoai)
     {
-        return _loaiItems.FirstOrDefault(x => x.MaLoai == maLoai)?.TenLoai ?? $"Loai #{maLoai}";
+        return _loaiItems.FirstOrDefault(x => x.MaLoai == maLoai)?.TenLoai ?? "";
     }
 
-    private static string CleanError(string? raw)
+    private static string BuildQrImageUrl(string qrValue)
     {
-        if (string.IsNullOrWhiteSpace(raw))
+        var encoded = Uri.EscapeDataString(qrValue);
+        return $"https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={encoded}";
+    }
+
+    private async Task LoadAudioUrlsByDiemAsync()
+    {
+        _audioUrlByDiem.Clear();
+        foreach (var diem in _diemItems)
         {
-            return "Co loi xay ra. Vui long thu lai.";
+            await LoadAudioUrlForPointAsync(diem.MaDiem);
+        }
+    }
+
+    private bool TryGetAudioUrlForDiem(int maDiem, out string url)
+    {
+        return _audioUrlByDiem.TryGetValue(maDiem, out url!);
+    }
+
+    private string ResolveAudioUrl(string path)
+    {
+        if (Uri.TryCreate(path, UriKind.Absolute, out var absolute))
+        {
+            return absolute.ToString();
         }
 
-        return raw
-            .Replace("{", string.Empty)
-            .Replace("}", string.Empty)
-            .Replace("\"", string.Empty)
-            .Trim();
+        var baseUrl = Config["Api:BaseUrl"] ?? "http://localhost:5000/";
+        return $"{baseUrl.TrimEnd('/')}/{path.TrimStart('/')}";
+    }
+
+    private async Task<ApiOperationResult> UpsertQrForPointAsync(int maDiem, string? qrValueRaw)
+    {
+        var qrValue = qrValueRaw?.Trim();
+        var existing = _qrItems.FirstOrDefault(x => x.MaDiem == maDiem);
+
+        if (string.IsNullOrWhiteSpace(qrValue))
+        {
+            if (existing is null)
+            {
+                return ApiOperationResult.Ok();
+            }
+
+            return await ApiClient.DeleteMaQRAsync(existing.MaQR);
+        }
+
+        var payload = new MaQRCreate
+        {
+            MaDiem = maDiem,
+            GiaTriQR = qrValue
+        };
+
+        if (existing is null)
+        {
+            return await ApiClient.CreateMaQRAsync(payload);
+        }
+
+        return await ApiClient.UpdateMaQRAsync(existing.MaQR, payload);
+    }
+
+    private async Task<ApiOperationResult> CreateNarrationAndQrForNewPointAsync(DiemThamQuanItem savedPoint)
+    {
+        var defaultLanguage = _ngonNguItems
+            .OrderByDescending(x => x.LaMacDinh)
+            .ThenBy(x => x.MaNgonNgu)
+            .FirstOrDefault();
+
+        if (defaultLanguage is null)
+        {
+            return ApiOperationResult.Fail("Khong tim thay ngon ngu hoat dong de tao thuyet minh.");
+        }
+
+        var createNoiDungResult = await ApiClient.CreateNoiDungAsync(new NoiDungThuyetMinhCreate
+        {
+            MaDiem = savedPoint.MaDiem,
+            MaNgonNgu = defaultLanguage.MaNgonNgu,
+            TieuDe = $"Thuyet minh - {savedPoint.TenDiem}",
+            NoiDungVanBan = _thuyetMinhNoiDung.Trim(),
+            ChoPhepTTS = true,
+            TrangThaiHoatDong = true
+        });
+
+        if (!createNoiDungResult.Success)
+        {
+            return createNoiDungResult;
+        }
+
+        await LoadAudioUrlForPointAsync(savedPoint.MaDiem);
+        if (!_audioUrlByDiem.TryGetValue(savedPoint.MaDiem, out var audioUrl) &&
+            createNoiDungResult.ResourceId is int maNoiDung)
+        {
+            var generateResult = await ApiClient.GenerateAudioForNoiDungAsync(maNoiDung);
+            if (!generateResult.Success)
+            {
+                return ApiOperationResult.Fail("Tao noi dung thanh cong, nhung tao audio that bai.");
+            }
+
+            await LoadAudioUrlForPointAsync(savedPoint.MaDiem);
+            _audioUrlByDiem.TryGetValue(savedPoint.MaDiem, out audioUrl);
+        }
+
+        if (string.IsNullOrWhiteSpace(audioUrl))
+        {
+            return ApiOperationResult.Fail("Da tao noi dung nhung chua lay duoc duong dan audio de tao QR.");
+        }
+
+        _qrGiaTri = audioUrl;
+        return await UpsertQrForPointAsync(savedPoint.MaDiem, audioUrl);
+    }
+
+    private async Task LoadAudioUrlForPointAsync(int maDiem)
+    {
+        var noiDung = await ApiClient.GetNoiDungTheoDiemAsync(maDiem);
+        var firstAudio = noiDung
+            .Where(x => !string.IsNullOrWhiteSpace(x.DuongDanAmThanh))
+            .OrderBy(x => x.MaNgonNgu)
+            .ThenBy(x => x.MaNoiDung)
+            .FirstOrDefault();
+
+        if (firstAudio is null)
+        {
+            _audioUrlByDiem.Remove(maDiem);
+            return;
+        }
+
+        _audioUrlByDiem[maDiem] = ResolveAudioUrl(firstAudio.DuongDanAmThanh!);
     }
 }

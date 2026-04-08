@@ -52,6 +52,8 @@ $env:MSBUILDDISABLENODEREUSE = "1"
 $dbProvider = if ($Mode -eq "offline") { "Sqlite" } else { "SqlServer" }
 $env:Database__Provider = $dbProvider
 
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+
 if ($Mode -eq "offline" -and $ResetOfflineDb) {
     $offlineDbPath = Join-Path (Get-Location) "HeThongThuyetMinhDuLich.Api\HeThongThuyetMinhDuLich.offline.db"
     if (Test-Path $offlineDbPath) {

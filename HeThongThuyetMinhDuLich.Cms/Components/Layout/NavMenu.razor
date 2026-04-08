@@ -1,4 +1,5 @@
-﻿@inject CmsSession Session
+﻿@using Microsoft.AspNetCore.Components.Routing
+@inject CmsSession Session
 
 <nav class="menu">
     @if (!Session.IsAuthenticated)
@@ -23,10 +24,6 @@
 
         <NavLink href="/thongke" class="item">
             Thống Kê
-        </NavLink>
-
-        <NavLink href="/maqr" class="item">
-            Quản lý Mã QR
         </NavLink>
 
         <NavLink href="/ngonngu" class="item">
