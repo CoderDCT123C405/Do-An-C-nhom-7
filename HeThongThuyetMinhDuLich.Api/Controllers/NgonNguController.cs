@@ -22,6 +22,29 @@ public class NgonNguController(DuLichDbContext dbContext) : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("sync")]
+    public async Task<ActionResult<IEnumerable<object>>> GetUpdatedSince([FromQuery] DateTime? updatedSince)
+    {
+        var thresholdUtc = updatedSince?.ToUniversalTime() ?? DateTime.MinValue;
+
+        var items = await dbContext.NgonNgus
+            .AsNoTracking()
+            .Where(x => (x.NgayCapNhat ?? x.NgayTao) > thresholdUtc)
+            .OrderBy(x => x.MaNgonNgu)
+            .Select(x => new
+            {
+                x.MaNgonNgu,
+                x.MaNgonNguQuocTe,
+                x.TenNgonNgu,
+                x.LaMacDinh,
+                x.TrangThaiHoatDong,
+                NgayCapNhat = x.NgayCapNhat ?? x.NgayTao
+            })
+            .ToListAsync();
+
+        return Ok(items);
+    }
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<NgonNgu>> GetById(int id)
     {
@@ -38,7 +61,9 @@ public class NgonNguController(DuLichDbContext dbContext) : ControllerBase
             MaNgonNguQuocTe = model.MaNgonNguQuocTe,
             TenNgonNgu = model.TenNgonNgu,
             LaMacDinh = model.LaMacDinh,
-            TrangThaiHoatDong = model.TrangThaiHoatDong
+            TrangThaiHoatDong = model.TrangThaiHoatDong,
+            NgayTao = DateTime.UtcNow,
+            NgayCapNhat = DateTime.UtcNow
         };
 
         dbContext.NgonNgus.Add(entity);
@@ -61,6 +86,7 @@ public class NgonNguController(DuLichDbContext dbContext) : ControllerBase
         item.TenNgonNgu = model.TenNgonNgu;
         item.LaMacDinh = model.LaMacDinh;
         item.TrangThaiHoatDong = model.TrangThaiHoatDong;
+        item.NgayCapNhat = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
         return NoContent();

@@ -73,7 +73,7 @@
             }
 
             var expiresAt = result.HetHanLuc == default ? (DateTime?)null : result.HetHanLuc;
-            Session.SignIn(result.TenDangNhap, result.Token, result.HoTen, result.VaiTro, expiresAt);
+            Session.SignIn(result.MaDinhDanh, result.TenDangNhap, result.Token, result.HoTen, result.VaiTro, expiresAt);
             Navigation.NavigateTo("/");
         }
         catch

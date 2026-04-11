@@ -13,6 +13,7 @@ namespace HeThongThuyetMinhDuLich.Api.Controllers;
 public class NoiDungThuyetMinhController(
     DuLichDbContext dbContext,
     EdgeTtsService edgeTtsService,
+    AudioPathResolver audioPathResolver,
     ILogger<NoiDungThuyetMinhController> logger) : ControllerBase
 {
     [HttpGet("diem/{maDiem:int}")]
@@ -38,7 +39,19 @@ public class NoiDungThuyetMinhController(
             })
             .ToListAsync();
 
-        return Ok(items);
+        return Ok(items.Select(x => new
+        {
+            x.MaNoiDung,
+            x.MaDiem,
+            x.MaNgonNgu,
+            x.TenNgonNgu,
+            x.TieuDe,
+            x.NoiDungVanBan,
+            DuongDanAmThanh = audioPathResolver.ResolveNoiDungAudioPath(x.MaNoiDung, x.DuongDanAmThanh),
+            x.ChoPhepTTS,
+            x.ThoiLuongGiay,
+            x.TrangThaiHoatDong
+        }));
     }
 
     [HttpGet("diem/{maDiem:int}/ngonngu/{maNgonNgu:int}")]
@@ -63,7 +76,21 @@ public class NoiDungThuyetMinhController(
             })
             .FirstOrDefaultAsync();
 
-        return item is null ? NotFound() : Ok(item);
+        return item is null
+            ? NotFound()
+            : Ok(new
+            {
+                item.MaNoiDung,
+                item.MaDiem,
+                item.MaNgonNgu,
+                item.TenNgonNgu,
+                item.TieuDe,
+                item.NoiDungVanBan,
+                DuongDanAmThanh = audioPathResolver.ResolveNoiDungAudioPath(item.MaNoiDung, item.DuongDanAmThanh),
+                item.ChoPhepTTS,
+                item.ThoiLuongGiay,
+                item.TrangThaiHoatDong
+            });
     }
 
     [HttpPost]

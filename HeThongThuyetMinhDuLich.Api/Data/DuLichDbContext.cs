@@ -77,6 +77,7 @@ public class DuLichDbContext(DbContextOptions<DuLichDbContext> options) : DbCont
             entity.Property(x => x.ViDo).HasPrecision(10, 7);
             entity.Property(x => x.KinhDo).HasPrecision(10, 7);
             entity.Property(x => x.DiaChi).HasMaxLength(255);
+            entity.Property(x => x.MaTaiKhoanCapNhat).IsRequired();
             entity.HasOne(x => x.LoaiDiemThamQuan)
                 .WithMany(x => x.DiemThamQuans)
                 .HasForeignKey(x => x.MaLoai)
@@ -100,6 +101,7 @@ public class DuLichDbContext(DbContextOptions<DuLichDbContext> options) : DbCont
             entity.HasIndex(x => x.MaNgonNgu);
             entity.Property(x => x.TieuDe).HasMaxLength(200).IsRequired();
             entity.Property(x => x.DuongDanAmThanh).HasMaxLength(255);
+            entity.Property(x => x.MaTaiKhoanCapNhat).IsRequired();
             entity.HasOne(x => x.DiemThamQuan)
                 .WithMany(x => x.NoiDungThuyetMinhs)
                 .HasForeignKey(x => x.MaDiem)

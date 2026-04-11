@@ -97,11 +97,48 @@
                     StrokeShape="RoundRectangle 16"
                     Padding="12">
                 <VerticalStackLayout Spacing="8">
+                    <Label Text="Ngon ngu"
+                           FontFamily="OpenSansSemibold"
+                           FontSize="15"
+                           TextColor="#23395B" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
+                            <Label Text="Hien thi"
+                                   FontSize="12"
+                                   TextColor="#4D6B8A" />
+                            <Picker x:Name="DisplayLanguagePicker"
+                                    Title="Ngon ngu hien thi"
+                                    ItemDisplayBinding="{Binding TenNgonNgu}"
+                                    SelectedIndexChanged="OnDisplayLanguageChanged" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="Phat audio"
+                                   FontSize="12"
+                                   TextColor="#4D6B8A" />
+                            <Picker x:Name="AudioLanguagePicker"
+                                    Title="Ngon ngu audio"
+                                    ItemDisplayBinding="{Binding TenNgonNgu}"
+                                    SelectedIndexChanged="OnAudioLanguageChanged" />
+                        </VerticalStackLayout>
+                    </Grid>
+                    <Label x:Name="LanguageStateLabel"
+                           Text="Hien thi: Tat ca | Audio: Tat ca"
+                           FontSize="11"
+                           TextColor="#4D6B8A" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Background="#FFFFFF"
+                    Stroke="#D8E6F7"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 16"
+                    Padding="12">
+                <VerticalStackLayout Spacing="8">
                     <Label Text="Mo bang QR"
                            FontFamily="OpenSansSemibold"
                            FontSize="15"
                            TextColor="#23395B" />
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                         <Entry x:Name="QrEntry"
                                Placeholder="Vi du: QR_POI001"
                                ClearButtonVisibility="WhileEditing"
@@ -114,6 +151,13 @@
                                 CornerRadius="10"
                                 FontFamily="OpenSansSemibold"
                                 Clicked="OnLookupQrClicked" />
+                        <Button Grid.Column="2"
+                                Text="Scan"
+                                BackgroundColor="#2E5BCA"
+                                TextColor="White"
+                                CornerRadius="10"
+                                FontFamily="OpenSansSemibold"
+                                Clicked="OnScanQrClicked" />
                     </Grid>
                 </VerticalStackLayout>
             </Border>
@@ -139,7 +183,7 @@
                                         Stroke="#E3ECF9"
                                         Background="#F9FCFF"
                                         StrokeShape="RoundRectangle 12">
-                                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="4">
+                                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
                                         <Label Grid.Row="0" Grid.Column="0"
                                                Text="{Binding TenDiem}"
                                                FontFamily="OpenSansSemibold"
@@ -153,6 +197,18 @@
                                                Text="{Binding DiaChi}"
                                                FontSize="12"
                                                TextColor="#5F7895" />
+                                        <Label Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                               FontSize="11"
+                                               TextColor="#6A7F96">
+                                            <Label.FormattedText>
+                                                <FormattedString>
+                                                    <Span Text="Toa do: " />
+                                                    <Span Text="{Binding ViDo, StringFormat='{0:F6}'}" />
+                                                    <Span Text=", " />
+                                                    <Span Text="{Binding KinhDo, StringFormat='{0:F6}'}" />
+                                                </FormattedString>
+                                            </Label.FormattedText>
+                                        </Label>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -170,6 +226,23 @@
                        FontFamily="OpenSansSemibold"
                        FontSize="13"
                        TextColor="#E5F0FF" />
+            </Border>
+
+            <Border x:Name="AudioPlayerCard"
+                    Background="#FFFFFF"
+                    Stroke="#D8E6F7"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 16"
+                    Padding="12"
+                    IsVisible="False">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Dang phat audio"
+                           FontFamily="OpenSansSemibold"
+                           FontSize="15"
+                           TextColor="#23395B" />
+                    <WebView x:Name="AudioWebView"
+                             HeightRequest="120" />
+                </VerticalStackLayout>
             </Border>
 
             <Border Background="#FFFFFF"
@@ -203,24 +276,13 @@
                                                LineBreakMode="TailTruncation"
                                                MaxLines="3"
                                                TextColor="#4D6179" />
-                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                            <Button Grid.Column="0"
-                                                    Text="Phat TTS"
-                                                    BackgroundColor="#156D8A"
-                                                    TextColor="White"
-                                                    FontSize="12"
-                                                    CornerRadius="10"
-                                                    FontFamily="OpenSansSemibold"
-                                                    Clicked="OnSpeakTtsClicked" />
-                                            <Button Grid.Column="1"
-                                                    Text="Mo audio"
-                                                    BackgroundColor="#E87A2F"
-                                                    TextColor="White"
-                                                    FontSize="12"
-                                                    CornerRadius="10"
-                                                    FontFamily="OpenSansSemibold"
-                                                    Clicked="OnPlayAudioClicked" />
-                                        </Grid>
+                                        <Button Text="Phat"
+                                            BackgroundColor="#156D8A"
+                                            TextColor="White"
+                                            FontSize="12"
+                                            CornerRadius="10"
+                                            FontFamily="OpenSansSemibold"
+                                                Clicked="OnPlayContentClicked" />
                                     </VerticalStackLayout>
                                 </Border>
                             </DataTemplate>

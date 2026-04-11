@@ -1,6 +1,7 @@
 using HeThongThuyetMinhDuLich.Api.Data;
 using HeThongThuyetMinhDuLich.Api.Models;
 using HeThongThuyetMinhDuLich.Api.Models.Dtos;
+using HeThongThuyetMinhDuLich.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,7 @@ namespace HeThongThuyetMinhDuLich.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class MaQrController(DuLichDbContext dbContext) : ControllerBase
+public class MaQrController(DuLichDbContext dbContext, AudioPathResolver audioPathResolver) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<object>>> GetAll()
@@ -27,6 +28,30 @@ public class MaQrController(DuLichDbContext dbContext) : ControllerBase
                 x.TrangThaiHoatDong,
                 x.NgayTao,
                 x.MaTaiKhoanTao
+            })
+            .ToListAsync();
+
+        return Ok(items);
+    }
+
+    [HttpGet("sync")]
+    public async Task<ActionResult<IEnumerable<object>>> GetUpdatedSince([FromQuery] DateTime? updatedSince)
+    {
+        var thresholdUtc = updatedSince?.ToUniversalTime() ?? DateTime.MinValue;
+
+        var items = await dbContext.MaQrs
+            .AsNoTracking()
+            .Include(x => x.DiemThamQuan)
+            .Where(x => (x.NgayCapNhat ?? x.NgayTao) > thresholdUtc)
+            .OrderBy(x => x.MaQR)
+            .Select(x => new
+            {
+                x.MaQR,
+                x.MaDiem,
+                TenDiem = x.DiemThamQuan != null ? x.DiemThamQuan.TenDiem : null,
+                x.GiaTriQR,
+                x.TrangThaiHoatDong,
+                NgayCapNhat = x.NgayCapNhat ?? x.NgayTao
             })
             .ToListAsync();
 
@@ -103,13 +128,25 @@ public class MaQrController(DuLichDbContext dbContext) : ControllerBase
             })
             .ToListAsync();
 
+        var resolvedNoiDung = noiDung.Select(x => new
+        {
+            x.MaNoiDung,
+            x.MaDiem,
+            x.MaNgonNgu,
+            x.TieuDe,
+            x.NoiDungVanBan,
+            DuongDanAmThanh = audioPathResolver.ResolveNoiDungAudioPath(x.MaNoiDung, x.DuongDanAmThanh),
+            x.ChoPhepTTS,
+            x.ThoiLuongGiay
+        }).ToList();
+
         return Ok(new
         {
             item.MaQR,
             item.GiaTriQR,
             item.MaDiem,
             item.DiemThamQuan,
-            NoiDung = noiDung
+            NoiDung = resolvedNoiDung
         });
     }
 
@@ -127,7 +164,8 @@ public class MaQrController(DuLichDbContext dbContext) : ControllerBase
             GiaTriQR = model.GiaTriQR,
             TrangThaiHoatDong = model.TrangThaiHoatDong,
             MaTaiKhoanTao = model.MaTaiKhoanTao,
-            NgayTao = DateTime.UtcNow
+            NgayTao = DateTime.UtcNow,
+            NgayCapNhat = DateTime.UtcNow
         };
 
         dbContext.MaQrs.Add(entity);
@@ -150,6 +188,7 @@ public class MaQrController(DuLichDbContext dbContext) : ControllerBase
         item.GiaTriQR = model.GiaTriQR;
         item.TrangThaiHoatDong = model.TrangThaiHoatDong;
         item.MaTaiKhoanTao = model.MaTaiKhoanTao;
+        item.NgayCapNhat = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
         return NoContent();

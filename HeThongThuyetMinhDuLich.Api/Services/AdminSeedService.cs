@@ -7,10 +7,14 @@ namespace HeThongThuyetMinhDuLich.Api.Services;
 
 public static class AdminSeedService
 {
+    private sealed record DemoNoiDungSeed(int MaNgonNgu, string TieuDe, string NoiDungVanBan);
+    private sealed record OnlineSampleContentSeed(string IsoCode, int MaNgonNgu, string TieuDe, string NoiDungVanBan);
+
     public static async Task EnsureAdminAsync(IServiceProvider services, IConfiguration configuration, string dbProvider)
     {
         await using var scope = services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<DuLichDbContext>();
+        var edgeTtsService = scope.ServiceProvider.GetRequiredService<EdgeTtsService>();
 
         if (string.Equals(dbProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
         {
@@ -61,130 +65,370 @@ public static class AdminSeedService
             await db.SaveChangesAsync();
         }
 
-        await EnsureDemoDataAsync(db);
+        await EnsureDemoDataAsync(db, edgeTtsService, dbProvider);
     }
 
-    private static async Task EnsureDemoDataAsync(DuLichDbContext db)
+    private static async Task EnsureDemoDataAsync(DuLichDbContext db, EdgeTtsService edgeTtsService, string dbProvider)
     {
-        if (await db.DiemThamQuans.AnyAsync())
-        {
-            return;
-        }
-
         var now = DateTime.UtcNow;
         var adminId = await db.TaiKhoans
             .Where(x => x.TenDangNhap == "admin")
             .Select(x => (int?)x.MaTaiKhoan)
             .FirstOrDefaultAsync();
-
-        var vi = await db.NgonNgus.FirstOrDefaultAsync(x => x.MaNgonNguQuocTe == "vi");
-        if (vi is null)
+        if (!adminId.HasValue)
         {
-            vi = new NgonNgu
+            throw new InvalidOperationException("Khong tim thay tai khoan admin de seed du lieu mau.");
+        }
+
+        var vi = await EnsureLanguageAsync(db, "vi", "Tiếng Việt", isDefault: true);
+        var en = await EnsureLanguageAsync(db, "en", "Tiếng Anh");
+        var zhCn = await EnsureLanguageAsync(db, "zh-CN", "Tiếng Trung");
+
+        if (!await db.DiemThamQuans.AnyAsync())
+        {
+            var loaiLichSu = new LoaiDiemThamQuan
             {
-                MaNgonNguQuocTe = "vi",
-                TenNgonNgu = "Tieng Viet",
-                LaMacDinh = true,
-                TrangThaiHoatDong = true
+                TenLoai = "Di tích lịch sử",
+                MoTa = "Các điểm đến mang giá trị lịch sử",
+                TrangThaiHoatDong = true,
+                NgayTao = now
             };
-            db.NgonNgus.Add(vi);
+            var loaiVanHoa = new LoaiDiemThamQuan
+            {
+                TenLoai = "Văn hóa - bảo tàng",
+                MoTa = "Không gian văn hóa và bảo tàng",
+                TrangThaiHoatDong = true,
+                NgayTao = now
+            };
+            db.LoaiDiemThamQuans.AddRange(loaiLichSu, loaiVanHoa);
+            await db.SaveChangesAsync();
+
+            var poi1 = new DiemThamQuan
+            {
+                MaDinhDanh = "POI001",
+                TenDiem = "Bến Nhà Rồng",
+                MoTaNgan = "Địa điểm lịch sử nổi tiếng tại TP.HCM.",
+                ViDo = 10.769969m,
+                KinhDo = 106.704849m,
+                BanKinhKichHoat = 150,
+                DiaChi = "1 Nguyen Tat Thanh, Quan 4, TP.HCM",
+                MaLoai = loaiLichSu.MaLoai,
+                MaTaiKhoanTao = adminId,
+                MaTaiKhoanCapNhat = adminId.Value,
+                TrangThaiHoatDong = true,
+                NgayTao = now
+            };
+            var poi2 = new DiemThamQuan
+            {
+                MaDinhDanh = "POI002",
+                TenDiem = "Bảo tàng Lịch sử TP.HCM",
+                MoTaNgan = "Bảo tàng trưng bày nhiều hiện vật giá trị.",
+                ViDo = 10.787116m,
+                KinhDo = 106.705405m,
+                BanKinhKichHoat = 180,
+                DiaChi = "2 Nguyen Binh Khiem, Quan 1, TP.HCM",
+                MaLoai = loaiVanHoa.MaLoai,
+                MaTaiKhoanTao = adminId,
+                MaTaiKhoanCapNhat = adminId.Value,
+                TrangThaiHoatDong = true,
+                NgayTao = now
+            };
+            db.DiemThamQuans.AddRange(poi1, poi2);
             await db.SaveChangesAsync();
         }
 
-        var loaiLichSu = new LoaiDiemThamQuan
-        {
-            TenLoai = "Di tich lich su",
-            MoTa = "Cac diem den mang gia tri lich su",
-            TrangThaiHoatDong = true,
-            NgayTao = now
-        };
-        var loaiVanHoa = new LoaiDiemThamQuan
-        {
-            TenLoai = "Van hoa - bao tang",
-            MoTa = "Khong gian van hoa va bao tang",
-            TrangThaiHoatDong = true,
-            NgayTao = now
-        };
-        db.LoaiDiemThamQuans.AddRange(loaiLichSu, loaiVanHoa);
-        await db.SaveChangesAsync();
+        await EnsureAuditFieldsAsync(db, adminId.Value, now);
+        await EnsureDemoNoiDungAsync(db, adminId.Value, now, vi, en, zhCn);
+        await EnsureDemoQrAsync(db, adminId, now);
 
-        var poi1 = new DiemThamQuan
+        if (string.Equals(dbProvider, "SqlServer", StringComparison.OrdinalIgnoreCase))
         {
-            MaDinhDanh = "POI001",
-            TenDiem = "Ben Nha Rong",
-            MoTaNgan = "Dia diem lich su noi tieng tai TP.HCM.",
-            ViDo = 10.769969m,
-            KinhDo = 106.704849m,
-            BanKinhKichHoat = 150,
-            DiaChi = "1 Nguyen Tat Thanh, Quan 4, TP.HCM",
-            MaLoai = loaiLichSu.MaLoai,
-            MaTaiKhoanTao = adminId,
-            TrangThaiHoatDong = true,
-            NgayTao = now
-        };
-        var poi2 = new DiemThamQuan
+            await EnsureOnlineSampleTranslationsAsync(db, edgeTtsService, adminId.Value, now, vi, en, zhCn);
+        }
+    }
+
+    private static async Task EnsureAuditFieldsAsync(DuLichDbContext db, int adminId, DateTime now)
+    {
+        await db.Database.ExecuteSqlRawAsync(
+            "UPDATE DiemThamQuan SET MaTaiKhoanCapNhat = COALESCE(MaTaiKhoanTao, {0}), NgayCapNhat = COALESCE(NgayCapNhat, {1}) WHERE MaTaiKhoanCapNhat IS NULL",
+            adminId,
+            now);
+
+        await db.Database.ExecuteSqlRawAsync(
+            "UPDATE NoiDungThuyetMinh SET MaTaiKhoanCapNhat = COALESCE(MaTaiKhoanTao, {0}), NgayCapNhat = COALESCE(NgayCapNhat, {1}) WHERE MaTaiKhoanCapNhat IS NULL",
+            adminId,
+            now);
+    }
+
+    private static async Task<NgonNgu> EnsureLanguageAsync(
+        DuLichDbContext db,
+        string isoCode,
+        string displayName,
+        bool isDefault = false)
+    {
+        var language = await db.NgonNgus.FirstOrDefaultAsync(x => x.MaNgonNguQuocTe == isoCode);
+        if (language is null)
         {
-            MaDinhDanh = "POI002",
-            TenDiem = "Bao tang Lich su TP.HCM",
-            MoTaNgan = "Bao tang trung bay nhieu hien vat gia tri.",
-            ViDo = 10.787116m,
-            KinhDo = 106.705405m,
-            BanKinhKichHoat = 180,
-            DiaChi = "2 Nguyen Binh Khiem, Quan 1, TP.HCM",
-            MaLoai = loaiVanHoa.MaLoai,
-            MaTaiKhoanTao = adminId,
-            TrangThaiHoatDong = true,
-            NgayTao = now
+            language = new NgonNgu
+            {
+                MaNgonNguQuocTe = isoCode,
+                TenNgonNgu = displayName,
+                LaMacDinh = isDefault,
+                TrangThaiHoatDong = true
+            };
+            db.NgonNgus.Add(language);
+            await db.SaveChangesAsync();
+            return language;
+        }
+
+        var changed = false;
+        if (!language.TrangThaiHoatDong)
+        {
+            language.TrangThaiHoatDong = true;
+            changed = true;
+        }
+
+        if (!string.Equals(language.TenNgonNgu, displayName, StringComparison.Ordinal))
+        {
+            language.TenNgonNgu = displayName;
+            changed = true;
+        }
+
+        if (isDefault && !language.LaMacDinh)
+        {
+            language.LaMacDinh = true;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await db.SaveChangesAsync();
+        }
+
+        return language;
+    }
+
+    private static async Task EnsureDemoNoiDungAsync(
+        DuLichDbContext db,
+        int adminId,
+        DateTime now,
+        NgonNgu vi,
+        NgonNgu en,
+        NgonNgu zhCn)
+    {
+        var poiSeeds = new Dictionary<string, DemoNoiDungSeed[]>
+        {
+            ["POI001"] =
+            [
+                new DemoNoiDungSeed(vi.MaNgonNgu, "Giới thiệu Bến Nhà Rồng", "Bến Nhà Rồng là di tích lịch sử gắn với hành trình ra đi tìm đường cứu nước của Chủ tịch Hồ Chí Minh và là điểm dừng chân quan trọng trong hành trình khám phá Sài Gòn."),
+                new DemoNoiDungSeed(en.MaNgonNgu, "Ben Nha Rong Audio Guide", "Ben Nha Rong is a historic landmark closely associated with President Ho Chi Minh's journey to seek a path for national liberation."),
+                new DemoNoiDungSeed(zhCn.MaNgonNgu, "芽龙码头语音导览", "芽龙码头是与胡志明主席寻找民族解放道路历程紧密相连的重要历史遗迹，也是游客了解胡志明市历史的重要地点。")
+            ],
+            ["POI002"] =
+            [
+                new DemoNoiDungSeed(vi.MaNgonNgu, "Giới thiệu Bảo tàng Lịch sử", "Bảo tàng Lịch sử TP.HCM lưu giữ nhiều bộ sưu tập hiện vật quý, phản ánh tiến trình hình thành và phát triển của văn hóa Việt Nam qua nhiều thời kỳ."),
+                new DemoNoiDungSeed(en.MaNgonNgu, "History Museum Audio Guide", "The Ho Chi Minh City Museum of History preserves valuable collections that reflect the development of Vietnamese culture."),
+                new DemoNoiDungSeed(zhCn.MaNgonNgu, "历史博物馆语音导览", "胡志明市历史博物馆珍藏了大量珍贵文物，系统展示了越南文化发展的历史脉络。")
+            ]
         };
-        db.DiemThamQuans.AddRange(poi1, poi2);
-        await db.SaveChangesAsync();
 
-        db.NoiDungThuyetMinhs.AddRange(
-            new NoiDungThuyetMinh
-            {
-                MaDiem = poi1.MaDiem,
-                MaNgonNgu = vi.MaNgonNgu,
-                TieuDe = "Gioi thieu Ben Nha Rong",
-                NoiDungVanBan = "Ben Nha Rong la mot dia danh lich su gan voi hanh trinh ra di tim duong cuu nuoc cua Chu tich Ho Chi Minh.",
-                DuongDanAmThanh = null,
-                ChoPhepTTS = true,
-                ThoiLuongGiay = 45,
-                MaTaiKhoanTao = adminId,
-                TrangThaiHoatDong = true,
-                NgayTao = now
-            },
-            new NoiDungThuyetMinh
-            {
-                MaDiem = poi2.MaDiem,
-                MaNgonNgu = vi.MaNgonNgu,
-                TieuDe = "Gioi thieu Bao tang Lich su",
-                NoiDungVanBan = "Bao tang Lich su TP.HCM luu giu nhieu bo suu tap hien vat quy, the hien qua trinh phat trien van hoa Viet Nam.",
-                DuongDanAmThanh = null,
-                ChoPhepTTS = true,
-                ThoiLuongGiay = 50,
-                MaTaiKhoanTao = adminId,
-                TrangThaiHoatDong = true,
-                NgayTao = now
-            });
+        var poiIdentifiers = poiSeeds.Keys.ToList();
+        var pois = await db.DiemThamQuans
+            .Where(x => poiIdentifiers.Contains(x.MaDinhDanh))
+            .ToDictionaryAsync(x => x.MaDinhDanh);
 
-        db.MaQrs.AddRange(
-            new MaQr
+        var changed = false;
+        foreach (var (maDinhDanh, seeds) in poiSeeds)
+        {
+            if (!pois.TryGetValue(maDinhDanh, out var poi))
             {
-                MaDiem = poi1.MaDiem,
-                GiaTriQR = "QR_POI001",
+                continue;
+            }
+
+            foreach (var seed in seeds)
+            {
+                var exists = await db.NoiDungThuyetMinhs.AnyAsync(x => x.MaDiem == poi.MaDiem && x.MaNgonNgu == seed.MaNgonNgu);
+                if (exists)
+                {
+                    continue;
+                }
+
+                db.NoiDungThuyetMinhs.Add(new NoiDungThuyetMinh
+                {
+                    MaDiem = poi.MaDiem,
+                    MaNgonNgu = seed.MaNgonNgu,
+                    TieuDe = seed.TieuDe,
+                    NoiDungVanBan = seed.NoiDungVanBan,
+                    DuongDanAmThanh = null,
+                    ChoPhepTTS = true,
+                    ThoiLuongGiay = 45,
+                    MaTaiKhoanTao = adminId,
+                    MaTaiKhoanCapNhat = adminId,
+                    TrangThaiHoatDong = true,
+                    NgayTao = now
+                });
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            await db.SaveChangesAsync();
+        }
+    }
+
+    private static async Task EnsureDemoQrAsync(DuLichDbContext db, int? adminId, DateTime now)
+    {
+        var pois = await db.DiemThamQuans
+            .Where(x => x.MaDinhDanh == "POI001" || x.MaDinhDanh == "POI002")
+            .Select(x => new { x.MaDiem, x.MaDinhDanh })
+            .ToListAsync();
+
+        var changed = false;
+        foreach (var poi in pois)
+        {
+            var qrValue = $"QR_{poi.MaDinhDanh}";
+            var exists = await db.MaQrs.AnyAsync(x => x.MaDiem == poi.MaDiem || x.GiaTriQR == qrValue);
+            if (exists)
+            {
+                continue;
+            }
+
+            db.MaQrs.Add(new MaQr
+            {
+                MaDiem = poi.MaDiem,
+                GiaTriQR = qrValue,
                 TrangThaiHoatDong = true,
                 NgayTao = now,
                 MaTaiKhoanTao = adminId
-            },
-            new MaQr
-            {
-                MaDiem = poi2.MaDiem,
-                GiaTriQR = "QR_POI002",
-                TrangThaiHoatDong = true,
-                NgayTao = now,
-                MaTaiKhoanTao = adminId
             });
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await db.SaveChangesAsync();
+        }
+    }
+
+    private static async Task EnsureOnlineSampleTranslationsAsync(
+        DuLichDbContext db,
+        EdgeTtsService edgeTtsService,
+        int adminId,
+        DateTime now,
+        NgonNgu vi,
+        NgonNgu en,
+        NgonNgu zhCn)
+    {
+        var baseContents = await db.NoiDungThuyetMinhs
+            .AsNoTracking()
+            .Where(x => x.TrangThaiHoatDong && x.MaNgonNgu == vi.MaNgonNgu && !string.IsNullOrWhiteSpace(x.NoiDungVanBan))
+            .OrderBy(x => x.MaDiem)
+            .ThenBy(x => x.MaNoiDung)
+            .Take(5)
+            .Join(
+                db.DiemThamQuans.AsNoTracking(),
+                content => content.MaDiem,
+                poi => poi.MaDiem,
+                (content, poi) => new
+                {
+                    Content = content,
+                    PoiName = poi.TenDiem,
+                    PoiIdentifier = poi.MaDinhDanh
+                })
+            .ToListAsync();
+
+        if (baseContents.Count == 0)
+        {
+            return;
+        }
+
+        var createdItems = new List<(NoiDungThuyetMinh Item, string IsoCode)>();
+        foreach (var baseContent in baseContents)
+        {
+            var seeds = BuildOnlineSampleSeeds(baseContent.PoiName, baseContent.PoiIdentifier, baseContent.Content, en, zhCn);
+            foreach (var seed in seeds)
+            {
+                var exists = await db.NoiDungThuyetMinhs.AnyAsync(x => x.MaDiem == baseContent.Content.MaDiem && x.MaNgonNgu == seed.MaNgonNgu);
+                if (exists)
+                {
+                    continue;
+                }
+
+                var entity = new NoiDungThuyetMinh
+                {
+                    MaDiem = baseContent.Content.MaDiem,
+                    MaNgonNgu = seed.MaNgonNgu,
+                    TieuDe = seed.TieuDe,
+                    NoiDungVanBan = seed.NoiDungVanBan,
+                    DuongDanAmThanh = null,
+                    ChoPhepTTS = true,
+                    ThoiLuongGiay = null,
+                    MaTaiKhoanTao = adminId,
+                    MaTaiKhoanCapNhat = adminId,
+                    TrangThaiHoatDong = true,
+                    NgayTao = now
+                };
+
+                db.NoiDungThuyetMinhs.Add(entity);
+                createdItems.Add((entity, seed.IsoCode));
+            }
+        }
+
+        if (createdItems.Count == 0)
+        {
+            return;
+        }
 
         await db.SaveChangesAsync();
+
+        if (!edgeTtsService.IsConfigured)
+        {
+            return;
+        }
+
+        var generatedAnyAudio = false;
+        foreach (var (item, isoCode) in createdItems)
+        {
+            try
+            {
+                var (newPath, duration) = await edgeTtsService.GenerateAudioAsync(item, isoCode);
+                item.DuongDanAmThanh = newPath;
+                item.ThoiLuongGiay = duration;
+                item.NgayCapNhat = DateTime.UtcNow;
+                generatedAnyAudio = true;
+            }
+            catch
+            {
+                item.DuongDanAmThanh = null;
+                item.ThoiLuongGiay = null;
+                item.NgayCapNhat = DateTime.UtcNow;
+            }
+        }
+
+        if (generatedAnyAudio)
+        {
+            await db.SaveChangesAsync();
+        }
+    }
+
+    private static OnlineSampleContentSeed[] BuildOnlineSampleSeeds(
+        string poiName,
+        string poiIdentifier,
+        NoiDungThuyetMinh baseContent,
+        NgonNgu en,
+        NgonNgu zhCn)
+    {
+        var englishTitle = $"{poiName} Audio Guide";
+        var englishBody = $"This is a sample English audio guide for {poiName} ({poiIdentifier}). Original Vietnamese content: {baseContent.NoiDungVanBan}";
+
+        var chineseTitle = $"{poiName} 中文语音导览";
+        var chineseBody = $"这是关于 {poiName} ({poiIdentifier}) 的中文示例讲解内容，内容基于越南语原稿整理生成。";
+
+        return
+        [
+            new OnlineSampleContentSeed("en", en.MaNgonNgu, englishTitle, englishBody),
+            new OnlineSampleContentSeed("zh-CN", zhCn.MaNgonNgu, chineseTitle, chineseBody)
+        ];
     }
 }

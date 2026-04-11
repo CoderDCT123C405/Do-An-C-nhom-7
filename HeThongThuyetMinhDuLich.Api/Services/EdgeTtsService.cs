@@ -17,6 +17,14 @@ public class EdgeTtsService(
 
     public async Task<(string? path, int? durationSeconds)> GenerateAudioAsync(NoiDungThuyetMinh item, CancellationToken cancellationToken = default)
     {
+        return await GenerateAudioAsync(item, languageCode: null, cancellationToken);
+    }
+
+    public async Task<(string? path, int? durationSeconds)> GenerateAudioAsync(
+        NoiDungThuyetMinh item,
+        string? languageCode,
+        CancellationToken cancellationToken = default)
+    {
         if (!IsConfigured)
         {
             return (null, null);
@@ -36,7 +44,7 @@ public class EdgeTtsService(
         var timeoutSeconds = Math.Clamp(_settings.TimeoutSeconds, 15, 300);
         var retryDelayMs = Math.Clamp(_settings.RetryDelayMs, 200, 10000);
         var minAudioBytes = Math.Max(_settings.MinAudioBytes, 1);
-        var voices = BuildVoiceCandidates();
+        var voices = BuildVoiceCandidates(languageCode);
 
         Exception? lastException = null;
         for (var attempt = 1; attempt <= maxRetries; attempt++)
@@ -237,8 +245,19 @@ public class EdgeTtsService(
                || message.Contains("No audio was received", StringComparison.OrdinalIgnoreCase);
     }
 
-    private List<string> BuildVoiceCandidates()
+    private List<string> BuildVoiceCandidates(string? languageCode = null)
     {
+        var normalizedLanguageCode = languageCode?.Trim().ToLowerInvariant();
+        if (string.Equals(normalizedLanguageCode, "en", StringComparison.OrdinalIgnoreCase))
+        {
+            return ["en-US-JennyNeural", "en-US-GuyNeural"];
+        }
+
+        if (string.Equals(normalizedLanguageCode, "ko", StringComparison.OrdinalIgnoreCase))
+        {
+            return ["ko-KR-SunHiNeural", "ko-KR-InJoonNeural"];
+        }
+
         var voices = new List<string>();
         if (!string.IsNullOrWhiteSpace(_settings.Voice))
         {

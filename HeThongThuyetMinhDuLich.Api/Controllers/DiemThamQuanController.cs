@@ -13,10 +13,17 @@ public class DiemThamQuanController(
     DuLichDbContext dbContext,
     ILogger<DiemThamQuanController> logger) : ControllerBase
 {
+    /// <summary>
+    /// Lấy danh sách điểm tham quan có phân trang (paging)
+    /// </summary>
+    /// <param name="page">Trang hiện tại (bắt đầu từ 1)</param>
+    /// <param name="pageSize">Số lượng bản ghi mỗi trang (mặc định 20, tối đa 100)</param>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<DiemThamQuanDto>>> GetAll()
+    public async Task<ActionResult<IEnumerable<DiemThamQuanDto>>> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var items = await dbContext.DiemThamQuans
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize < 1 ? 100 : (pageSize > 100 ? 100 : pageSize);
+        var query = dbContext.DiemThamQuans
             .AsNoTracking()
             .Include(x => x.LoaiDiemThamQuan)
             .OrderBy(x => x.TenDiem)
@@ -32,6 +39,35 @@ public class DiemThamQuanController(
                 DiaChi = x.DiaChi,
                 MaLoai = x.MaLoai,
                 TrangThaiHoatDong = x.TrangThaiHoatDong
+            });
+        var total = await query.CountAsync();
+        var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        Response.Headers.Append("X-Total-Count", total.ToString());
+        return Ok(items);
+    }
+
+    [HttpGet("sync")]
+    public async Task<ActionResult<IEnumerable<object>>> GetUpdatedSince([FromQuery] DateTime? updatedSince)
+    {
+        var thresholdUtc = updatedSince?.ToUniversalTime() ?? DateTime.MinValue;
+
+        var items = await dbContext.DiemThamQuans
+            .AsNoTracking()
+            .OrderBy(x => x.MaDiem)
+            .Where(x => (x.NgayCapNhat ?? x.NgayTao) > thresholdUtc)
+            .Select(x => new
+            {
+                x.MaDiem,
+                x.MaDinhDanh,
+                x.TenDiem,
+                x.MoTaNgan,
+                x.ViDo,
+                x.KinhDo,
+                x.BanKinhKichHoat,
+                x.DiaChi,
+                x.MaLoai,
+                x.TrangThaiHoatDong,
+                NgayCapNhat = x.NgayCapNhat ?? x.NgayTao
             })
             .ToListAsync();
 
@@ -86,12 +122,16 @@ public class DiemThamQuanController(
         return item is null ? NotFound() : Ok(item);
     }
 
+    /// <summary>
+    /// Lấy 10 điểm tham quan gần nhất vị trí (tối ưu bằng bounding box)
+    /// </summary>
     [HttpGet("gan-day")]
     public async Task<ActionResult<IEnumerable<object>>> GetNearby(
         [FromQuery] decimal? vido,
         [FromQuery] decimal? kinhdo,
         [FromQuery] decimal? lat,
-        [FromQuery] decimal? lng)
+        [FromQuery] decimal? lng,
+        [FromQuery] double radius = 0.1) // radius theo độ, mặc định ~11km
     {
         var viDoThamChieu = lat ?? vido;
         var kinhDoThamChieu = lng ?? kinhdo;
@@ -100,9 +140,17 @@ public class DiemThamQuanController(
             return BadRequest(new { message = "Can cung cap toa do qua cap vido/kinhdo hoac lat/lng." });
         }
 
+        // Lọc sơ bộ theo bounding box trước khi tính khoảng cách
+        var minLat = (double)viDoThamChieu.Value - radius;
+        var maxLat = (double)viDoThamChieu.Value + radius;
+        var minLng = (double)kinhDoThamChieu.Value - radius;
+        var maxLng = (double)kinhDoThamChieu.Value + radius;
+
         var items = await dbContext.DiemThamQuans
             .AsNoTracking()
-            .Where(x => x.TrangThaiHoatDong)
+            .Where(x => x.TrangThaiHoatDong
+                && (double)x.ViDo >= minLat && (double)x.ViDo <= maxLat
+                && (double)x.KinhDo >= minLng && (double)x.KinhDo <= maxLng)
             .Select(x => new
             {
                 x.MaDiem,

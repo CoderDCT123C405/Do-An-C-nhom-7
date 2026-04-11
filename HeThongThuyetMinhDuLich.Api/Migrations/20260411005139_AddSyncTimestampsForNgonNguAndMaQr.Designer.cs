@@ -4,6 +4,7 @@ using HeThongThuyetMinhDuLich.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HeThongThuyetMinhDuLich.Api.Migrations
 {
     [DbContext(typeof(DuLichDbContext))]
-    partial class DuLichDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260411005139_AddSyncTimestampsForNgonNguAndMaQr")]
+    partial class AddSyncTimestampsForNgonNguAndMaQr
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -50,7 +53,7 @@ namespace HeThongThuyetMinhDuLich.Api.Migrations
                     b.Property<int>("MaLoai")
                         .HasColumnType("int");
 
-                    b.Property<int>("MaTaiKhoanCapNhat")
+                    b.Property<int?>("MaTaiKhoanCapNhat")
                         .HasColumnType("int");
 
                     b.Property<int?>("MaTaiKhoanTao")
@@ -370,7 +373,7 @@ namespace HeThongThuyetMinhDuLich.Api.Migrations
                     b.Property<int>("MaNgonNgu")
                         .HasColumnType("int");
 
-                    b.Property<int>("MaTaiKhoanCapNhat")
+                    b.Property<int?>("MaTaiKhoanCapNhat")
                         .HasColumnType("int");
 
                     b.Property<int?>("MaTaiKhoanTao")
@@ -471,8 +474,7 @@ namespace HeThongThuyetMinhDuLich.Api.Migrations
                     b.HasOne("HeThongThuyetMinhDuLich.Api.Models.TaiKhoan", "TaiKhoanCapNhat")
                         .WithMany("DiemThamQuanDaCapNhats")
                         .HasForeignKey("MaTaiKhoanCapNhat")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("HeThongThuyetMinhDuLich.Api.Models.TaiKhoan", "TaiKhoanTao")
                         .WithMany("DiemThamQuanDaTaos")
@@ -574,8 +576,7 @@ namespace HeThongThuyetMinhDuLich.Api.Migrations
                     b.HasOne("HeThongThuyetMinhDuLich.Api.Models.TaiKhoan", "TaiKhoanCapNhat")
                         .WithMany("NoiDungDaCapNhats")
                         .HasForeignKey("MaTaiKhoanCapNhat")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("HeThongThuyetMinhDuLich.Api.Models.TaiKhoan", "TaiKhoanTao")
                         .WithMany("NoiDungDaTaos")

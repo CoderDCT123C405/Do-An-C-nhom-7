@@ -86,6 +86,11 @@ public class DiemThamQuanCreate
     [Range(1, int.MaxValue, ErrorMessage = "Vui long chon loai diem.")]
     public int MaLoai { get; set; }
 
+    public int? MaTaiKhoanTao { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "Khong xac dinh duoc tai khoan cap nhat.")]
+    public int MaTaiKhoanCapNhat { get; set; }
+
     public bool TrangThaiHoatDong { get; set; } = true;
 }
 
@@ -159,6 +164,11 @@ public class NoiDungThuyetMinhCreate
     public string? DuongDanAmThanh { get; set; }
 
     public bool ChoPhepTTS { get; set; } = true;
+
+    public int? MaTaiKhoanTao { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "Khong xac dinh duoc tai khoan cap nhat.")]
+    public int MaTaiKhoanCapNhat { get; set; }
 
     public bool TrangThaiHoatDong { get; set; } = true;
 }

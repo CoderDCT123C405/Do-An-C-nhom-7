@@ -12,7 +12,7 @@ public class DiemThamQuan
     public string? DiaChi { get; set; }
     public int MaLoai { get; set; }
     public int? MaTaiKhoanTao { get; set; }
-    public int? MaTaiKhoanCapNhat { get; set; }
+    public int MaTaiKhoanCapNhat { get; set; }
     public bool TrangThaiHoatDong { get; set; } = true;
     public DateTime NgayTao { get; set; } = DateTime.UtcNow;
     public DateTime? NgayCapNhat { get; set; }

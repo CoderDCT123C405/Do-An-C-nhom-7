@@ -1,6 +1,7 @@
 using HeThongThuyetMinhDuLich.Mobile.Services;
 using Microsoft.Extensions.Logging;
-using Microsoft.Maui.Dispatching;
+using ZXing.Net.Maui.Controls;
+
 namespace HeThongThuyetMinhDuLich.Mobile;
 
 public static class MauiProgram
@@ -9,48 +10,34 @@ public static class MauiProgram
     {
         var builder = MauiApp.CreateBuilder();
 
-        builder.UseMauiApp<App>();
+        builder
+            .UseMauiApp<App>()
+            .UseBarcodeReader();
 
 #if !WINDOWS
         builder.UseMauiMaps();
 #endif
 
-        builder.ConfigureFonts(fonts =>
-        {
-            fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-            fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-        });
+        builder.ConfigureFonts(_ => { });
 
-        // 🔥 API
         builder.Services.AddHttpClient("Api", client =>
         {
-            client.BaseAddress = new Uri(GetApiBaseUrl());
+            client.Timeout = TimeSpan.FromSeconds(8);
         });
 
-        // 🔥 SERVICES
+        builder.Services.AddSingleton<AuthSession>();
         builder.Services.AddSingleton<MobileCacheStore>();
         builder.Services.AddSingleton<MobileApiClient>();
         builder.Services.AddSingleton<SyncService>();
 
-        // 🔥 UI
         builder.Services.AddSingleton<MainPage>();
         builder.Services.AddSingleton<AppShell>();
-
-        // 🔥 DISPATCHER (QUAN TRỌNG)
-        builder.Services.AddSingleton<IDispatcher>(sp =>
-            Application.Current?.Dispatcher ?? throw new Exception("Dispatcher not available"));
+        builder.Services.AddTransient<AuthPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
 
         return builder.Build();
-    }
-
-    private static string GetApiBaseUrl()
-    {
-        return DeviceInfo.Platform == DevicePlatform.Android
-            ? "http://10.0.2.2:5000/"
-            : "http://localhost:5000/";
     }
 }

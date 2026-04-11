@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.Maui.Controls;
 using Microsoft.Maui.Dispatching;
 using Microsoft.Maui.Networking;
 
@@ -9,19 +10,16 @@ public class SyncService
 {
     private readonly MobileApiClient _api;
     private readonly MobileCacheStore _cache;
-    private readonly IDispatcher _dispatcher;
 
     private bool _isSyncing;
     private IDispatcherTimer? _timer;
 
     public SyncService(
         MobileApiClient api,
-        MobileCacheStore cache,
-        IDispatcher dispatcher)
+        MobileCacheStore cache)
     {
         _api = api;
         _cache = cache;
-        _dispatcher = dispatcher;
     }
 
     public async Task SyncAllAsync()
@@ -58,7 +56,10 @@ public class SyncService
     {
         if (_timer != null) return;
 
-        _timer = _dispatcher.CreateTimer();
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null) return;
+
+        _timer = dispatcher.CreateTimer();
         _timer.Interval = TimeSpan.FromSeconds(30);
 
         _timer.Tick += async (s, e) =>

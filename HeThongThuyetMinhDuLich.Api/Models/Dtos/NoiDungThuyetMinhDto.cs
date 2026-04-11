@@ -26,7 +26,8 @@ public class NoiDungThuyetMinhDto
 
     public int? MaTaiKhoanTao { get; set; }
 
-    public int? MaTaiKhoanCapNhat { get; set; }
+    [Range(1, int.MaxValue)]
+    public int MaTaiKhoanCapNhat { get; set; }
 
     public bool TrangThaiHoatDong { get; set; } = true;
 }

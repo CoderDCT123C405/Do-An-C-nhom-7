@@ -12,3 +12,8 @@ obj/
 **/*.db-wal
 .dotnet-home/
 HeThongThuyetMinhDuLich.Cms/.keys/
+.tools/
+HeThongThuyetMinhDuLich.Api/wwwroot/audio/
+_tmp_api_build_verify/
+_tmp_blazor_ref/
+emulator-map-check.png

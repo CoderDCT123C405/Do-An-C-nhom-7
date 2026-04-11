@@ -48,16 +48,19 @@
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 	</PropertyGroup>
 
+	<!-- Debug Fast Emulator: only for Android + Debug (F5 nhanh hon tren may ao). -->
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">android-x64</RuntimeIdentifier>
+		<AndroidPackageFormat>apk</AndroidPackageFormat>
+		<EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+		<RunAOTCompilation>false</RunAOTCompilation>
+		<PublishTrimmed>false</PublishTrimmed>
+		<AndroidLinkMode>None</AndroidLinkMode>
+	</PropertyGroup>
+
 	<ItemGroup>
-		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
-
-		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
-
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
-		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
 		
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
@@ -73,44 +76,27 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
 		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
+		<PackageReference Include="ZXing.Net.Maui.Controls" Version="0.6.0" />
+	</ItemGroup>
+
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<PackageReference Include="Xamarin.AndroidX.AppCompat" Version="1.7.1.1" />
+		<PackageReference Include="Xamarin.AndroidX.AppCompat.AppCompatResources" Version="1.7.1.1" />
+		<PackageReference Include="Xamarin.AndroidX.Concurrent.Futures.Ktx" Version="1.3.0.1" />
+		<PackageReference Include="Xamarin.AndroidX.Tracing.Tracing.Ktx" Version="1.3.0.1" />
+		<PackageReference Include="Xamarin.Google.Android.Material" Version="1.12.0.5" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<MauiXaml Include="App.xaml" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<!-- Removed redundant AndroidResource Include="Resources\**" -->
+	<ItemGroup><!-- Removed redundant AndroidResource Include="Resources\**" -->
+	
+	  <Folder Include="Helpers\" />
 	</ItemGroup>
-    <!-- Clear read-only attributes and remove the intermediate android directory before build.
-		 This avoids "Access to the path ... is denied" errors when the Android asset subfolders
-		 (e.g. language resource folders) are left with protected attributes. -->
- <Target Name="Fix_AndroidAssetDir" BeforeTargets="BeforeBuild;PrepareForBuild">
-	  <PropertyGroup>
-     <_IntermediateAndroidDir>$(IntermediateOutputPath)android</_IntermediateAndroidDir>
-		<_IntermediateResDir>$(IntermediateOutputPath)res</_IntermediateResDir>
-	  </PropertyGroup>
-  <!-- Remove read-only attributes recursively, ignore errors -->
-    <Exec Command='if exist "$(IntermediateOutputPath)android" attrib -r /s /d "$(IntermediateOutputPath)android"' ContinueOnError="true" />
-	  <!-- Try to take ownership and grant full control, then remove -->
-	  <Exec Command='if exist "$(IntermediateOutputPath)android" takeown /f "$(IntermediateOutputPath)android" /r /d Y' ContinueOnError="true" />
-	  <Exec Command='if exist "$(IntermediateOutputPath)android" icacls "$(IntermediateOutputPath)android" /grant Everyone:F /t /c' ContinueOnError="true" />
-	  <Exec Command='if exist "$(IntermediateOutputPath)android" rd /s /q "$(IntermediateOutputPath)android"' ContinueOnError="true" />
-
-	  <!-- Repeat for res directory which can also cause access denied errors -->
-	  <Exec Command='if exist "$(IntermediateOutputPath)res" attrib -r /s /d "$(IntermediateOutputPath)res"' ContinueOnError="true" />
-	  <Exec Command='if exist "$(IntermediateOutputPath)res" takeown /f "$(IntermediateOutputPath)res" /r /d Y' ContinueOnError="true" />
-	  <Exec Command='if exist "$(IntermediateOutputPath)res" icacls "$(IntermediateOutputPath)res" /grant Everyone:F /t /c' ContinueOnError="true" />
-	  <Exec Command='if exist "$(IntermediateOutputPath)res" rd /s /q "$(IntermediateOutputPath)res"' ContinueOnError="true" />
-	</Target>
-	<Target Name="EnsureResDirectory" BeforeTargets="PrepareForBuild">
-  <MakeDir Directories="$(IntermediateOutputPath)res" />
-</Target>
-	<Target Name="EnsureColorsXml" BeforeTargets="PrepareForBuild">
-  <MakeDir Directories="$(IntermediateOutputPath)res\values" />
-  <Copy SourceFiles="Resources\values\colors.xml" DestinationFolder="$(IntermediateOutputPath)res\values" />
-</Target>
 	<ItemGroup>
-		<AndroidResource Include="Resources\values\colors.xml" LogicalName="values/colors.xml" />
+		<AndroidResource Include="Platforms\Android\Resources\values\colors.xml" LogicalName="values/colors.xml" />
+		<AndroidResource Include="Platforms\Android\Resources\values\google_maps_api.xml" LogicalName="values/google_maps_api.xml" />
 	</ItemGroup>
 </Project>

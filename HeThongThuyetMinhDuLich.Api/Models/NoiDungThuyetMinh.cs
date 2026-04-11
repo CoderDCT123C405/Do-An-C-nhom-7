@@ -11,7 +11,7 @@ public class NoiDungThuyetMinh
     public bool ChoPhepTTS { get; set; } = true;
     public int? ThoiLuongGiay { get; set; }
     public int? MaTaiKhoanTao { get; set; }
-    public int? MaTaiKhoanCapNhat { get; set; }
+    public int MaTaiKhoanCapNhat { get; set; }
     public bool TrangThaiHoatDong { get; set; } = true;
     public DateTime NgayTao { get; set; } = DateTime.UtcNow;
     public DateTime? NgayCapNhat { get; set; }

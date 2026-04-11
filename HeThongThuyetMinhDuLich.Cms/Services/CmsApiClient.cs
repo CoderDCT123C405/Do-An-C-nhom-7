@@ -66,7 +66,7 @@ public class CmsApiClient(
                     return;
                 }
 
-                session.SignIn(data.TenDangNhap, data.Token, data.HoTen, data.VaiTro, data.HetHanLuc);
+                session.SignIn(data.MaDinhDanh, data.TenDangNhap, data.Token, data.HoTen, data.VaiTro, data.HetHanLuc);
             }
             catch
             {
@@ -141,12 +141,14 @@ public class CmsApiClient(
     public async Task<ApiOperationResult> CreateDiemAsync(DiemThamQuanCreate model, CancellationToken cancellationToken = default)
     {
         using var client = CreateClient();
+        ApplyAuditFields(model, isCreate: true);
         return await SendAsync(() => client.PostAsJsonAsync("api/diemthamquan", model, cancellationToken));
     }
 
     public async Task<ApiOperationResult> UpdateDiemAsync(int id, DiemThamQuanCreate model, CancellationToken cancellationToken = default)
     {
         using var client = CreateClient();
+        ApplyAuditFields(model, isCreate: false);
         return await SendAsync(() => client.PutAsJsonAsync($"api/diemthamquan/{id}", model, cancellationToken));
     }
 
@@ -187,6 +189,7 @@ public class CmsApiClient(
         try
         {
             using var client = CreateClient();
+            ApplyAuditFields(model, isCreate: true);
             using var response = await client.PostAsJsonAsync("api/noidungthuyetminh", model, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
@@ -206,6 +209,7 @@ public class CmsApiClient(
     public async Task<ApiOperationResult> UpdateNoiDungAsync(int id, NoiDungThuyetMinhCreate model, CancellationToken cancellationToken = default)
     {
         using var client = CreateClient();
+        ApplyAuditFields(model, isCreate: false);
         return await SendAsync(() => client.PutAsJsonAsync($"api/noidungthuyetminh/{id}", model, cancellationToken));
     }
 
@@ -316,6 +320,36 @@ public class CmsApiClient(
     {
         using var client = CreateClient();
         return await SendAsync(() => client.DeleteAsync($"api/ngonngu/{id}", cancellationToken));
+    }
+
+    private void ApplyAuditFields(DiemThamQuanCreate model, bool isCreate)
+    {
+        if (session.MaTaiKhoan is not int maTaiKhoan || maTaiKhoan <= 0)
+        {
+            return;
+        }
+
+        if (isCreate && (!model.MaTaiKhoanTao.HasValue || model.MaTaiKhoanTao <= 0))
+        {
+            model.MaTaiKhoanTao = maTaiKhoan;
+        }
+
+        model.MaTaiKhoanCapNhat = maTaiKhoan;
+    }
+
+    private void ApplyAuditFields(NoiDungThuyetMinhCreate model, bool isCreate)
+    {
+        if (session.MaTaiKhoan is not int maTaiKhoan || maTaiKhoan <= 0)
+        {
+            return;
+        }
+
+        if (isCreate && (!model.MaTaiKhoanTao.HasValue || model.MaTaiKhoanTao <= 0))
+        {
+            model.MaTaiKhoanTao = maTaiKhoan;
+        }
+
+        model.MaTaiKhoanCapNhat = maTaiKhoan;
     }
 
     public async Task<IEnumerable<NguoiDungItem>> GetNguoiDungAsync()

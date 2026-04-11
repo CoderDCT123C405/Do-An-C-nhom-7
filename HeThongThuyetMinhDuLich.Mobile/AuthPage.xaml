@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="HeThongThuyetMinhDuLich.Mobile.AuthPage"
+             Title="Tai khoan">
+    <ScrollView>
+        <VerticalStackLayout Padding="18,18,18,24" Spacing="14">
+            <Border Background="#1F4B8E"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 20"
+                    Padding="16,14">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Dang nhap / Dang ky"
+                           TextColor="White"
+                           FontFamily="OpenSansSemibold"
+                           FontSize="24" />
+                    <Label x:Name="SessionStatusLabel"
+                           Text="Dang su dung che do khach."
+                           TextColor="#D9E9FF"
+                           FontFamily="OpenSansRegular"
+                           FontSize="13" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <Button x:Name="LoginTabButton"
+                        Grid.Column="0"
+                        Text="Dang nhap"
+                        Clicked="OnShowLoginClicked"
+                        CornerRadius="12"
+                        BackgroundColor="#2E5BCA"
+                        TextColor="White" />
+                <Button x:Name="RegisterTabButton"
+                        Grid.Column="1"
+                        Text="Dang ky"
+                        Clicked="OnShowRegisterClicked"
+                        CornerRadius="12"
+                        BackgroundColor="#E8EEF7"
+                        TextColor="#1F3555" />
+            </Grid>
+
+            <Label x:Name="StatusLabel"
+                   IsVisible="False"
+                   FontSize="13"
+                   TextColor="#B42318" />
+
+            <Border x:Name="LoginCard"
+                    Background="#FFFFFF"
+                    Stroke="#D8E6F7"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 16"
+                    Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Dang nhap nguoi dung"
+                           FontFamily="OpenSansSemibold"
+                           FontSize="16"
+                           TextColor="#23395B" />
+                    <Entry x:Name="LoginUsernameEntry" Placeholder="Ten dang nhap" />
+                    <Entry x:Name="LoginPasswordEntry" Placeholder="Mat khau" IsPassword="True" />
+                    <Button x:Name="LoginButton"
+                            Text="Dang nhap"
+                            Clicked="OnLoginClicked"
+                            BackgroundColor="#0E7A6A"
+                            TextColor="White"
+                            CornerRadius="12" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border x:Name="RegisterCard"
+                    IsVisible="False"
+                    Background="#FFFFFF"
+                    Stroke="#D8E6F7"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 16"
+                    Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Dang ky tai khoan moi"
+                           FontFamily="OpenSansSemibold"
+                           FontSize="16"
+                           TextColor="#23395B" />
+                    <Entry x:Name="RegisterUsernameEntry" Placeholder="Ten dang nhap" />
+                    <Entry x:Name="RegisterPasswordEntry" Placeholder="Mat khau" IsPassword="True" />
+                    <Entry x:Name="RegisterFullNameEntry" Placeholder="Ho ten" />
+                    <Entry x:Name="RegisterEmailEntry" Placeholder="Email" Keyboard="Email" />
+                    <Entry x:Name="RegisterPhoneEntry" Placeholder="So dien thoai" Keyboard="Telephone" />
+                    <Picker x:Name="RegisterLanguagePicker"
+                            Title="Ngon ngu mac dinh"
+                            ItemDisplayBinding="{Binding TenNgonNgu}" />
+                    <Button x:Name="RegisterButton"
+                            Text="Dang ky va dang nhap"
+                            Clicked="OnRegisterClicked"
+                            BackgroundColor="#2E5BCA"
+                            TextColor="White"
+                            CornerRadius="12" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Button x:Name="LogoutButton"
+                    Text="Dang xuat"
+                    Clicked="OnLogoutClicked"
+                    BackgroundColor="#FDECEC"
+                    TextColor="#B42318"
+                    CornerRadius="12"
+                    IsVisible="False" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

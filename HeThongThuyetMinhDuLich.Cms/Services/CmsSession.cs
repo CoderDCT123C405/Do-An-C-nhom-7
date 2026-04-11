@@ -4,6 +4,7 @@ public class CmsSession
 {
     private const bool BypassLogin = false; // FIX Ở ĐÂY
 
+    public int? MaTaiKhoan { get; private set; }
     public string? AccessToken { get; private set; }
     public string? TenDangNhap { get; private set; }
     public string? HoTen { get; private set; }
@@ -15,8 +16,9 @@ public class CmsSession
         || (!string.IsNullOrWhiteSpace(AccessToken)
         && (!HetHanLuc.HasValue || HetHanLuc.Value > DateTime.UtcNow));
 
-    public void SignIn(string tenDangNhap, string accessToken, string? hoTen, string? vaiTro, DateTime? hetHanLuc)
+    public void SignIn(int? maTaiKhoan, string tenDangNhap, string accessToken, string? hoTen, string? vaiTro, DateTime? hetHanLuc)
     {
+        MaTaiKhoan = maTaiKhoan;
         TenDangNhap = tenDangNhap;
         AccessToken = accessToken;
         HoTen = hoTen;
@@ -26,6 +28,7 @@ public class CmsSession
 
     public void SignOut()
     {
+        MaTaiKhoan = null;
         TenDangNhap = null;
         AccessToken = null;
         HoTen = null;

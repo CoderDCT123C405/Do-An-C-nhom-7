@@ -7,7 +7,11 @@ using System.Text.Json.Serialization;
 using System.Text;
 using System.IO;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = AppContext.BaseDirectory
+});
 builder.Logging.ClearProviders();
 
 builder.Logging.AddConsole();
@@ -23,6 +27,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.Configure<EdgeTtsSettings>(builder.Configuration.GetSection("EdgeTts"));
 builder.Services.AddSingleton<EdgeTtsService>();
+builder.Services.AddSingleton<AudioPathResolver>();
 
 var dbProvider = builder.Configuration["Database:Provider"] ?? "SqlServer";
 builder.Services.AddDbContext<DuLichDbContext>(options =>

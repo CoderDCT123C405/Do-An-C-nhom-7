@@ -54,14 +54,37 @@ $env:Database__Provider = $dbProvider
 
 $env:ASPNETCORE_ENVIRONMENT = "Development"
 
-if ($Mode -eq "offline" -and $ResetOfflineDb) {
-    $offlineDbPath = Join-Path (Get-Location) "HeThongThuyetMinhDuLich.Api\HeThongThuyetMinhDuLich.offline.db"
-    if (Test-Path $offlineDbPath) {
-        Remove-Item -Path $offlineDbPath -Force -ErrorAction SilentlyContinue
-        Write-Host "Reset offline DB: removed $offlineDbPath"
-    } else {
-        Write-Host "Reset offline DB: file not found (skip)"
+function Reset-OfflineDatabaseFiles {
+    param([string]$ProjectRoot)
+
+    $apiProjectDir = Join-Path $ProjectRoot "HeThongThuyetMinhDuLich.Api"
+    $candidatePatterns = @(
+        (Join-Path $apiProjectDir "HeThongThuyetMinhDuLich.offline.db*"),
+        (Join-Path $apiProjectDir "bin\Debug\**\HeThongThuyetMinhDuLich.offline.db*")
+    )
+
+    $matchedFiles = @()
+    foreach ($pattern in $candidatePatterns) {
+        $matchedFiles += Get-ChildItem -Path $pattern -File -ErrorAction SilentlyContinue
     }
+
+    $matchedFiles = $matchedFiles |
+        Sort-Object FullName -Unique |
+        Where-Object { $_.Name -like "HeThongThuyetMinhDuLich.offline.db*" }
+
+    if (-not $matchedFiles) {
+        Write-Host "Reset offline DB: file not found (skip)"
+        return
+    }
+
+    foreach ($file in $matchedFiles) {
+        Remove-Item -Path $file.FullName -Force -ErrorAction SilentlyContinue
+        Write-Host "Reset offline DB: removed $($file.FullName)"
+    }
+}
+
+if ($Mode -eq "offline" -and $ResetOfflineDb) {
+    Reset-OfflineDatabaseFiles -ProjectRoot (Get-Location).Path
 }
 
 function Invoke-BuildWithRetry {

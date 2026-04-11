@@ -63,7 +63,7 @@ CREATE TABLE DiemThamQuan (
     DiaChi NVARCHAR(255) NULL,
     MaLoai INT NOT NULL,
     MaTaiKhoanTao INT NULL,
-    MaTaiKhoanCapNhat INT NULL,
+    MaTaiKhoanCapNhat INT NOT NULL,
     TrangThaiHoatDong BIT NOT NULL DEFAULT 1,
     NgayTao DATETIME NOT NULL DEFAULT GETDATE(),
     NgayCapNhat DATETIME NULL,
@@ -86,7 +86,7 @@ CREATE TABLE NoiDungThuyetMinh (
     ChoPhepTTS BIT NOT NULL DEFAULT 1,
     ThoiLuongGiay INT NULL,
     MaTaiKhoanTao INT NULL,
-    MaTaiKhoanCapNhat INT NULL,
+    MaTaiKhoanCapNhat INT NOT NULL,
     TrangThaiHoatDong BIT NOT NULL DEFAULT 1,
     NgayTao DATETIME NOT NULL DEFAULT GETDATE(),
     NgayCapNhat DATETIME NULL,
@@ -207,8 +207,8 @@ INSERT INTO TaiKhoan (
     TrangThaiHoatDong
 )
 VALUES
-    ('admin', 'hashed_admin_123', N'Quan tri vien', 'admin@thuyetminhdulich.vn', N'Admin', 1),
-    ('bien_tap_01', 'hashed_editor_123', N'Nhan vien bien tap', 'bientap01@thuyetminhdulich.vn', N'BienTap', 1);
+    ('admin', 'hashed_admin_123', N'Quản trị viên hệ thống', 'admin@thuyetminhdulich.vn', N'Admin', 1),
+    ('bien_tap_01', 'hashed_editor_123', N'Biên tập viên nội dung', 'bientap01@thuyetminhdulich.vn', N'BienTap', 1);
 GO
 
 INSERT INTO NgonNgu (
@@ -218,9 +218,9 @@ INSERT INTO NgonNgu (
     TrangThaiHoatDong
 )
 VALUES
-    ('vi', N'Tieng Viet', 1, 1),
-    ('en', N'Tieng Anh', 0, 1),
-    ('ko', N'Tieng Han', 0, 1);
+    ('vi', N'Tiếng Việt', 1, 1),
+    ('en', N'Tiếng Anh', 0, 1),
+    ('zh-CN', N'Tiếng Trung', 0, 1);
 GO
 
 INSERT INTO NguoiDung (
@@ -233,8 +233,8 @@ INSERT INTO NguoiDung (
     TrangThaiHoatDong
 )
 VALUES
-    ('khach01', 'hashed_user_01', N'Nguyen Van A', 'khach01@email.com', '0901000001', 1, 1),
-    ('khach02', 'hashed_user_02', N'Tran Thi B', 'khach02@email.com', '0901000002', 2, 1);
+    ('khach01', 'hashed_user_01', N'Nguyễn Văn An', 'khach01@email.com', '0901000001', 1, 1),
+    ('khach02', 'hashed_user_02', N'Trần Thị Bình', 'khach02@email.com', '0901000002', 2, 1);
 GO
 
 INSERT INTO LoaiDiemThamQuan (
@@ -243,9 +243,9 @@ INSERT INTO LoaiDiemThamQuan (
     TrangThaiHoatDong
 )
 VALUES
-    (N'Khu di tich', N'Cac dia diem mang gia tri lich su va van hoa', 1),
-    (N'Pho am thuc', N'Cac khu vuc tap trung hoat dong am thuc dia phuong', 1),
-    (N'Tuyen pho di bo', N'Khong gian tham quan va di bo phuc vu du lich', 1);
+    (N'Khu di tích', N'Các địa điểm mang giá trị lịch sử và văn hóa tiêu biểu', 1),
+    (N'Phố ẩm thực', N'Các khu vực tập trung hoạt động ẩm thực địa phương', 1),
+    (N'Tuyến phố đi bộ', N'Không gian tham quan và đi bộ phục vụ du lịch', 1);
 GO
 
 INSERT INTO DiemThamQuan (
@@ -262,9 +262,9 @@ INSERT INTO DiemThamQuan (
     TrangThaiHoatDong
 )
 VALUES
-    ('POI001', N'Cho Ben Thanh', N'Diem tham quan noi tieng tai trung tam Thanh pho Ho Chi Minh', 10.7721400, 106.6982200, 80.00, N'Le Loi, Quan 1, TP Ho Chi Minh', 1, 1, 1, 1),
-    ('POI002', N'Pho di bo Nguyen Hue', N'Tuyen pho di bo thu hut nhieu du khach va su kien van hoa', 10.7735600, 106.7039900, 120.00, N'Nguyen Hue, Quan 1, TP Ho Chi Minh', 3, 1, 2, 1),
-    ('POI003', N'Pho am thuc Ho Thi Ky', N'Khu pho am thuc da dang mon an va khong gian nhon nhip', 10.7648500, 106.6762700, 100.00, N'Ho Thi Ky, Quan 10, TP Ho Chi Minh', 2, 2, 2, 1);
+    ('POI001', N'Chợ Bến Thành', N'Điểm tham quan nổi tiếng tại trung tâm Thành phố Hồ Chí Minh', 10.7721400, 106.6982200, 80.00, N'Lê Lợi, Quận 1, TP Hồ Chí Minh', 1, 1, 1, 1),
+    ('POI002', N'Phố đi bộ Nguyễn Huệ', N'Tuyến phố đi bộ thu hút nhiều du khách và sự kiện văn hóa', 10.7735600, 106.7039900, 120.00, N'Nguyễn Huệ, Quận 1, TP Hồ Chí Minh', 3, 1, 2, 1),
+    ('POI003', N'Phố ẩm thực Hồ Thị Kỷ', N'Khu phố ẩm thực đa dạng món ăn và không gian nhộn nhịp', 10.7648500, 106.6762700, 100.00, N'Hồ Thị Kỷ, Quận 10, TP Hồ Chí Minh', 2, 2, 2, 1);
 GO
 
 INSERT INTO NoiDungThuyetMinh (
@@ -280,11 +280,12 @@ INSERT INTO NoiDungThuyetMinh (
     TrangThaiHoatDong
 )
 VALUES
-    (1, 1, N'Thuyet minh Cho Ben Thanh', N'Cho Ben Thanh la mot trong nhung bieu tuong du lich noi bat cua Thanh pho Ho Chi Minh.', '/audio/cho-ben-thanh-vi.mp3', 1, 95, 1, 1, 1),
-    (1, 2, N'Ben Thanh Market Audio Guide', N'Ben Thanh Market is one of the most iconic tourist destinations in Ho Chi Minh City.', '/audio/cho-ben-thanh-en.mp3', 1, 92, 1, 1, 1),
-    (2, 1, N'Thuyet minh Pho di bo Nguyen Hue', N'Pho di bo Nguyen Hue la khong gian cong cong hien dai, noi dien ra nhieu su kien van hoa va giai tri.', '/audio/nguyen-hue-vi.mp3', 1, 110, 1, 2, 1),
-    (2, 2, N'Nguyen Hue Walking Street Audio Guide', N'Nguyen Hue Walking Street is a vibrant public space in the city center.', '/audio/nguyen-hue-en.mp3', 1, 105, 1, 2, 1),
-    (3, 1, N'Thuyet minh Pho am thuc Ho Thi Ky', N'Pho am thuc Ho Thi Ky noi bat voi nhieu mon an duong pho phong phu va gia ca hop ly.', '/audio/ho-thi-ky-vi.mp3', 1, 88, 2, 2, 1);
+    (1, 1, N'Thuyết minh Chợ Bến Thành', N'Chợ Bến Thành là một trong những biểu tượng du lịch nổi bật của Thành phố Hồ Chí Minh, nơi du khách có thể cảm nhận nhịp sống thương mại truyền thống và khám phá nhiều đặc sản địa phương.', '/audio/cho-ben-thanh-vi.mp3', 1, 95, 1, 1, 1),
+    (1, 2, N'Ben Thanh Market Audio Guide', N'Ben Thanh Market is one of the most iconic attractions in Ho Chi Minh City, offering visitors a lively local trading atmosphere and a rich selection of regional specialties.', '/audio/cho-ben-thanh-en.mp3', 1, 92, 1, 1, 1),
+    (1, 3, N'边城市场语音导览', N'边城市场是胡志明市最具代表性的旅游地标之一，游客可以在这里感受传统商业氛围，并品尝多种越南地方特色美食。', '/audio/cho-ben-thanh-zh.mp3', 1, 94, 1, 1, 1),
+    (2, 1, N'Thuyết minh Phố đi bộ Nguyễn Huệ', N'Phố đi bộ Nguyễn Huệ là không gian công cộng hiện đại, nơi diễn ra nhiều sự kiện văn hóa, nghệ thuật và lễ hội của thành phố.', '/audio/nguyen-hue-vi.mp3', 1, 110, 1, 2, 1),
+    (2, 2, N'Nguyen Hue Walking Street Audio Guide', N'Nguyen Hue Walking Street is a vibrant public space in the city center where many cultural activities and festivals take place.', '/audio/nguyen-hue-en.mp3', 1, 105, 1, 2, 1),
+    (3, 1, N'Thuyết minh Phố ẩm thực Hồ Thị Kỷ', N'Phố ẩm thực Hồ Thị Kỷ nổi bật với nhiều món ăn đường phố phong phú, không gian nhộn nhịp và mức giá phù hợp với nhiều nhóm du khách.', '/audio/ho-thi-ky-vi.mp3', 1, 88, 2, 2, 1);
 GO
 
 INSERT INTO HinhAnhDiemThamQuan (
