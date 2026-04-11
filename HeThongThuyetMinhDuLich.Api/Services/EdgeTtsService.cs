@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using HeThongThuyetMinhDuLich.Api.Models;
 using Microsoft.Extensions.Options;
@@ -36,7 +37,11 @@ public class EdgeTtsService(
             throw new InvalidOperationException("Khong co noi dung van ban de sinh audio.");
         }
 
-        var relativePath = BuildRelativeAudioPath(item.MaNoiDung);
+        var effectiveLanguageCode = string.IsNullOrWhiteSpace(languageCode)
+            ? item.NgonNgu?.MaNgonNguQuocTe
+            : languageCode;
+
+        var relativePath = BuildRelativeAudioPath(item, effectiveLanguageCode);
         var fullPath = Path.Combine(GetWebRootPath(), relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
 
@@ -44,7 +49,7 @@ public class EdgeTtsService(
         var timeoutSeconds = Math.Clamp(_settings.TimeoutSeconds, 15, 300);
         var retryDelayMs = Math.Clamp(_settings.RetryDelayMs, 200, 10000);
         var minAudioBytes = Math.Max(_settings.MinAudioBytes, 1);
-        var voices = BuildVoiceCandidates(languageCode);
+        var voices = BuildVoiceCandidates(effectiveLanguageCode);
 
         Exception? lastException = null;
         for (var attempt = 1; attempt <= maxRetries; attempt++)
@@ -132,10 +137,96 @@ public class EdgeTtsService(
         }
     }
 
-    private string BuildRelativeAudioPath(int maNoiDung)
+    private string BuildRelativeAudioPath(NoiDungThuyetMinh item, string? languageCode)
     {
         var folder = NormalizeFolder(_settings.OutputFolder);
-        return $"/{folder}/noidung-{maNoiDung}.mp3";
+        var pointName = item.DiemThamQuan?.TenDiem;
+        if (string.IsNullOrWhiteSpace(pointName))
+        {
+            pointName = ExtractPointNameFromTitle(item.TieuDe);
+        }
+
+        var safePointName = SlugifyFilePart(pointName);
+        var safeLanguageCode = SlugifyFilePart(languageCode ?? item.NgonNgu?.MaNgonNguQuocTe) ?? item.MaNgonNgu.ToString(CultureInfo.InvariantCulture);
+
+        if (string.IsNullOrWhiteSpace(safePointName))
+        {
+            safePointName = $"noidung-{item.MaNoiDung}";
+        }
+
+        return $"/{folder}/{safePointName}-{safeLanguageCode}.mp3";
+    }
+
+    private static string? ExtractPointNameFromTitle(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return null;
+        }
+
+        var trimmed = title.Trim();
+        var prefixes = new[]
+        {
+            "Thuyết minh ",
+            "Thuyet minh ",
+            "Audio Guide - ",
+            "语音导览 - "
+        };
+
+        foreach (var prefix in prefixes)
+        {
+            if (trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return trimmed[prefix.Length..].Trim();
+            }
+        }
+
+        return trimmed;
+    }
+
+    private static string? SlugifyFilePart(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var normalized = value.Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder(normalized.Length);
+        var pendingDash = false;
+
+        foreach (var ch in normalized)
+        {
+            var category = CharUnicodeInfo.GetUnicodeCategory(ch);
+            if (category == UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            var mapped = ch switch
+            {
+                'đ' => 'd',
+                'Đ' => 'd',
+                _ => char.ToLowerInvariant(ch)
+            };
+
+            if ((mapped >= 'a' && mapped <= 'z') || (mapped >= '0' && mapped <= '9'))
+            {
+                if (pendingDash && builder.Length > 0)
+                {
+                    builder.Append('-');
+                }
+
+                builder.Append(mapped);
+                pendingDash = false;
+            }
+            else if (builder.Length > 0)
+            {
+                pendingDash = true;
+            }
+        }
+
+        return builder.ToString().Trim('-');
     }
 
     private async Task<(int ExitCode, string StdOut, string StdErr)> RunEdgeTtsAsync(
@@ -256,6 +347,13 @@ public class EdgeTtsService(
         if (string.Equals(normalizedLanguageCode, "ko", StringComparison.OrdinalIgnoreCase))
         {
             return ["ko-KR-SunHiNeural", "ko-KR-InJoonNeural"];
+        }
+
+        if (string.Equals(normalizedLanguageCode, "zh", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(normalizedLanguageCode, "zh-cn", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(normalizedLanguageCode, "zh-hans", StringComparison.OrdinalIgnoreCase))
+        {
+            return ["zh-CN-XiaoxiaoNeural", "zh-CN-YunxiNeural"];
         }
 
         var voices = new List<string>();
