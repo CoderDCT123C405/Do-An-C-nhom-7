@@ -7,20 +7,32 @@ public partial class AuthPage : ContentPage
 {
     private readonly MobileApiClient _apiClient;
     private readonly AuthSession _authSession;
+    private readonly LanguageService _languageService;
     private bool _isBusy;
+    private bool _isLanguageSubscribed;
 
-    public AuthPage(MobileApiClient apiClient, AuthSession authSession)
+    public AuthPage(MobileApiClient apiClient, AuthSession authSession, LanguageService languageService)
     {
         InitializeComponent();
         _apiClient = apiClient;
         _authSession = authSession;
+        _languageService = languageService;
+        ApplyLocalization();
     }
 
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        SubscribeLanguageChanges();
         await LoadLanguagesAsync();
         UpdateSessionUi();
+        ConfigureToolbar();
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        UnsubscribeLanguageChanges();
     }
 
     private async Task LoadLanguagesAsync()
@@ -29,7 +41,9 @@ public partial class AuthPage : ContentPage
         {
             var languages = (await _apiClient.GetNgonNguAsync()).Where(x => x.TrangThaiHoatDong).ToList();
             RegisterLanguagePicker.ItemsSource = languages;
-            RegisterLanguagePicker.SelectedItem = languages.FirstOrDefault(x => x.LaMacDinh) ?? languages.FirstOrDefault();
+            RegisterLanguagePicker.SelectedItem = languages.FirstOrDefault(x => string.Equals(x.MaNgonNguQuocTe, _languageService.CurrentLanguageCode, StringComparison.OrdinalIgnoreCase))
+                ?? languages.FirstOrDefault(x => x.LaMacDinh)
+                ?? languages.FirstOrDefault();
         }
         catch
         {
@@ -40,8 +54,8 @@ public partial class AuthPage : ContentPage
     private void UpdateSessionUi()
     {
         SessionStatusLabel.Text = _authSession.IsAuthenticated
-            ? $"Da dang nhap: {_authSession.DisplayName ?? _authSession.TenDangNhap}"
-            : "Dang su dung che do khach.";
+            ? _languageService.Format("LoggedInSessionStatus", _authSession.DisplayName ?? _authSession.TenDangNhap ?? _languageService.GetText("AccountFallback"))
+            : _languageService.GetText("GuestSessionStatus");
         LogoutButton.IsVisible = _authSession.IsAuthenticated;
     }
 
@@ -87,7 +101,7 @@ public partial class AuthPage : ContentPage
             var password = LoginPasswordEntry.Text?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
-                ShowStatus("Vui long nhap day du ten dang nhap va mat khau.", false);
+                ShowStatus(_languageService.GetText("MissingLoginFields"), false);
                 return;
             }
 
@@ -99,12 +113,13 @@ public partial class AuthPage : ContentPage
 
             if (!result.Success)
             {
-                ShowStatus(result.ErrorMessage ?? "Dang nhap that bai.", false);
+                ShowStatus(result.ErrorMessage ?? _languageService.GetText("LoginFailed"), false);
                 return;
             }
 
             UpdateSessionUi();
-            ShowStatus("Dang nhap thanh cong.", true);
+            ConfigureToolbar();
+            ShowStatus(_languageService.GetText("LoginSuccess"), true);
             await Shell.Current.GoToAsync("..");
         });
     }
@@ -117,7 +132,7 @@ public partial class AuthPage : ContentPage
             var password = RegisterPasswordEntry.Text?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
-                ShowStatus("Ten dang nhap va mat khau dang ky la bat buoc.", false);
+                ShowStatus(_languageService.GetText("MissingRegisterFields"), false);
                 return;
             }
 
@@ -134,12 +149,13 @@ public partial class AuthPage : ContentPage
 
             if (!result.Success)
             {
-                ShowStatus(result.ErrorMessage ?? "Dang ky that bai.", false);
+                ShowStatus(result.ErrorMessage ?? _languageService.GetText("RegisterFailed"), false);
                 return;
             }
 
             UpdateSessionUi();
-            ShowStatus("Dang ky thanh cong va da dang nhap.", true);
+            ConfigureToolbar();
+            ShowStatus(_languageService.GetText("RegisterSuccess"), true);
             await Shell.Current.GoToAsync("..");
         });
     }
@@ -152,7 +168,8 @@ public partial class AuthPage : ContentPage
     {
         _authSession.SignOut();
         UpdateSessionUi();
-        ShowStatus("Da dang xuat tai khoan.", true);
+        ConfigureToolbar();
+        ShowStatus(_languageService.GetText("LogoutSuccess"), true);
     }
 
     private void ShowStatus(string message, bool success)
@@ -160,5 +177,93 @@ public partial class AuthPage : ContentPage
         StatusLabel.IsVisible = true;
         StatusLabel.Text = message;
         StatusLabel.TextColor = success ? Color.FromArgb("#027A48") : Color.FromArgb("#B42318");
+    }
+
+    private void SubscribeLanguageChanges()
+    {
+        if (_isLanguageSubscribed)
+        {
+            return;
+        }
+
+        _languageService.LanguageChanged += OnLanguageChanged;
+        _isLanguageSubscribed = true;
+    }
+
+    private void UnsubscribeLanguageChanges()
+    {
+        if (!_isLanguageSubscribed)
+        {
+            return;
+        }
+
+        _languageService.LanguageChanged -= OnLanguageChanged;
+        _isLanguageSubscribed = false;
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            ApplyLocalization();
+            await LoadLanguagesAsync();
+            UpdateSessionUi();
+            ConfigureToolbar();
+        });
+    }
+
+    private void ApplyLocalization()
+    {
+        Title = _languageService.GetText("AuthPageTitle");
+        AuthHeroTitleLabel.Text = _languageService.GetText("AuthHeroTitle");
+        LoginTabButton.Text = _languageService.GetText("LoginTab");
+        RegisterTabButton.Text = _languageService.GetText("RegisterTab");
+        LoginSectionTitleLabel.Text = _languageService.GetText("LoginSectionTitle");
+        LoginUsernameEntry.Placeholder = _languageService.GetText("UsernamePlaceholder");
+        LoginPasswordEntry.Placeholder = _languageService.GetText("PasswordPlaceholder");
+        LoginButton.Text = _languageService.GetText("LoginTab");
+        RegisterSectionTitleLabel.Text = _languageService.GetText("RegisterSectionTitle");
+        RegisterUsernameEntry.Placeholder = _languageService.GetText("UsernamePlaceholder");
+        RegisterPasswordEntry.Placeholder = _languageService.GetText("PasswordPlaceholder");
+        RegisterFullNameEntry.Placeholder = _languageService.GetText("FullNamePlaceholder");
+        RegisterEmailEntry.Placeholder = _languageService.GetText("EmailPlaceholder");
+        RegisterPhoneEntry.Placeholder = _languageService.GetText("PhonePlaceholder");
+        RegisterLanguagePicker.Title = _languageService.GetText("RegisterLanguageTitle");
+        RegisterButton.Text = _languageService.GetText("RegisterAndLoginButton");
+        LogoutButton.Text = _languageService.GetText("LogoutButton");
+        UpdateSessionUi();
+    }
+
+    private void ConfigureToolbar()
+    {
+        ToolbarItems.Clear();
+        ToolbarItems.Add(new ToolbarItem
+        {
+            Text = _languageService.CurrentLanguage.ShortLabel,
+            Order = ToolbarItemOrder.Primary,
+            Priority = 0,
+            Command = new Command(async () => await ShowLanguageMenuAsync())
+        });
+    }
+
+    private async Task ShowLanguageMenuAsync()
+    {
+        var actions = _languageService.SupportedLanguages
+            .Select(x => $"{x.ShortLabel} - {x.NativeName}")
+            .ToArray();
+
+        var selectedAction = await Shell.Current.DisplayActionSheetAsync(
+            _languageService.GetText("LanguageActionTitle"),
+            _languageService.GetText("CancelAction"),
+            null,
+            actions);
+
+        var selectedLanguage = _languageService.SupportedLanguages.FirstOrDefault(x => $"{x.ShortLabel} - {x.NativeName}" == selectedAction);
+        if (selectedLanguage is null)
+        {
+            return;
+        }
+
+        _languageService.SetLanguage(selectedLanguage.Code);
     }
 }

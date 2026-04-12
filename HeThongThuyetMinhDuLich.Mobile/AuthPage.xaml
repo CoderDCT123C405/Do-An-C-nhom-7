@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="HeThongThuyetMinhDuLich.Mobile.AuthPage"
-             Title="Tai khoan">
+             Title="">
     <ScrollView>
         <VerticalStackLayout Padding="18,18,18,24" Spacing="14">
             <Border Background="#1F4B8E"
@@ -10,33 +10,39 @@
                     StrokeShape="RoundRectangle 20"
                     Padding="16,14">
                 <VerticalStackLayout Spacing="6">
-                    <Label Text="Dang nhap / Dang ky"
+                          <Label x:Name="AuthHeroTitleLabel"
+                              Text=""
                            TextColor="White"
                            FontFamily="OpenSansSemibold"
                            FontSize="24" />
-                    <Label x:Name="SessionStatusLabel"
-                           Text="Dang su dung che do khach."
+                          <Label x:Name="SessionStatusLabel"
+                              Text=""
                            TextColor="#D9E9FF"
                            FontFamily="OpenSansRegular"
-                           FontSize="13" />
+                           FontSize="13"
+                           LineBreakMode="WordWrap" />
                 </VerticalStackLayout>
             </Border>
 
             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                 <Button x:Name="LoginTabButton"
                         Grid.Column="0"
-                        Text="Dang nhap"
+                        Text=""
                         Clicked="OnShowLoginClicked"
                         CornerRadius="12"
+                        Padding="12,10"
                         BackgroundColor="#2E5BCA"
-                        TextColor="White" />
+                        TextColor="White"
+                        LineBreakMode="WordWrap" />
                 <Button x:Name="RegisterTabButton"
                         Grid.Column="1"
-                        Text="Dang ky"
+                        Text=""
                         Clicked="OnShowRegisterClicked"
                         CornerRadius="12"
+                        Padding="12,10"
                         BackgroundColor="#E8EEF7"
-                        TextColor="#1F3555" />
+                        TextColor="#1F3555"
+                        LineBreakMode="WordWrap" />
             </Grid>
 
             <Label x:Name="StatusLabel"
@@ -51,18 +57,22 @@
                     StrokeShape="RoundRectangle 16"
                     Padding="14">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="Dang nhap nguoi dung"
+                          <Label x:Name="LoginSectionTitleLabel"
+                              Text=""
                            FontFamily="OpenSansSemibold"
                            FontSize="16"
+                           LineBreakMode="WordWrap"
                            TextColor="#23395B" />
-                    <Entry x:Name="LoginUsernameEntry" Placeholder="Ten dang nhap" />
-                    <Entry x:Name="LoginPasswordEntry" Placeholder="Mat khau" IsPassword="True" />
-                    <Button x:Name="LoginButton"
-                            Text="Dang nhap"
+                    <Entry x:Name="LoginUsernameEntry" Placeholder="" />
+                    <Entry x:Name="LoginPasswordEntry" Placeholder="" IsPassword="True" />
+                        <Button x:Name="LoginButton"
+                            Text=""
                             Clicked="OnLoginClicked"
                             BackgroundColor="#0E7A6A"
                             TextColor="White"
-                            CornerRadius="12" />
+                            CornerRadius="12"
+                            Padding="12,10"
+                            LineBreakMode="WordWrap" />
                 </VerticalStackLayout>
             </Border>
 
@@ -74,33 +84,39 @@
                     StrokeShape="RoundRectangle 16"
                     Padding="14">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="Dang ky tai khoan moi"
+                          <Label x:Name="RegisterSectionTitleLabel"
+                              Text=""
                            FontFamily="OpenSansSemibold"
                            FontSize="16"
+                           LineBreakMode="WordWrap"
                            TextColor="#23395B" />
-                    <Entry x:Name="RegisterUsernameEntry" Placeholder="Ten dang nhap" />
-                    <Entry x:Name="RegisterPasswordEntry" Placeholder="Mat khau" IsPassword="True" />
-                    <Entry x:Name="RegisterFullNameEntry" Placeholder="Ho ten" />
-                    <Entry x:Name="RegisterEmailEntry" Placeholder="Email" Keyboard="Email" />
-                    <Entry x:Name="RegisterPhoneEntry" Placeholder="So dien thoai" Keyboard="Telephone" />
+                        <Entry x:Name="RegisterUsernameEntry" Placeholder="" />
+                        <Entry x:Name="RegisterPasswordEntry" Placeholder="" IsPassword="True" />
+                        <Entry x:Name="RegisterFullNameEntry" Placeholder="" />
+                        <Entry x:Name="RegisterEmailEntry" Placeholder="" Keyboard="Email" />
+                        <Entry x:Name="RegisterPhoneEntry" Placeholder="" Keyboard="Telephone" />
                     <Picker x:Name="RegisterLanguagePicker"
-                            Title="Ngon ngu mac dinh"
+                            Title=""
                             ItemDisplayBinding="{Binding TenNgonNgu}" />
-                    <Button x:Name="RegisterButton"
-                            Text="Dang ky va dang nhap"
+                        <Button x:Name="RegisterButton"
+                            Text=""
                             Clicked="OnRegisterClicked"
                             BackgroundColor="#2E5BCA"
                             TextColor="White"
-                            CornerRadius="12" />
+                            CornerRadius="12"
+                            Padding="12,10"
+                            LineBreakMode="WordWrap" />
                 </VerticalStackLayout>
             </Border>
 
-            <Button x:Name="LogoutButton"
-                    Text="Dang xuat"
+                <Button x:Name="LogoutButton"
+                    Text=""
                     Clicked="OnLogoutClicked"
                     BackgroundColor="#FDECEC"
                     TextColor="#B42318"
                     CornerRadius="12"
+                    Padding="12,10"
+                    LineBreakMode="WordWrap"
                     IsVisible="False" />
         </VerticalStackLayout>
     </ScrollView>

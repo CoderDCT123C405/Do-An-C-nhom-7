@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="ShellHomeTitle" xml:space="preserve"><value>Trang chủ</value></data>
+  <data name="MainPageTitle" xml:space="preserve"><value>Audio Guide</value></data>
+  <data name="MainHeroTitle" xml:space="preserve"><value>Audio Guide</value></data>
+  <data name="MainHeroSubtitle" xml:space="preserve"><value>Tra cứu điểm đến, mở nội dung và nghe thuyết minh nhanh</value></data>
+  <data name="ReloadPoints" xml:space="preserve"><value>Tải điểm</value></data>
+  <data name="RefreshGps" xml:space="preserve"><value>Cập nhật GPS</value></data>
+  <data name="LocationStatusTitle" xml:space="preserve"><value>Trạng thái vị trí</value></data>
+  <data name="DefaultGpsStatus" xml:space="preserve"><value>Vị trí: chưa cập nhật.</value></data>
+  <data name="GpsUnsupportedWindows" xml:space="preserve"><value>Vị trí: map chỉ hỗ trợ Android/iOS. Bạn đang chạy trên Windows.</value></data>
+  <data name="GpsUnsupportedDevice" xml:space="preserve"><value>Vị trí: map không hỗ trợ trên thiết bị này.</value></data>
+  <data name="CurrentLocationCoordinates" xml:space="preserve"><value>Vị trí: {0:F6}, {1:F6}</value></data>
+  <data name="LanguageSectionTitle" xml:space="preserve"><value>Ngôn ngữ</value></data>
+  <data name="DisplayLanguageLabel" xml:space="preserve"><value>Hiển thị</value></data>
+  <data name="LanguagePreferenceLabel" xml:space="preserve"><value>Ngôn ngữ chung</value></data>
+  <data name="AudioLanguageLabel" xml:space="preserve"><value>Phát audio</value></data>
+  <data name="DisplayLanguagePickerTitle" xml:space="preserve"><value>Ngôn ngữ hiển thị</value></data>
+  <data name="LanguagePreferencePickerTitle" xml:space="preserve"><value>Chọn ngôn ngữ chung</value></data>
+  <data name="AudioLanguagePickerTitle" xml:space="preserve"><value>Ngôn ngữ audio</value></data>
+  <data name="AllLanguages" xml:space="preserve"><value>Tất cả ngôn ngữ</value></data>
+  <data name="LanguageDisplayFormat" xml:space="preserve"><value>Hiển thị: {0}</value></data>
+  <data name="LanguageAudioFormat" xml:space="preserve"><value>Audio: {0}</value></data>
+  <data name="LanguageMissingDisplaySuffix" xml:space="preserve"><value> | Hiển thị chưa có dữ liệu</value></data>
+  <data name="LanguageMissingAudioSuffix" xml:space="preserve"><value> | Audio sẽ dùng bản thay thế</value></data>
+  <data name="LanguageFallbackAppliedFormat" xml:space="preserve"><value>POI chưa có {0}, đang tự động dùng {1}.</value></data>
+  <data name="LanguageFallbackNoPreferredFormat" xml:space="preserve"><value>POI đang hiển thị bằng {0} vì chưa có ngôn ngữ phù hợp hơn.</value></data>
+  <data name="QrSectionTitle" xml:space="preserve"><value>Mở bằng QR</value></data>
+  <data name="QrPlaceholder" xml:space="preserve"><value>Ví dụ: QR_POI001</value></data>
+  <data name="OpenQr" xml:space="preserve"><value>Mở QR</value></data>
+  <data name="ScanQr" xml:space="preserve"><value>Scan</value></data>
+  <data name="PoiListTitle" xml:space="preserve"><value>Danh sách điểm tham quan</value></data>
+  <data name="CoordinateFormat" xml:space="preserve"><value>Tọa độ: {0:F6}, {1:F6}</value></data>
+  <data name="SelectedPoiDefault" xml:space="preserve"><value>Chưa chọn điểm.</value></data>
+  <data name="SelectedPoiFormat" xml:space="preserve"><value>Đã chọn: {0} ({1})</value></data>
+  <data name="AudioPlayerTitle" xml:space="preserve"><value>Đang phát audio</value></data>
+  <data name="ContentSectionTitle" xml:space="preserve"><value>Nội dung thuyết minh</value></data>
+  <data name="ContentLanguageFormat" xml:space="preserve"><value>Ngôn ngữ: {0}</value></data>
+  <data name="PlayButton" xml:space="preserve"><value>Phát</value></data>
+  <data name="LanguageActionTitle" xml:space="preserve"><value>Chọn ngôn ngữ ứng dụng</value></data>
+  <data name="CancelAction" xml:space="preserve"><value>Hủy</value></data>
+  <data name="ConfirmAction" xml:space="preserve"><value>OK</value></data>
+  <data name="NotificationTitle" xml:space="preserve"><value>Thông báo</value></data>
+  <data name="CloseAction" xml:space="preserve"><value>Đóng</value></data>
+  <data name="LoginRequiredTitle" xml:space="preserve"><value>Cần đăng nhập</value></data>
+  <data name="LoginRequiredBody" xml:space="preserve"><value>Bạn cần đăng nhập để {0}.</value></data>
+  <data name="LoginAction" xml:space="preserve"><value>Đăng nhập</value></data>
+  <data name="LaterAction" xml:space="preserve"><value>Để sau</value></data>
+  <data name="AccountFallback" xml:space="preserve"><value>Tài khoản</value></data>
+  <data name="LoginToolbarText" xml:space="preserve"><value>Đăng nhập</value></data>
+  <data name="LogoutAction" xml:space="preserve"><value>Đăng xuất</value></data>
+  <data name="LogoutSuccess" xml:space="preserve"><value>Đã đăng xuất tài khoản.</value></data>
+  <data name="StartupErrorTitle" xml:space="preserve"><value>Lỗi</value></data>
+  <data name="StartupErrorBody" xml:space="preserve"><value>Khởi động thất bại: {0}</value></data>
+  <data name="LocationPermissionMissing" xml:space="preserve"><value>Vị trí: bạn chưa cấp quyền GPS.</value></data>
+  <data name="LocationUnavailable" xml:space="preserve"><value>Vị trí: không lấy được tọa độ hiện tại.</value></data>
+  <data name="GpsErrorTitle" xml:space="preserve"><value>Lỗi GPS</value></data>
+  <data name="GpsErrorBody" xml:space="preserve"><value>Không cập nhật được vị trí: {0}</value></data>
+  <data name="GpsErrorInline" xml:space="preserve"><value>Vị trí: cập nhật thất bại ({0})</value></data>
+  <data name="PoiLoadErrorBody" xml:space="preserve"><value>Không tải được danh sách điểm: {0}</value></data>
+  <data name="ContentLoadErrorBody" xml:space="preserve"><value>Không tải được nội dung: {0}</value></data>
+  <data name="PoiNoContentBody" xml:space="preserve"><value>Điểm này chưa có nội dung để phát.</value></data>
+  <data name="LanguageFallbackPrompt" xml:space="preserve"><value>POI này không hỗ trợ ngôn ngữ đã chọn. Hãy chọn ngôn ngữ khác để xem và nghe.</value></data>
+  <data name="LanguageFallbackGenerated" xml:space="preserve"><value>Ngôn ngữ {0}</value></data>
+  <data name="LanguageFallbackAlternativesFormat" xml:space="preserve"><value>Ngôn ngữ thay thế: {0}.</value></data>
+  <data name="LanguageAvailableAlternativesFormat" xml:space="preserve"><value>POI hiện có các ngôn ngữ: {0}.</value></data>
+  <data name="AudioPlayErrorTitle" xml:space="preserve"><value>Lỗi phát nội dung</value></data>
+  <data name="AudioUnavailableBody" xml:space="preserve"><value>Không thể phát audio cho nội dung này.{0}</value></data>
+  <data name="AudioErrorDetailPrefix" xml:space="preserve"><value>
+Chi tiết audio: {0}</value></data>
+  <data name="DirectQrPlaying" xml:space="preserve"><value>QR -&gt; Đang phát audio trực tiếp</value></data>
+  <data name="QrInvalidBody" xml:space="preserve"><value>Nhập hoặc scan mã QR trước.</value></data>
+  <data name="QrNotFoundTitle" xml:space="preserve"><value>Không tìm thấy</value></data>
+  <data name="QrNotFoundBody" xml:space="preserve"><value>Mã QR không hợp lệ hoặc không tồn tại.</value></data>
+  <data name="QrLookupErrorBody" xml:space="preserve"><value>Không tra cứu được QR: {0}</value></data>
+  <data name="QrPoiSelectedFormat" xml:space="preserve"><value>QR -&gt; {0}</value></data>
+  <data name="NearestPoiUnknown" xml:space="preserve"><value>POI gần nhất: chưa xác định.</value></data>
+  <data name="NearestPoiFormat" xml:space="preserve"><value>POI gần nhất: {0} (~{1:F0} m)</value></data>
+  <data name="NearestPinFormat" xml:space="preserve"><value>Gần nhất: {0}</value></data>
+  <data name="AutoGeofenceFormat" xml:space="preserve"><value>Auto geofence: {0}</value></data>
+  <data name="GpsTestSectionTitle" xml:space="preserve"><value>Test GPS tracking</value></data>
+  <data name="GpsTestRouteButton" xml:space="preserve"><value>Chạy tuyến GPX</value></data>
+  <data name="GpsTestPoiSweepButton" xml:space="preserve"><value>Bật tất cả POI</value></data>
+  <data name="GpsTestStopButton" xml:space="preserve"><value>Dừng test</value></data>
+  <data name="GpsTestProgressTitle" xml:space="preserve"><value>Tiến độ tuyến test</value></data>
+  <data name="GpsTestLogTitle" xml:space="preserve"><value>Nhật ký geofence</value></data>
+  <data name="GpsTestIdleStatus" xml:space="preserve"><value>GPS test: chưa nạp dữ liệu tuyến.</value></data>
+  <data name="GpsTestReadyStatus" xml:space="preserve"><value>GPS test: sẵn sàng với {0} điểm trên tuyến GPX.</value></data>
+  <data name="GpsTestRunningStatus" xml:space="preserve"><value>{0}: bước {1}/{2}, đã kích hoạt {3} POI.</value></data>
+  <data name="GpsTestProgressFormat" xml:space="preserve"><value>Đã chạy {0}/{1} bước ({2:F0}%).</value></data>
+  <data name="GpsTestLastTriggerSuffix" xml:space="preserve"><value>Vừa kích hoạt: {0}.</value></data>
+  <data name="GpsTestCompletedStatus" xml:space="preserve"><value>{0} hoàn tất. Đã kích hoạt {1} POI.</value></data>
+  <data name="GpsTestStoppingStatus" xml:space="preserve"><value>GPS test đang dừng và chuyển về GPS thật...</value></data>
+  <data name="GpsTestStoppedStatus" xml:space="preserve"><value>GPS test đã dừng. Có thể quay lại GPS thật.</value></data>
+  <data name="GpsTestRunningBody" xml:space="preserve"><value>GPS test đang chạy. Hãy dừng test trước khi làm mới GPS thật.</value></data>
+  <data name="GpsTestLoadErrorTitle" xml:space="preserve"><value>Lỗi GPS test</value></data>
+  <data name="GpsTestLoadErrorBody" xml:space="preserve"><value>Không nạp được dữ liệu GPS test: {0}</value></data>
+  <data name="GpsTestTrackMissingBody" xml:space="preserve"><value>Không tìm thấy điểm nào trong file GPX test.</value></data>
+  <data name="GpsTestNoPoiBody" xml:space="preserve"><value>Không có POI hợp lệ để chạy test geofence hàng loạt.</value></data>
+  <data name="GpsTestRouteModeName" xml:space="preserve"><value>Test tuyến GPX</value></data>
+  <data name="GpsTestPoiSweepModeName" xml:space="preserve"><value>Test toàn bộ geofence</value></data>
+  <data name="GpsTestCurrentPin" xml:space="preserve"><value>GPS test hiện tại</value></data>
+  <data name="GpsTestLogStarted" xml:space="preserve"><value>Bắt đầu {0} với {1} bước.</value></data>
+  <data name="GpsTestLogStep" xml:space="preserve"><value>Đến điểm {0} ({1}/{2}) tại {3:F6}, {4:F6}.</value></data>
+  <data name="GpsTestLogOutsideGeofence" xml:space="preserve"><value>Ngoài geofence của {0}: cách {1:F0} m, ngưỡng {2:F0} m.</value></data>
+  <data name="GpsTestLogCooldown" xml:space="preserve"><value>Bỏ qua {0} vì đang trong thời gian chờ geofence.</value></data>
+  <data name="GpsTestLogGeofenceTriggered" xml:space="preserve"><value>Kích hoạt geofence tại {0} ở khoảng cách {1:F0} m.</value></data>
+  <data name="GpsTestLogPlaybackAudio" xml:space="preserve"><value>Phát audio file cho "{0}" ({1}).</value></data>
+  <data name="GpsTestLogPlaybackTts" xml:space="preserve"><value>Dùng TTS cho "{0}" ({1}).</value></data>
+  <data name="GpsTestLogPlaybackError" xml:space="preserve"><value>Lỗi phát "{0}": {1}</value></data>
+  <data name="GpsTestLogNoTrigger" xml:space="preserve"><value>Bước này chưa kích hoạt geofence nào.</value></data>
+  <data name="GpsTestLogStopped" xml:space="preserve"><value>Dừng test. Tổng số POI đã kích hoạt: {0}.</value></data>
+  <data name="PlaybackLanguageFormat" xml:space="preserve"><value>Đang phát audio theo ngôn ngữ đã chọn: {0}</value></data>
+  <data name="MapErrorTitle" xml:space="preserve"><value>Lỗi map</value></data>
+  <data name="PoiSelectionErrorTitle" xml:space="preserve"><value>Lỗi chọn điểm</value></data>
+  <data name="CameraPermissionBody" xml:space="preserve"><value>Cần cấp quyền camera để quét QR.</value></data>
+  <data name="ActionOpenQrContent" xml:space="preserve"><value>mở nội dung bằng QR</value></data>
+  <data name="ActionScanQr" xml:space="preserve"><value>quét QR</value></data>
+  <data name="ActionPlayAudio" xml:space="preserve"><value>phát audio</value></data>
+  <data name="QrScannerTitle" xml:space="preserve"><value>Quét QR</value></data>
+  <data name="QrScannerHint" xml:space="preserve"><value>Đưa mã QR vào khung để quét</value></data>
+  <data name="AuthPageTitle" xml:space="preserve"><value>Tài khoản</value></data>
+  <data name="AuthHeroTitle" xml:space="preserve"><value>Đăng nhập / Đăng ký</value></data>
+  <data name="GuestSessionStatus" xml:space="preserve"><value>Đang sử dụng chế độ khách.</value></data>
+  <data name="LoggedInSessionStatus" xml:space="preserve"><value>Đã đăng nhập: {0}</value></data>
+  <data name="LoginTab" xml:space="preserve"><value>Đăng nhập</value></data>
+  <data name="RegisterTab" xml:space="preserve"><value>Đăng ký</value></data>
+  <data name="LoginSectionTitle" xml:space="preserve"><value>Đăng nhập người dùng</value></data>
+  <data name="UsernamePlaceholder" xml:space="preserve"><value>Tên đăng nhập</value></data>
+  <data name="PasswordPlaceholder" xml:space="preserve"><value>Mật khẩu</value></data>
+  <data name="RegisterSectionTitle" xml:space="preserve"><value>Đăng ký tài khoản mới</value></data>
+  <data name="FullNamePlaceholder" xml:space="preserve"><value>Họ tên</value></data>
+  <data name="EmailPlaceholder" xml:space="preserve"><value>Email</value></data>
+  <data name="PhonePlaceholder" xml:space="preserve"><value>Số điện thoại</value></data>
+  <data name="RegisterLanguageTitle" xml:space="preserve"><value>Ngôn ngữ mặc định</value></data>
+  <data name="RegisterAndLoginButton" xml:space="preserve"><value>Đăng ký và đăng nhập</value></data>
+  <data name="LogoutButton" xml:space="preserve"><value>Đăng xuất</value></data>
+  <data name="MissingLoginFields" xml:space="preserve"><value>Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.</value></data>
+  <data name="LoginFailed" xml:space="preserve"><value>Đăng nhập thất bại.</value></data>
+  <data name="LoginSuccess" xml:space="preserve"><value>Đăng nhập thành công.</value></data>
+  <data name="MissingRegisterFields" xml:space="preserve"><value>Tên đăng nhập và mật khẩu đăng ký là bắt buộc.</value></data>
+  <data name="RegisterFailed" xml:space="preserve"><value>Đăng ký thất bại.</value></data>
+  <data name="RegisterSuccess" xml:space="preserve"><value>Đăng ký thành công và đã đăng nhập.</value></data>
+</root>

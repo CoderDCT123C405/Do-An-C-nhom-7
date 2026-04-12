@@ -50,6 +50,7 @@ public class DiemThamQuanItem
     public int MaLoai { get; set; }
     public bool TrangThaiHoatDong { get; set; }
     public DateTime NgayCapNhat { get; set; }
+    public string CoordinateText { get; set; } = string.Empty;
 }
 
 public class NoiDungItem
@@ -66,6 +67,8 @@ public class NoiDungItem
     public int? ThoiLuongGiay { get; set; }
     public bool TrangThaiHoatDong { get; set; } = true;
     public DateTime NgayCapNhat { get; set; }
+    public string LocalizedLanguageText { get; set; } = string.Empty;
+    public string LocalizedPlayButtonText { get; set; } = string.Empty;
 }
 
 public class NoiDungByDiemResponse
@@ -74,11 +77,29 @@ public class NoiDungByDiemResponse
     public List<NoiDungItem> NoiDung { get; set; } = [];
 }
 
+public class NoiDungFallbackResponse
+{
+    public int MaDiem { get; set; }
+    public int? MaNgonNguYeuCau { get; set; }
+    public int? MaNgonNguThucTe { get; set; }
+    public NgonNguItem? NgonNguYeuCau { get; set; }
+    public NgonNguItem? NgonNguThucTe { get; set; }
+    public List<NgonNguItem> NgonNguKhaDung { get; set; } = [];
+    public List<NgonNguItem> NgonNguThayThe { get; set; } = [];
+    public List<NoiDungItem> NoiDung { get; set; } = [];
+}
+
 public class QrLookupResponse
 {
     public int MaQR { get; set; }
     public string GiaTriQR { get; set; } = string.Empty;
     public int MaDiem { get; set; }
+    public int? MaNgonNguYeuCau { get; set; }
+    public int? MaNgonNguThucTe { get; set; }
+    public NgonNguItem? NgonNguYeuCau { get; set; }
+    public NgonNguItem? NgonNguThucTe { get; set; }
+    public List<NgonNguItem> NgonNguKhaDung { get; set; } = [];
+    public List<NgonNguItem> NgonNguThayThe { get; set; } = [];
     public DiemThamQuanItem? DiemThamQuan { get; set; }
     public List<NoiDungItem> NoiDung { get; set; } = [];
 }

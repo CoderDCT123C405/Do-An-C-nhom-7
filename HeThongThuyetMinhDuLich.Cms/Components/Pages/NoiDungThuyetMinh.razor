@@ -35,7 +35,11 @@
             </select>
         </div>
         <div style="display:flex;gap:8px;align-items:flex-end;">
+            <button class="btn btn-primary" @onclick="StartCreate">Them noi dung</button>
             <button class="btn btn-secondary" @onclick="LoadNoiDungAsync" disabled="@_isLoading">Tai lai</button>
+            <button class="btn btn-secondary" @onclick="GenerateAllAudioAsync" disabled="@(_isGeneratingAllAudio || _isLoading)">
+                @(_isGeneratingAllAudio ? "Dang tao lai audio..." : "Tao lai toan bo audio")
+            </button>
         </div>
     </div>
     <div>
@@ -43,6 +47,42 @@
         <input placeholder="Tim theo tieu de/noi dung..." @bind="_search" @bind:event="oninput" />
     </div>
 </div>
+
+@if (CoverageRows.Any())
+{
+    <div class="card" style="margin-bottom:12px;">
+        <h4>Do day du ngon ngu cho demo</h4>
+        <p style="margin-top:6px;color:#475569;">Muc tieu demo: moi diem co du 3 ngon ngu vi, en, zh-CN va san sang sinh audio.</p>
+
+        <div class="table-wrap" style="margin-top:10px;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Diem tham quan</th>
+                        <th>Ngon ngu hien co</th>
+                        <th>Ngon ngu con thieu</th>
+                        <th>Trang thai</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in CoverageRows)
+                    {
+                        <tr>
+                            <td>@row.PoiDisplayName</td>
+                            <td>@row.AvailableLanguagesText</td>
+                            <td>@row.MissingLanguagesText</td>
+                            <td>
+                                <span class="badge @(row.IsComplete ? "badge-success" : "badge-muted")">
+                                    @(row.IsComplete ? "Du 3 ngon ngu" : "Can bo sung")
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
 
 @if (_showForm)
 {
@@ -134,7 +174,7 @@
                         <td>@item.MaNoiDung</td>
                         <td>@GetTenDiem(item.MaDiem)</td>
                         <td>@item.TieuDe</td>
-                        <td>@(item.TenNgonNgu ?? $"Ngon ngu #{item.MaNgonNgu}")</td>
+                        <td>@GetLanguageDisplay(item)</td>
                         <td>
                             @if (string.IsNullOrWhiteSpace(item.DuongDanAmThanh))
                             {
@@ -189,7 +229,15 @@
     private string? _error;
     private string? _success;
     private string _search = "";
+    private bool _isGeneratingAllAudio;
     private readonly HashSet<int> _generatingAudioIds = [];
+    private static readonly string[] RequiredLanguageCodes = ["vi", "en", "zh-CN"];
+
+    private IEnumerable<PoiCoverageRow> CoverageRows => _diemItems
+        .Where(x => _selectedMaDiem == 0 || x.MaDiem == _selectedMaDiem)
+        .Select(BuildCoverageRow)
+        .OrderBy(x => x.IsComplete ? 1 : 0)
+        .ThenBy(x => x.PoiDisplayName);
 
     private IEnumerable<NoiDungThuyetMinhItem> FilteredNoiDungItems =>
         _noiDungItems.Where(x =>
@@ -215,7 +263,11 @@
         _ngonNguItems.Clear();
 
         _diemItems.AddRange((await ApiClient.GetDiemAsync()).OrderBy(x => x.TenDiem));
-        _ngonNguItems.AddRange((await ApiClient.GetNgonNguAsync()).Where(x => x.TrangThaiHoatDong).OrderBy(x => x.TenNgonNgu));
+        _ngonNguItems.AddRange((await ApiClient.GetNgonNguAsync())
+            .Where(x => x.TrangThaiHoatDong)
+            .OrderByDescending(x => x.LaMacDinh)
+            .ThenBy(x => Array.IndexOf(RequiredLanguageCodes, x.MaNgonNguQuocTe))
+            .ThenBy(x => x.TenNgonNgu));
 
         if (_selectedMaDiem < 0)
         {
@@ -284,6 +336,14 @@
         _form.ChoPhepTTS = true;
         // _form.ThoiLuongGiay auto-calculated
         _form.TrangThaiHoatDong = true;
+    }
+
+    private void StartCreate()
+    {
+        ResetForm();
+        _showForm = true;
+        _error = null;
+        _success = null;
     }
 
     private void CloseForm()
@@ -384,6 +444,35 @@
         }
     }
 
+    private async Task GenerateAllAudioAsync()
+    {
+        if (_isGeneratingAllAudio)
+        {
+            return;
+        }
+
+        _isGeneratingAllAudio = true;
+        _error = null;
+        _success = null;
+
+        try
+        {
+            var result = await ApiClient.GenerateAudioBatchAsync(overwrite: true);
+            if (!result.Success)
+            {
+                _error = CleanError(result.ErrorMessage);
+                return;
+            }
+
+            _success = "Da gui yeu cau tao lai toan bo audio demo.";
+            await LoadNoiDungAsync();
+        }
+        finally
+        {
+            _isGeneratingAllAudio = false;
+        }
+    }
+
     private static string CleanError(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
@@ -419,4 +508,46 @@
         var diem = _diemItems.FirstOrDefault(x => x.MaDiem == maDiem);
         return diem is null ? $"Diem #{maDiem}" : $"{diem.TenDiem} ({diem.MaDinhDanh})";
     }
+
+    private string GetLanguageDisplay(NoiDungThuyetMinhItem item)
+    {
+        var language = _ngonNguItems.FirstOrDefault(x => x.MaNgonNgu == item.MaNgonNgu);
+        if (language is null)
+        {
+            return item.TenNgonNgu ?? $"Ngon ngu #{item.MaNgonNgu}";
+        }
+
+        return string.IsNullOrWhiteSpace(language.MaNgonNguQuocTe)
+            ? language.TenNgonNgu
+            : $"{language.TenNgonNgu} ({language.MaNgonNguQuocTe})";
+    }
+
+    private PoiCoverageRow BuildCoverageRow(DiemThamQuanItem poi)
+    {
+        var availableLanguageCodes = _noiDungItems
+            .Where(x => x.MaDiem == poi.MaDiem && x.TrangThaiHoatDong)
+            .Select(x => GetLanguageCode(x.MaNgonNgu))
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var missingLanguageCodes = RequiredLanguageCodes
+            .Where(code => !availableLanguageCodes.Contains(code, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+        return new PoiCoverageRow(
+            $"{poi.TenDiem} ({poi.MaDinhDanh})",
+            availableLanguageCodes.Count == 0 ? "Chua co" : string.Join(", ", availableLanguageCodes),
+            missingLanguageCodes.Count == 0 ? "Khong thieu" : string.Join(", ", missingLanguageCodes),
+            missingLanguageCodes.Count == 0);
+    }
+
+    private string? GetLanguageCode(int maNgonNgu)
+        => _ngonNguItems.FirstOrDefault(x => x.MaNgonNgu == maNgonNgu)?.MaNgonNguQuocTe;
+
+    private sealed record PoiCoverageRow(
+        string PoiDisplayName,
+        string AvailableLanguagesText,
+        string MissingLanguagesText,
+        bool IsComplete);
 }

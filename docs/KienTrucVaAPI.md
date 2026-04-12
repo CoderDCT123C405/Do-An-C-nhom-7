@@ -7,6 +7,8 @@ He thong theo mo hinh Client - Server, gom 3 module:
 - Web API (ASP.NET Core)
 - CMS (Blazor Server)
 
+Nguon du lieu trung tam la SQL Server thong qua API. Chuc nang offline dung SQLite tren mobile de cache du lieu va audio. SQLite trong API neu co chi duoc xem la che do dev/test cuc bo, khong phai kien truc van hanh chinh.
+
 ## 2. Thanh phan chuc nang
 
 ### 2.1 Mobile
@@ -14,12 +16,14 @@ He thong theo mo hinh Client - Server, gom 3 module:
 - Dong bo du lieu va cache offline
 - Phat audio noi dung thuyet minh
 - Kich hoat qua GPS/QR theo luong nghiep vu
+- Khi mat mang, doc du lieu tu SQLite local va dong bo lai khi co mang
 
 ### 2.2 API
 - Xac thuc admin va nguoi dung
 - CRUD danh muc du lieu (loai diem, diem, ngon ngu, tai khoan, nguoi dung)
 - Quan ly noi dung thuyet minh va generate audio edge-tts
 - Quan ly QR, hinh anh, lich su phat va thong ke
+- Mac dinh chay tren SQL Server; khong xem SQLite la nguon du lieu chinh cua API
 
 ### 2.3 CMS
 - Dang nhap quan tri
@@ -30,7 +34,7 @@ He thong theo mo hinh Client - Server, gom 3 module:
 ## 3. Luong nghiep vu chinh
 
 1. Admin dang nhap CMS -> tao/sua du lieu diem, noi dung, QR, hinh anh.
-2. Mobile dong bo du lieu tu API -> luu cache SQLite.
+2. Mobile dong bo du lieu tu API (nguon du lieu SQL Server) -> luu cache SQLite local.
 3. Nguoi dung kich hoat noi dung (GPS/QR) -> app phat audio/TTS.
 4. Mobile gui lich su phat ve API -> CMS tong hop thong ke.
 
@@ -133,3 +137,4 @@ Cac nhom du lieu duoc dung thuong xuyen:
 - Luong generate audio dang dung `edge-tts` local va co the auto-generate khi save noi dung.
 - Route API phan lon khong phan biet hoa thuong, nhung khi viet tai lieu nen giu dung theo ten controller de de doi chieu code.
 - Neu can de tich hop frontend, nen tao them OpenAPI/Postman collection tu source hien tai de tranh lech route.
+- Kien truc offline chuan: `SQL Server -> API -> SQLite tren mobile`. Neu thay API dang chay bang SQLite, do la mode dev/test, khong phai luong du lieu chuan de nop bai.

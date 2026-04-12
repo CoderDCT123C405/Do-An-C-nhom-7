@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="ChatGPT">
+  <trk>
+    <name>Vinh Khanh Food Tour</name>
+    <trkseg>
+      <!-- Bat dau ngoai vung -->
+      <trkpt lat="10.756800" lon="106.702500"/>
+
+      <!-- Pho am thuc Vinh Khanh -->
+      <trkpt lat="10.7578500" lon="106.7036200"/>
+
+      <!-- Cum quan oc -->
+      <trkpt lat="10.7582000" lon="106.7039000"/>
+      <trkpt lat="10.7576000" lon="106.7033000"/>
+      <trkpt lat="10.7579000" lon="106.7042000"/>
+      <trkpt lat="10.7581000" lon="106.7031000"/>
+
+      <!-- Bo nuong -->
+      <trkpt lat="10.7573000" lon="106.7038000"/>
+      <trkpt lat="10.7571000" lon="106.7034000"/>
+
+      <!-- Hai san -->
+      <trkpt lat="10.7584000" lon="106.7035000"/>
+      <trkpt lat="10.7580000" lon="106.7040000"/>
+
+      <!-- Lau -->
+      <trkpt lat="10.7577000" lon="106.7039000"/>
+      <trkpt lat="10.7583000" lon="106.7037000"/>
+
+      <!-- An vat -->
+      <trkpt lat="10.7574000" lon="106.7032000"/>
+      <trkpt lat="10.7578000" lon="106.7036000"/>
+
+      <!-- Nhau -->
+      <trkpt lat="10.7572000" lon="106.7041000"/>
+      <trkpt lat="10.7576000" lon="106.7043000"/>
+
+      <!-- Dem khuya -->
+      <trkpt lat="10.7582000" lon="106.7034000"/>
+      <trkpt lat="10.7581000" lon="106.7038000"/>
+      <trkpt lat="10.7579000" lon="106.7030000"/>
+      <trkpt lat="10.7575000" lon="106.7044000"/>
+      <trkpt lat="10.7583000" lon="106.7032000"/>
+      <trkpt lat="10.7576000" lon="106.7031000"/>
+
+      <!-- Di den Ben Nha Rong -->
+      <trkpt lat="10.7699690" lon="106.7048490"/>
+
+      <!-- Di den Bao tang -->
+      <trkpt lat="10.7871160" lon="106.7054050"/>
+    </trkseg>
+  </trk>
+</gpx>

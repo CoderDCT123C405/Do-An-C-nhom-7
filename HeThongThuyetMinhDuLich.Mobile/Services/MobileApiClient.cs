@@ -8,7 +8,11 @@ namespace HeThongThuyetMinhDuLich.Mobile.Services;
 
 public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheStore cacheStore, AuthSession authSession)
 {
+    private const string CacheGenerationPreferenceKey = "mobile.cache.generation";
+    private const string CurrentCacheGeneration = "sqlserver-sync-v2";
+
     private string? _resolvedBaseUrl;
+    private bool _cacheCompatibilityChecked;
 
     private static readonly HashSet<string> AllowedPlaybackTriggers = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -173,6 +177,8 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
 
     public async Task<IReadOnlyList<DiemThamQuanItem>> GetDiemThamQuanAsync()
     {
+        await EnsureCacheCompatibilityAsync();
+
         var isOnline = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
 
         if (isOnline)
@@ -194,8 +200,10 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
 
     // ================== NOI DUNG ==================
 
-    public async Task<IReadOnlyList<NoiDungItem>> GetNoiDungByDiemAsync(int maDiem)
+    public async Task<IReadOnlyList<NoiDungItem>> GetNoiDungByDiemAsync(int maDiem, int? preferredLanguageId = null)
     {
+        await EnsureCacheCompatibilityAsync();
+
         var isOnline = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
 
         if (isOnline)
@@ -203,26 +211,64 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
             try
             {
                 await SyncNoiDungAsync(maDiem);
-                return await cacheStore.GetNoiDungAsync(maDiem);
+                var items = await cacheStore.GetNoiDungAsync(maDiem);
+                return PrioritizePreferredLanguage(items, preferredLanguageId);
             }
             catch (Exception ex)
             {
                 Console.WriteLine("API ERROR: " + ex.Message);
-                return await cacheStore.GetNoiDungAsync(maDiem);
+                var items = await cacheStore.GetNoiDungAsync(maDiem);
+                return PrioritizePreferredLanguage(items, preferredLanguageId);
             }
         }
 
-        return await cacheStore.GetNoiDungAsync(maDiem);
+        var cachedItems = await cacheStore.GetNoiDungAsync(maDiem);
+        return PrioritizePreferredLanguage(cachedItems, preferredLanguageId);
+    }
+
+    public async Task<NoiDungFallbackResponse?> GetNoiDungFallbackAsync(int maDiem, int? preferredLanguageId = null)
+    {
+        await EnsureCacheCompatibilityAsync();
+
+        var isOnline = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
+
+        if (isOnline)
+        {
+            try
+            {
+                await SyncNoiDungAsync(maDiem);
+
+                if (preferredLanguageId.HasValue && preferredLanguageId.Value > 0)
+                {
+                    using var client = await CreateApiClientAsync();
+                    var fallbackResponse = await client.GetFromJsonAsync<NoiDungFallbackResponse>(
+                        $"api/noidung/{maDiem}/fallback?maNgonNguUuTien={preferredLanguageId.Value}");
+                    if (fallbackResponse is not null)
+                    {
+                        return fallbackResponse;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("FALLBACK ERROR: " + ex.Message);
+            }
+        }
+
+        var cachedItems = await cacheStore.GetNoiDungAsync(maDiem);
+        return await BuildFallbackResponseFromCacheAsync(maDiem, cachedItems, preferredLanguageId);
     }
 
     // ================== QR ==================
 
-    public async Task<QrLookupResponse?> LookupQrAsync(string qrValue)
+    public async Task<QrLookupResponse?> LookupQrAsync(string qrValue, int? preferredLanguageId = null)
     {
+        await EnsureCacheCompatibilityAsync();
+
         var isOnline = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
 
         if (!isOnline)
-            return await LookupQrFromCacheAsync(qrValue);
+            return await LookupQrFromCacheAsync(qrValue, preferredLanguageId);
 
         try
         {
@@ -231,12 +277,12 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
             var response = await client.GetAsync($"api/maqr/{Uri.EscapeDataString(qrValue)}");
 
             if (!response.IsSuccessStatusCode)
-                return await LookupQrFromCacheAsync(qrValue);
+                return await LookupQrFromCacheAsync(qrValue, preferredLanguageId);
 
             var result = await response.Content.ReadFromJsonAsync<QrLookupResponse>();
             if (result is null)
             {
-                return await LookupQrFromCacheAsync(qrValue);
+                return await LookupQrFromCacheAsync(qrValue, preferredLanguageId);
             }
 
             if (result.DiemThamQuan is not null)
@@ -260,7 +306,16 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
                 }
             }
 
-            result.NoiDung = cachedContents.ToList();
+            NoiDungFallbackResponse? fallbackResponse = null;
+            if (preferredLanguageId.HasValue && preferredLanguageId.Value > 0)
+            {
+                fallbackResponse = await client.GetFromJsonAsync<NoiDungFallbackResponse>(
+                    $"api/noidung/{result.MaDiem}/fallback?maNgonNguUuTien={preferredLanguageId.Value}");
+            }
+
+            ApplyFallbackMetadata(result, fallbackResponse);
+            result.NoiDung = PrioritizePreferredLanguage(cachedContents, preferredLanguageId).ToList();
+
             await cacheStore.SaveNoiDungAsync(result.MaDiem, cachedContents);
             await cacheStore.SaveQrMappingAsync(new QrSummaryItem
             {
@@ -276,7 +331,7 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
         catch (Exception ex)
         {
             Console.WriteLine("QR ERROR: " + ex.Message);
-            return await LookupQrFromCacheAsync(qrValue);
+            return await LookupQrFromCacheAsync(qrValue, preferredLanguageId);
         }
     }
 
@@ -284,6 +339,8 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
 
     public async Task<IReadOnlyList<NgonNguItem>> GetNgonNguAsync()
     {
+        await EnsureCacheCompatibilityAsync();
+
         var isOnline = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
         if (!isOnline)
             return await cacheStore.GetNgonNguAsync();
@@ -331,6 +388,8 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
 
     public async Task SyncOfflineStateAsync(IEnumerable<int>? poiIds = null)
     {
+        await EnsureCacheCompatibilityAsync();
+
         if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
         {
             return;
@@ -436,6 +495,23 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
         }
 
         throw new InvalidOperationException("Khong ket noi duoc API o cac cong da cau hinh.");
+    }
+
+    private async Task EnsureCacheCompatibilityAsync()
+    {
+        if (_cacheCompatibilityChecked)
+        {
+            return;
+        }
+
+        var storedGeneration = Preferences.Default.Get(CacheGenerationPreferenceKey, string.Empty);
+        if (!string.Equals(storedGeneration, CurrentCacheGeneration, StringComparison.Ordinal))
+        {
+            await cacheStore.ResetCacheAsync();
+            Preferences.Default.Set(CacheGenerationPreferenceKey, CurrentCacheGeneration);
+        }
+
+        _cacheCompatibilityChecked = true;
     }
 
     private HttpClient CreateClientForBaseUrl(string baseUrl)
@@ -668,7 +744,7 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
         }
     }
 
-    private async Task<QrLookupResponse?> LookupQrFromCacheAsync(string qrValue)
+    private async Task<QrLookupResponse?> LookupQrFromCacheAsync(string qrValue, int? preferredLanguageId = null)
     {
         var cachedQr = await cacheStore.GetQrMappingAsync(qrValue);
         if (cachedQr is null)
@@ -682,14 +758,118 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
             return null;
         }
 
-        var noiDung = await cacheStore.GetNoiDungAsync(cachedQr.MaDiem);
+        var allNoiDung = await cacheStore.GetNoiDungAsync(cachedQr.MaDiem);
+        var fallbackResponse = await BuildFallbackResponseFromCacheAsync(cachedQr.MaDiem, allNoiDung, preferredLanguageId);
+
         return new QrLookupResponse
         {
             MaQR = cachedQr.MaQR,
             GiaTriQR = cachedQr.GiaTriQR,
             MaDiem = cachedQr.MaDiem,
+            MaNgonNguYeuCau = fallbackResponse?.MaNgonNguYeuCau,
+            MaNgonNguThucTe = fallbackResponse?.MaNgonNguThucTe,
+            NgonNguYeuCau = fallbackResponse?.NgonNguYeuCau,
+            NgonNguThucTe = fallbackResponse?.NgonNguThucTe,
+            NgonNguKhaDung = fallbackResponse?.NgonNguKhaDung ?? [],
+            NgonNguThayThe = fallbackResponse?.NgonNguThayThe ?? [],
             DiemThamQuan = poi,
-            NoiDung = noiDung.ToList()
+            NoiDung = PrioritizePreferredLanguage(allNoiDung, preferredLanguageId).ToList()
         };
+    }
+
+    private static void ApplyFallbackMetadata(QrLookupResponse target, NoiDungFallbackResponse? source)
+    {
+        if (source is null)
+        {
+            return;
+        }
+
+        target.MaNgonNguYeuCau = source.MaNgonNguYeuCau;
+        target.MaNgonNguThucTe = source.MaNgonNguThucTe;
+        target.NgonNguYeuCau = source.NgonNguYeuCau;
+        target.NgonNguThucTe = source.NgonNguThucTe;
+        target.NgonNguKhaDung = source.NgonNguKhaDung ?? [];
+        target.NgonNguThayThe = source.NgonNguThayThe ?? [];
+    }
+
+    private async Task<NoiDungFallbackResponse?> BuildFallbackResponseFromCacheAsync(int maDiem, IReadOnlyList<NoiDungItem> items, int? preferredLanguageId)
+    {
+        if (items.Count == 0)
+        {
+            return null;
+        }
+
+        var languages = await cacheStore.GetNgonNguAsync();
+        var availableLanguageIds = items.Select(x => x.MaNgonNgu).Distinct().ToHashSet();
+        var requestedLanguageId = preferredLanguageId.GetValueOrDefault();
+        var resolvedLanguageId = ResolveFallbackLanguageId(languages, availableLanguageIds, requestedLanguageId);
+
+        var requestedLanguage = languages.FirstOrDefault(x => x.MaNgonNgu == requestedLanguageId);
+        var resolvedLanguage = languages.FirstOrDefault(x => x.MaNgonNgu == resolvedLanguageId);
+        var availableLanguages = languages
+            .Where(x => availableLanguageIds.Contains(x.MaNgonNgu))
+            .OrderByDescending(x => x.LaMacDinh)
+            .ThenBy(x => x.TenNgonNgu)
+            .ToList();
+
+        return new NoiDungFallbackResponse
+        {
+            MaDiem = maDiem,
+            MaNgonNguYeuCau = requestedLanguageId > 0 ? requestedLanguageId : null,
+            MaNgonNguThucTe = resolvedLanguageId > 0 ? resolvedLanguageId : null,
+            NgonNguYeuCau = requestedLanguage,
+            NgonNguThucTe = resolvedLanguage,
+            NgonNguKhaDung = availableLanguages,
+            NgonNguThayThe = availableLanguages
+                .Where(x => x.MaNgonNgu != resolvedLanguageId)
+                .ToList(),
+            NoiDung = (resolvedLanguageId > 0
+                    ? items.Where(x => x.MaNgonNgu == resolvedLanguageId)
+                    : items)
+                .ToList()
+        };
+    }
+
+    private static int ResolveFallbackLanguageId(IReadOnlyList<NgonNguItem> languages, IReadOnlyCollection<int> availableLanguageIds, int requestedLanguageId)
+    {
+        if (availableLanguageIds.Count == 0)
+        {
+            return 0;
+        }
+
+        if (requestedLanguageId > 0 && availableLanguageIds.Contains(requestedLanguageId))
+        {
+            return requestedLanguageId;
+        }
+
+        var defaultLanguageId = languages.FirstOrDefault(x => x.LaMacDinh && availableLanguageIds.Contains(x.MaNgonNgu))?.MaNgonNgu ?? 0;
+        if (defaultLanguageId > 0)
+        {
+            return defaultLanguageId;
+        }
+
+        var vietnameseLanguageId = languages.FirstOrDefault(x =>
+            availableLanguageIds.Contains(x.MaNgonNgu) &&
+            string.Equals(x.MaNgonNguQuocTe, "vi", StringComparison.OrdinalIgnoreCase))?.MaNgonNgu ?? 0;
+        if (vietnameseLanguageId > 0)
+        {
+            return vietnameseLanguageId;
+        }
+
+        return availableLanguageIds.First();
+    }
+
+    private static IReadOnlyList<NoiDungItem> PrioritizePreferredLanguage(IReadOnlyList<NoiDungItem> items, int? preferredLanguageId)
+    {
+        if (!preferredLanguageId.HasValue || preferredLanguageId.Value <= 0)
+        {
+            return items;
+        }
+
+        return items
+            .OrderByDescending(x => x.MaNgonNgu == preferredLanguageId.Value)
+            .ThenBy(x => x.MaNgonNgu)
+            .ThenBy(x => x.MaNoiDung)
+            .ToList();
     }
 }

@@ -6,7 +6,8 @@
     xmlns:local="clr-namespace:HeThongThuyetMinhDuLich.Mobile">
 
     <ShellContent
-        Title="Trang chủ"
+        x:Name="HomeShellContent"
+        Title=""
         ContentTemplate="{DataTemplate local:MainPage}" />
 
 </Shell>

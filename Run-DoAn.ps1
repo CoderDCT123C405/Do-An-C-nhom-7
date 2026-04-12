@@ -1,6 +1,6 @@
 param(
     [ValidateSet("online", "offline")]
-    [string]$Mode = "offline",
+    [string]$Mode = "online",
     [switch]$ResetOfflineDb,
     [switch]$SkipBuild
 )
@@ -136,6 +136,9 @@ function Test-RunnableDll {
 }
 
 Write-Host "Mode: $Mode ($dbProvider)"
+if ($Mode -eq "offline") {
+    Write-Host "Offline mode chi dung cho API SQLite cuc bo de dev/test. Kien truc chuan cua do an la SQL Server o API va SQLite chi tren mobile."
+}
 if (-not $SkipBuild) {
     Write-Host "Building API..."
     if (-not (Invoke-BuildWithRetry -ProjectPath "HeThongThuyetMinhDuLich.Api\HeThongThuyetMinhDuLich.Api.csproj" -BuildLogPath ".\api.build.log")) {

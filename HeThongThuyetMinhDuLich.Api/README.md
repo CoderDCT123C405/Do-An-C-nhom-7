@@ -4,6 +4,7 @@
 
 - ASP.NET Core Web API .NET 8
 - Entity Framework Core SQL Server
+- Mobile offline cache su dung SQLite tren thiet bi, khong dung SQLite lam DB chinh cua he thong
 - DbContext va entity theo co so du lieu da chot
 - CRUD cho:
   - `LoaiDiemThamQuan`
@@ -21,13 +22,23 @@
 
 ## Cau hinh ket noi
 
+Mac dinh API phai chay voi SQL Server. SQLite trong API chi nen dung khi can dev/test offline cuc bo.
+
 Sua chuoi ket noi trong file `appsettings.json`:
 
 ```json
+"Database": {
+  "Provider": "SqlServer"
+},
 "ConnectionStrings": {
   "DefaultConnection": "Server=.;Database=HeThongThuyetMinhDuLich;Trusted_Connection=True;TrustServerCertificate=True;"
 }
 ```
+
+Neu can chay API bang SQLite de test cuc bo, co the dung `Run-DoAn.ps1 -Mode offline`. Kien truc nop bai/van hanh chuan van la:
+
+- SQL Server o server/API
+- SQLite chi tren mobile de cache offline
 
 ## Cau hinh edge-tts
 

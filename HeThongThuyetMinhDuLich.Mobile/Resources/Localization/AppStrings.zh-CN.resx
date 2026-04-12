@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="ShellHomeTitle" xml:space="preserve"><value>首页</value></data>
+  <data name="MainPageTitle" xml:space="preserve"><value>语音导览</value></data>
+  <data name="MainHeroTitle" xml:space="preserve"><value>语音导览</value></data>
+  <data name="MainHeroSubtitle" xml:space="preserve"><value>快速查看景点、打开内容并播放讲解</value></data>
+  <data name="ReloadPoints" xml:space="preserve"><value>加载景点</value></data>
+  <data name="RefreshGps" xml:space="preserve"><value>刷新 GPS</value></data>
+  <data name="LocationStatusTitle" xml:space="preserve"><value>位置状态</value></data>
+  <data name="DefaultGpsStatus" xml:space="preserve"><value>位置：尚未更新。</value></data>
+  <data name="GpsUnsupportedWindows" xml:space="preserve"><value>位置：地图仅支持 Android/iOS。当前正在 Windows 上运行。</value></data>
+  <data name="GpsUnsupportedDevice" xml:space="preserve"><value>位置：此设备不支持地图。</value></data>
+  <data name="CurrentLocationCoordinates" xml:space="preserve"><value>位置：{0:F6}, {1:F6}</value></data>
+  <data name="LanguageSectionTitle" xml:space="preserve"><value>语言</value></data>
+  <data name="DisplayLanguageLabel" xml:space="preserve"><value>显示</value></data>
+  <data name="LanguagePreferenceLabel" xml:space="preserve"><value>统一语言</value></data>
+  <data name="AudioLanguageLabel" xml:space="preserve"><value>音频</value></data>
+  <data name="DisplayLanguagePickerTitle" xml:space="preserve"><value>显示语言</value></data>
+  <data name="LanguagePreferencePickerTitle" xml:space="preserve"><value>选择统一语言</value></data>
+  <data name="AudioLanguagePickerTitle" xml:space="preserve"><value>音频语言</value></data>
+  <data name="AllLanguages" xml:space="preserve"><value>全部语言</value></data>
+  <data name="LanguageDisplayFormat" xml:space="preserve"><value>显示：{0}</value></data>
+  <data name="LanguageAudioFormat" xml:space="preserve"><value>音频：{0}</value></data>
+  <data name="LanguageMissingDisplaySuffix" xml:space="preserve"><value> | 暂无显示数据</value></data>
+  <data name="LanguageMissingAudioSuffix" xml:space="preserve"><value> | 音频将使用回退语言</value></data>
+  <data name="LanguageFallbackAppliedFormat" xml:space="preserve"><value>该景点暂不提供 {0}，已自动切换为 {1}。</value></data>
+  <data name="LanguageFallbackNoPreferredFormat" xml:space="preserve"><value>该景点当前显示为 {0}，因为暂时没有更合适的语言版本。</value></data>
+  <data name="QrSectionTitle" xml:space="preserve"><value>通过二维码打开</value></data>
+  <data name="QrPlaceholder" xml:space="preserve"><value>例如：QR_POI001</value></data>
+  <data name="OpenQr" xml:space="preserve"><value>打开二维码</value></data>
+  <data name="ScanQr" xml:space="preserve"><value>扫描</value></data>
+  <data name="PoiListTitle" xml:space="preserve"><value>景点列表</value></data>
+  <data name="CoordinateFormat" xml:space="preserve"><value>坐标：{0:F6}, {1:F6}</value></data>
+  <data name="SelectedPoiDefault" xml:space="preserve"><value>尚未选择景点。</value></data>
+  <data name="SelectedPoiFormat" xml:space="preserve"><value>已选择：{0} ({1})</value></data>
+  <data name="AudioPlayerTitle" xml:space="preserve"><value>正在播放</value></data>
+  <data name="ContentSectionTitle" xml:space="preserve"><value>讲解内容</value></data>
+  <data name="ContentLanguageFormat" xml:space="preserve"><value>语言：{0}</value></data>
+  <data name="PlayButton" xml:space="preserve"><value>播放</value></data>
+  <data name="LanguageActionTitle" xml:space="preserve"><value>选择应用语言</value></data>
+  <data name="CancelAction" xml:space="preserve"><value>取消</value></data>
+  <data name="ConfirmAction" xml:space="preserve"><value>确定</value></data>
+  <data name="NotificationTitle" xml:space="preserve"><value>提示</value></data>
+  <data name="CloseAction" xml:space="preserve"><value>关闭</value></data>
+  <data name="LoginRequiredTitle" xml:space="preserve"><value>需要登录</value></data>
+  <data name="LoginRequiredBody" xml:space="preserve"><value>您需要登录才能{0}。</value></data>
+  <data name="LoginAction" xml:space="preserve"><value>登录</value></data>
+  <data name="LaterAction" xml:space="preserve"><value>稍后</value></data>
+  <data name="AccountFallback" xml:space="preserve"><value>账户</value></data>
+  <data name="LoginToolbarText" xml:space="preserve"><value>登录</value></data>
+  <data name="LogoutAction" xml:space="preserve"><value>退出登录</value></data>
+  <data name="LogoutSuccess" xml:space="preserve"><value>已成功退出登录。</value></data>
+  <data name="StartupErrorTitle" xml:space="preserve"><value>错误</value></data>
+  <data name="StartupErrorBody" xml:space="preserve"><value>启动失败：{0}</value></data>
+  <data name="LocationPermissionMissing" xml:space="preserve"><value>位置：尚未授予 GPS 权限。</value></data>
+  <data name="LocationUnavailable" xml:space="preserve"><value>位置：无法获取当前位置。</value></data>
+  <data name="GpsErrorTitle" xml:space="preserve"><value>GPS 错误</value></data>
+  <data name="GpsErrorBody" xml:space="preserve"><value>无法刷新位置：{0}</value></data>
+  <data name="GpsErrorInline" xml:space="preserve"><value>位置：刷新失败（{0}）</value></data>
+  <data name="PoiLoadErrorBody" xml:space="preserve"><value>无法加载景点列表：{0}</value></data>
+  <data name="ContentLoadErrorBody" xml:space="preserve"><value>无法加载内容：{0}</value></data>
+  <data name="PoiNoContentBody" xml:space="preserve"><value>该景点暂时没有可播放内容。</value></data>
+  <data name="LanguageFallbackPrompt" xml:space="preserve"><value>此景点不支持当前所选语言。请选择其他语言进行查看和收听。</value></data>
+  <data name="LanguageFallbackGenerated" xml:space="preserve"><value>语言 {0}</value></data>
+  <data name="LanguageFallbackAlternativesFormat" xml:space="preserve"><value>可选替代语言：{0}。</value></data>
+  <data name="LanguageAvailableAlternativesFormat" xml:space="preserve"><value>该景点当前支持：{0}。</value></data>
+  <data name="AudioPlayErrorTitle" xml:space="preserve"><value>播放错误</value></data>
+  <data name="AudioUnavailableBody" xml:space="preserve"><value>无法播放此内容的音频。{0}</value></data>
+  <data name="AudioErrorDetailPrefix" xml:space="preserve"><value>
+音频详情：{0}</value></data>
+  <data name="DirectQrPlaying" xml:space="preserve"><value>二维码 -&gt; 正在直接播放音频</value></data>
+  <data name="QrInvalidBody" xml:space="preserve"><value>请先输入或扫描二维码。</value></data>
+  <data name="QrNotFoundTitle" xml:space="preserve"><value>未找到</value></data>
+  <data name="QrNotFoundBody" xml:space="preserve"><value>二维码无效或不存在。</value></data>
+  <data name="QrLookupErrorBody" xml:space="preserve"><value>无法查询二维码：{0}</value></data>
+  <data name="QrPoiSelectedFormat" xml:space="preserve"><value>二维码 -&gt; {0}</value></data>
+  <data name="NearestPoiUnknown" xml:space="preserve"><value>最近景点：未知。</value></data>
+  <data name="NearestPoiFormat" xml:space="preserve"><value>最近景点：{0}（约 {1:F0} 米）</value></data>
+  <data name="NearestPinFormat" xml:space="preserve"><value>最近：{0}</value></data>
+  <data name="AutoGeofenceFormat" xml:space="preserve"><value>自动围栏：{0}</value></data>
+  <data name="GpsTestSectionTitle" xml:space="preserve"><value>GPS 轨迹测试</value></data>
+  <data name="GpsTestRouteButton" xml:space="preserve"><value>运行 GPX 路线</value></data>
+  <data name="GpsTestPoiSweepButton" xml:space="preserve"><value>触发全部 POI</value></data>
+  <data name="GpsTestStopButton" xml:space="preserve"><value>停止测试</value></data>
+  <data name="GpsTestProgressTitle" xml:space="preserve"><value>路线进度</value></data>
+  <data name="GpsTestLogTitle" xml:space="preserve"><value>围栏日志</value></data>
+  <data name="GpsTestIdleStatus" xml:space="preserve"><value>GPS 测试：尚未加载路线数据。</value></data>
+  <data name="GpsTestReadyStatus" xml:space="preserve"><value>GPS 测试：已就绪，共 {0} 个 GPX 点。</value></data>
+  <data name="GpsTestRunningStatus" xml:space="preserve"><value>{0}：第 {1}/{2} 步，已触发 {3} 个 POI。</value></data>
+  <data name="GpsTestProgressFormat" xml:space="preserve"><value>已完成 {0}/{1} 步（{2:F0}%）。</value></data>
+  <data name="GpsTestLastTriggerSuffix" xml:space="preserve"><value>最近触发：{0}。</value></data>
+  <data name="GpsTestCompletedStatus" xml:space="preserve"><value>{0} 已完成。共触发 {1} 个 POI。</value></data>
+  <data name="GpsTestStoppingStatus" xml:space="preserve"><value>正在停止 GPS 测试并切回真实 GPS...</value></data>
+  <data name="GpsTestStoppedStatus" xml:space="preserve"><value>GPS 测试已停止，可恢复真实 GPS。</value></data>
+  <data name="GpsTestRunningBody" xml:space="preserve"><value>GPS 测试正在运行。请先停止测试，再刷新真实 GPS。</value></data>
+  <data name="GpsTestLoadErrorTitle" xml:space="preserve"><value>GPS 测试错误</value></data>
+  <data name="GpsTestLoadErrorBody" xml:space="preserve"><value>无法加载 GPS 测试数据：{0}</value></data>
+  <data name="GpsTestTrackMissingBody" xml:space="preserve"><value>GPX 测试文件中未找到有效轨迹点。</value></data>
+  <data name="GpsTestNoPoiBody" xml:space="preserve"><value>没有可用于围栏全量测试的有效 POI。</value></data>
+  <data name="GpsTestRouteModeName" xml:space="preserve"><value>GPX 路线测试</value></data>
+  <data name="GpsTestPoiSweepModeName" xml:space="preserve"><value>全量围栏测试</value></data>
+  <data name="GpsTestCurrentPin" xml:space="preserve"><value>当前 GPS 测试点</value></data>
+  <data name="GpsTestLogStarted" xml:space="preserve"><value>开始 {0}，共 {1} 步。</value></data>
+  <data name="GpsTestLogStep" xml:space="preserve"><value>到达 {0}（{1}/{2}），坐标 {3:F6}, {4:F6}。</value></data>
+  <data name="GpsTestLogOutsideGeofence" xml:space="preserve"><value>位于 {0} 围栏外：距离 {1:F0} 米，阈值 {2:F0} 米。</value></data>
+  <data name="GpsTestLogCooldown" xml:space="preserve"><value>跳过 {0}，因为围栏冷却时间尚未结束。</value></data>
+  <data name="GpsTestLogGeofenceTriggered" xml:space="preserve"><value>在 {0} 触发围栏，距离 {1:F0} 米。</value></data>
+  <data name="GpsTestLogPlaybackAudio" xml:space="preserve"><value>已播放 "{0}" 的文件音频（{1}）。</value></data>
+  <data name="GpsTestLogPlaybackTts" xml:space="preserve"><value>对 "{0}" 使用 TTS（{1}）。</value></data>
+  <data name="GpsTestLogPlaybackError" xml:space="preserve"><value>播放 "{0}" 时出错：{1}</value></data>
+  <data name="GpsTestLogNoTrigger" xml:space="preserve"><value>此步骤未触发任何围栏。</value></data>
+  <data name="GpsTestLogStopped" xml:space="preserve"><value>测试已停止。累计触发 POI：{0}。</value></data>
+  <data name="PlaybackLanguageFormat" xml:space="preserve"><value>正在使用所选语言播放音频：{0}</value></data>
+  <data name="MapErrorTitle" xml:space="preserve"><value>地图错误</value></data>
+  <data name="PoiSelectionErrorTitle" xml:space="preserve"><value>选择错误</value></data>
+  <data name="CameraPermissionBody" xml:space="preserve"><value>扫描二维码需要相机权限。</value></data>
+  <data name="ActionOpenQrContent" xml:space="preserve"><value>通过二维码打开内容</value></data>
+  <data name="ActionScanQr" xml:space="preserve"><value>扫描二维码</value></data>
+  <data name="ActionPlayAudio" xml:space="preserve"><value>播放音频</value></data>
+  <data name="QrScannerTitle" xml:space="preserve"><value>扫描二维码</value></data>
+  <data name="QrScannerHint" xml:space="preserve"><value>将二维码放入框内进行扫描</value></data>
+  <data name="AuthPageTitle" xml:space="preserve"><value>账户</value></data>
+  <data name="AuthHeroTitle" xml:space="preserve"><value>登录 / 注册</value></data>
+  <data name="GuestSessionStatus" xml:space="preserve"><value>当前使用游客模式。</value></data>
+  <data name="LoggedInSessionStatus" xml:space="preserve"><value>已登录：{0}</value></data>
+  <data name="LoginTab" xml:space="preserve"><value>登录</value></data>
+  <data name="RegisterTab" xml:space="preserve"><value>注册</value></data>
+  <data name="LoginSectionTitle" xml:space="preserve"><value>用户登录</value></data>
+  <data name="UsernamePlaceholder" xml:space="preserve"><value>用户名</value></data>
+  <data name="PasswordPlaceholder" xml:space="preserve"><value>密码</value></data>
+  <data name="RegisterSectionTitle" xml:space="preserve"><value>创建新账户</value></data>
+  <data name="FullNamePlaceholder" xml:space="preserve"><value>姓名</value></data>
+  <data name="EmailPlaceholder" xml:space="preserve"><value>电子邮箱</value></data>
+  <data name="PhonePlaceholder" xml:space="preserve"><value>电话号码</value></data>
+  <data name="RegisterLanguageTitle" xml:space="preserve"><value>默认语言</value></data>
+  <data name="RegisterAndLoginButton" xml:space="preserve"><value>注册并登录</value></data>
+  <data name="LogoutButton" xml:space="preserve"><value>退出登录</value></data>
+  <data name="MissingLoginFields" xml:space="preserve"><value>请输入完整的用户名和密码。</value></data>
+  <data name="LoginFailed" xml:space="preserve"><value>登录失败。</value></data>
+  <data name="LoginSuccess" xml:space="preserve"><value>登录成功。</value></data>
+  <data name="MissingRegisterFields" xml:space="preserve"><value>注册时用户名和密码为必填项。</value></data>
+  <data name="RegisterFailed" xml:space="preserve"><value>注册失败。</value></data>
+  <data name="RegisterSuccess" xml:space="preserve"><value>注册成功，且已自动登录。</value></data>
+</root>

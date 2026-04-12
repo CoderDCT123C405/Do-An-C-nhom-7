@@ -380,6 +380,20 @@ public class MobileCacheStore
         });
     }
 
+    public async Task ResetCacheAsync()
+    {
+        await EnsureInitializedAsync();
+
+        await _db.RunInTransactionAsync(conn =>
+        {
+            conn.DeleteAll<CachedPoi>();
+            conn.DeleteAll<CachedNgonNgu>();
+            conn.DeleteAll<CachedNoiDung>();
+            conn.DeleteAll<CachedQr>();
+            conn.DeleteAll<CachedSyncCheckpoint>();
+        });
+    }
+
     public async Task EnqueuePlaybackHistoryAsync(LichSuPhatCreateRequest request)
     {
         await EnsureInitializedAsync();

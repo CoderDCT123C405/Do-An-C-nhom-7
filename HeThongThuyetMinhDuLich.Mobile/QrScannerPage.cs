@@ -1,3 +1,4 @@
+using HeThongThuyetMinhDuLich.Mobile.Services;
 using ZXing.Net.Maui;
 using ZXing.Net.Maui.Controls;
 
@@ -7,11 +8,13 @@ public class QrScannerPage : ContentPage
 {
     private readonly TaskCompletionSource<string?> _resultSource = new();
     private readonly CameraBarcodeReaderView _cameraView;
+    private readonly LanguageService? _languageService;
     private bool _completed;
 
-    private QrScannerPage()
+    private QrScannerPage(LanguageService? languageService)
     {
-        Title = "Quet QR";
+        _languageService = languageService;
+        Title = T("QrScannerTitle");
         BackgroundColor = Colors.Black;
 
         _cameraView = new CameraBarcodeReaderView
@@ -30,7 +33,7 @@ public class QrScannerPage : ContentPage
 
         var closeButton = new Button
         {
-            Text = "Dong",
+            Text = T("CloseAction"),
             TextColor = Colors.White,
             BackgroundColor = Color.FromArgb("#B00020"),
             CornerRadius = 10,
@@ -47,7 +50,7 @@ public class QrScannerPage : ContentPage
             {
                 new Label
                 {
-                    Text = "Dua ma QR vao khung de quet",
+                    Text = T("QrScannerHint"),
                     TextColor = Colors.White,
                     HorizontalTextAlignment = TextAlignment.Center
                 },
@@ -74,10 +77,13 @@ public class QrScannerPage : ContentPage
 
     public static async Task<string?> ScanAsync(INavigation navigation)
     {
-        var page = new QrScannerPage();
+        var languageService = Application.Current?.Handler?.MauiContext?.Services.GetService<LanguageService>();
+        var page = new QrScannerPage(languageService);
         await navigation.PushModalAsync(page);
         return await page._resultSource.Task;
     }
+
+    private string T(string key) => _languageService?.GetText(key) ?? key;
 
     private async void OnBarcodesDetected(object? sender, BarcodeDetectionEventArgs e)
     {

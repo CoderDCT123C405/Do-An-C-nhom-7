@@ -26,6 +26,7 @@ public static class MauiProgram
         });
 
         builder.Services.AddSingleton<AuthSession>();
+        builder.Services.AddSingleton<LanguageService>();
         builder.Services.AddSingleton<MobileCacheStore>();
         builder.Services.AddSingleton<MobileApiClient>();
         builder.Services.AddSingleton<SyncService>();

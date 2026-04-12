@@ -13,23 +13,96 @@ namespace HeThongThuyetMinhDuLich.Api.Migrations
             migrationBuilder.Sql("UPDATE [NoiDungThuyetMinh] SET [MaTaiKhoanCapNhat] = COALESCE([MaTaiKhoanTao], 1) WHERE [MaTaiKhoanCapNhat] IS NULL");
             migrationBuilder.Sql("UPDATE [DiemThamQuan] SET [MaTaiKhoanCapNhat] = COALESCE([MaTaiKhoanTao], 1) WHERE [MaTaiKhoanCapNhat] IS NULL");
 
-            migrationBuilder.AlterColumn<int>(
-                name: "MaTaiKhoanCapNhat",
-                table: "NoiDungThuyetMinh",
-                type: "int",
-                nullable: false,
-                oldClrType: typeof(int),
-                oldType: "int",
-                oldNullable: true);
+            if (ActiveProvider == "Microsoft.EntityFrameworkCore.SqlServer")
+            {
+                migrationBuilder.Sql(
+                    """
+                    IF EXISTS (
+                        SELECT 1
+                        FROM sys.columns
+                        WHERE object_id = OBJECT_ID(N'[dbo].[NoiDungThuyetMinh]')
+                          AND name = N'MaTaiKhoanCapNhat'
+                          AND is_nullable = 1
+                    )
+                    BEGIN
+                        IF EXISTS (
+                            SELECT 1
+                            FROM sys.indexes
+                            WHERE name = N'IX_NoiDungThuyetMinh_MaTaiKhoanCapNhat'
+                              AND object_id = OBJECT_ID(N'[dbo].[NoiDungThuyetMinh]')
+                        )
+                        BEGIN
+                            DROP INDEX [IX_NoiDungThuyetMinh_MaTaiKhoanCapNhat] ON [dbo].[NoiDungThuyetMinh];
+                        END;
 
-            migrationBuilder.AlterColumn<int>(
-                name: "MaTaiKhoanCapNhat",
-                table: "DiemThamQuan",
-                type: "int",
-                nullable: false,
-                oldClrType: typeof(int),
-                oldType: "int",
-                oldNullable: true);
+                        ALTER TABLE [dbo].[NoiDungThuyetMinh] ALTER COLUMN [MaTaiKhoanCapNhat] int NOT NULL;
+
+                        IF NOT EXISTS (
+                            SELECT 1
+                            FROM sys.indexes
+                            WHERE name = N'IX_NoiDungThuyetMinh_MaTaiKhoanCapNhat'
+                              AND object_id = OBJECT_ID(N'[dbo].[NoiDungThuyetMinh]')
+                        )
+                        BEGIN
+                            CREATE INDEX [IX_NoiDungThuyetMinh_MaTaiKhoanCapNhat] ON [dbo].[NoiDungThuyetMinh] ([MaTaiKhoanCapNhat]);
+                        END;
+                    END;
+                    """);
+
+                migrationBuilder.Sql(
+                    """
+                    IF EXISTS (
+                        SELECT 1
+                        FROM sys.columns
+                        WHERE object_id = OBJECT_ID(N'[dbo].[DiemThamQuan]')
+                          AND name = N'MaTaiKhoanCapNhat'
+                          AND is_nullable = 1
+                    )
+                    BEGIN
+                        IF EXISTS (
+                            SELECT 1
+                            FROM sys.indexes
+                            WHERE name = N'IX_DiemThamQuan_MaTaiKhoanCapNhat'
+                              AND object_id = OBJECT_ID(N'[dbo].[DiemThamQuan]')
+                        )
+                        BEGIN
+                            DROP INDEX [IX_DiemThamQuan_MaTaiKhoanCapNhat] ON [dbo].[DiemThamQuan];
+                        END;
+
+                        ALTER TABLE [dbo].[DiemThamQuan] ALTER COLUMN [MaTaiKhoanCapNhat] int NOT NULL;
+
+                        IF NOT EXISTS (
+                            SELECT 1
+                            FROM sys.indexes
+                            WHERE name = N'IX_DiemThamQuan_MaTaiKhoanCapNhat'
+                              AND object_id = OBJECT_ID(N'[dbo].[DiemThamQuan]')
+                        )
+                        BEGIN
+                            CREATE INDEX [IX_DiemThamQuan_MaTaiKhoanCapNhat] ON [dbo].[DiemThamQuan] ([MaTaiKhoanCapNhat]);
+                        END;
+                    END;
+                    """);
+            }
+            else
+            {
+                migrationBuilder.AlterColumn<int>(
+                    name: "MaTaiKhoanCapNhat",
+                    table: "NoiDungThuyetMinh",
+                    type: "INTEGER",
+                    nullable: false,
+                    oldClrType: typeof(int),
+                    oldType: "INTEGER",
+                    oldNullable: true);
+
+                migrationBuilder.AlterColumn<int>(
+                    name: "MaTaiKhoanCapNhat",
+                    table: "DiemThamQuan",
+                    type: "INTEGER",
+                    nullable: false,
+                    oldClrType: typeof(int),
+                    oldType: "INTEGER",
+                    oldNullable: true);
+            }
         }
 
         /// <inheritdoc />

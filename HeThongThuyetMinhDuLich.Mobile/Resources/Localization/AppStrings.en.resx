@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="ShellHomeTitle" xml:space="preserve"><value>Home</value></data>
+  <data name="MainPageTitle" xml:space="preserve"><value>Audio Guide</value></data>
+  <data name="MainHeroTitle" xml:space="preserve"><value>Audio Guide</value></data>
+  <data name="MainHeroSubtitle" xml:space="preserve"><value>Browse places, open content, and play narration quickly</value></data>
+  <data name="ReloadPoints" xml:space="preserve"><value>Load POIs</value></data>
+  <data name="RefreshGps" xml:space="preserve"><value>Refresh GPS</value></data>
+  <data name="LocationStatusTitle" xml:space="preserve"><value>Location status</value></data>
+  <data name="DefaultGpsStatus" xml:space="preserve"><value>Location: not updated yet.</value></data>
+  <data name="GpsUnsupportedWindows" xml:space="preserve"><value>Location: map is only supported on Android/iOS. You are running on Windows.</value></data>
+  <data name="GpsUnsupportedDevice" xml:space="preserve"><value>Location: map is not supported on this device.</value></data>
+  <data name="CurrentLocationCoordinates" xml:space="preserve"><value>Location: {0:F6}, {1:F6}</value></data>
+  <data name="LanguageSectionTitle" xml:space="preserve"><value>Language</value></data>
+  <data name="DisplayLanguageLabel" xml:space="preserve"><value>Display</value></data>
+  <data name="LanguagePreferenceLabel" xml:space="preserve"><value>Unified language</value></data>
+  <data name="AudioLanguageLabel" xml:space="preserve"><value>Audio</value></data>
+  <data name="DisplayLanguagePickerTitle" xml:space="preserve"><value>Display language</value></data>
+  <data name="LanguagePreferencePickerTitle" xml:space="preserve"><value>Select unified language</value></data>
+  <data name="AudioLanguagePickerTitle" xml:space="preserve"><value>Audio language</value></data>
+  <data name="AllLanguages" xml:space="preserve"><value>All languages</value></data>
+  <data name="LanguageDisplayFormat" xml:space="preserve"><value>Display: {0}</value></data>
+  <data name="LanguageAudioFormat" xml:space="preserve"><value>Audio: {0}</value></data>
+  <data name="LanguageMissingDisplaySuffix" xml:space="preserve"><value> | No display data</value></data>
+  <data name="LanguageMissingAudioSuffix" xml:space="preserve"><value> | Audio will use fallback</value></data>
+  <data name="LanguageFallbackAppliedFormat" xml:space="preserve"><value>This POI does not have {0}. It is using {1} automatically.</value></data>
+  <data name="LanguageFallbackNoPreferredFormat" xml:space="preserve"><value>This POI is currently shown in {0} because no better language match is available.</value></data>
+  <data name="QrSectionTitle" xml:space="preserve"><value>Open with QR</value></data>
+  <data name="QrPlaceholder" xml:space="preserve"><value>Example: QR_POI001</value></data>
+  <data name="OpenQr" xml:space="preserve"><value>Open QR</value></data>
+  <data name="ScanQr" xml:space="preserve"><value>Scan</value></data>
+  <data name="PoiListTitle" xml:space="preserve"><value>Points of interest</value></data>
+  <data name="CoordinateFormat" xml:space="preserve"><value>Coordinates: {0:F6}, {1:F6}</value></data>
+  <data name="SelectedPoiDefault" xml:space="preserve"><value>No place selected.</value></data>
+  <data name="SelectedPoiFormat" xml:space="preserve"><value>Selected: {0} ({1})</value></data>
+  <data name="AudioPlayerTitle" xml:space="preserve"><value>Now playing</value></data>
+  <data name="ContentSectionTitle" xml:space="preserve"><value>Narration content</value></data>
+  <data name="ContentLanguageFormat" xml:space="preserve"><value>Language: {0}</value></data>
+  <data name="PlayButton" xml:space="preserve"><value>Play</value></data>
+  <data name="LanguageActionTitle" xml:space="preserve"><value>Choose app language</value></data>
+  <data name="CancelAction" xml:space="preserve"><value>Cancel</value></data>
+  <data name="ConfirmAction" xml:space="preserve"><value>OK</value></data>
+  <data name="NotificationTitle" xml:space="preserve"><value>Notice</value></data>
+  <data name="CloseAction" xml:space="preserve"><value>Close</value></data>
+  <data name="LoginRequiredTitle" xml:space="preserve"><value>Login required</value></data>
+  <data name="LoginRequiredBody" xml:space="preserve"><value>You need to sign in to {0}.</value></data>
+  <data name="LoginAction" xml:space="preserve"><value>Sign in</value></data>
+  <data name="LaterAction" xml:space="preserve"><value>Later</value></data>
+  <data name="AccountFallback" xml:space="preserve"><value>Account</value></data>
+  <data name="LoginToolbarText" xml:space="preserve"><value>Sign in</value></data>
+  <data name="LogoutAction" xml:space="preserve"><value>Sign out</value></data>
+  <data name="LogoutSuccess" xml:space="preserve"><value>Signed out successfully.</value></data>
+  <data name="StartupErrorTitle" xml:space="preserve"><value>Error</value></data>
+  <data name="StartupErrorBody" xml:space="preserve"><value>Startup failed: {0}</value></data>
+  <data name="LocationPermissionMissing" xml:space="preserve"><value>Location: GPS permission has not been granted.</value></data>
+  <data name="LocationUnavailable" xml:space="preserve"><value>Location: current coordinates are unavailable.</value></data>
+  <data name="GpsErrorTitle" xml:space="preserve"><value>GPS error</value></data>
+  <data name="GpsErrorBody" xml:space="preserve"><value>Unable to refresh location: {0}</value></data>
+  <data name="GpsErrorInline" xml:space="preserve"><value>Location: refresh failed ({0})</value></data>
+  <data name="PoiLoadErrorBody" xml:space="preserve"><value>Unable to load POIs: {0}</value></data>
+  <data name="ContentLoadErrorBody" xml:space="preserve"><value>Unable to load content: {0}</value></data>
+  <data name="PoiNoContentBody" xml:space="preserve"><value>This place does not have playable content yet.</value></data>
+  <data name="LanguageFallbackPrompt" xml:space="preserve"><value>This POI does not support the selected language. Choose another language to view and listen.</value></data>
+  <data name="LanguageFallbackGenerated" xml:space="preserve"><value>Language {0}</value></data>
+  <data name="LanguageFallbackAlternativesFormat" xml:space="preserve"><value>Available alternatives: {0}.</value></data>
+  <data name="LanguageAvailableAlternativesFormat" xml:space="preserve"><value>This POI currently supports: {0}.</value></data>
+  <data name="AudioPlayErrorTitle" xml:space="preserve"><value>Playback error</value></data>
+  <data name="AudioUnavailableBody" xml:space="preserve"><value>Unable to play audio for this content.{0}</value></data>
+  <data name="AudioErrorDetailPrefix" xml:space="preserve"><value>
+Audio details: {0}</value></data>
+  <data name="DirectQrPlaying" xml:space="preserve"><value>QR -&gt; Playing direct audio</value></data>
+  <data name="QrInvalidBody" xml:space="preserve"><value>Enter or scan a QR code first.</value></data>
+  <data name="QrNotFoundTitle" xml:space="preserve"><value>Not found</value></data>
+  <data name="QrNotFoundBody" xml:space="preserve"><value>The QR code is invalid or does not exist.</value></data>
+  <data name="QrLookupErrorBody" xml:space="preserve"><value>Unable to look up QR: {0}</value></data>
+  <data name="QrPoiSelectedFormat" xml:space="preserve"><value>QR -&gt; {0}</value></data>
+  <data name="NearestPoiUnknown" xml:space="preserve"><value>Nearest POI: unknown.</value></data>
+  <data name="NearestPoiFormat" xml:space="preserve"><value>Nearest POI: {0} (~{1:F0} m)</value></data>
+  <data name="NearestPinFormat" xml:space="preserve"><value>Nearest: {0}</value></data>
+  <data name="AutoGeofenceFormat" xml:space="preserve"><value>Auto geofence: {0}</value></data>
+  <data name="GpsTestSectionTitle" xml:space="preserve"><value>GPS tracking test</value></data>
+  <data name="GpsTestRouteButton" xml:space="preserve"><value>Run GPX route</value></data>
+  <data name="GpsTestPoiSweepButton" xml:space="preserve"><value>Trigger all POIs</value></data>
+  <data name="GpsTestStopButton" xml:space="preserve"><value>Stop test</value></data>
+  <data name="GpsTestProgressTitle" xml:space="preserve"><value>Route progress</value></data>
+  <data name="GpsTestLogTitle" xml:space="preserve"><value>Geofence log</value></data>
+  <data name="GpsTestIdleStatus" xml:space="preserve"><value>GPS test: route data has not been loaded yet.</value></data>
+  <data name="GpsTestReadyStatus" xml:space="preserve"><value>GPS test: ready with {0} GPX waypoints.</value></data>
+  <data name="GpsTestRunningStatus" xml:space="preserve"><value>{0}: step {1}/{2}, triggered {3} POIs.</value></data>
+  <data name="GpsTestProgressFormat" xml:space="preserve"><value>Completed {0}/{1} steps ({2:F0}%).</value></data>
+  <data name="GpsTestLastTriggerSuffix" xml:space="preserve"><value>Last trigger: {0}.</value></data>
+  <data name="GpsTestCompletedStatus" xml:space="preserve"><value>{0} completed. Triggered {1} POIs.</value></data>
+  <data name="GpsTestStoppingStatus" xml:space="preserve"><value>Stopping GPS test and switching back to live GPS...</value></data>
+  <data name="GpsTestStoppedStatus" xml:space="preserve"><value>GPS test stopped. Live GPS can be used again.</value></data>
+  <data name="GpsTestRunningBody" xml:space="preserve"><value>A GPS test is already running. Stop it before refreshing live GPS.</value></data>
+  <data name="GpsTestLoadErrorTitle" xml:space="preserve"><value>GPS test error</value></data>
+  <data name="GpsTestLoadErrorBody" xml:space="preserve"><value>Unable to load GPS test data: {0}</value></data>
+  <data name="GpsTestTrackMissingBody" xml:space="preserve"><value>No valid waypoints were found in the GPX test file.</value></data>
+  <data name="GpsTestNoPoiBody" xml:space="preserve"><value>No valid POIs are available for the geofence sweep test.</value></data>
+  <data name="GpsTestRouteModeName" xml:space="preserve"><value>GPX route test</value></data>
+  <data name="GpsTestPoiSweepModeName" xml:space="preserve"><value>Full geofence sweep</value></data>
+  <data name="GpsTestCurrentPin" xml:space="preserve"><value>Current GPS test point</value></data>
+  <data name="GpsTestLogStarted" xml:space="preserve"><value>Started {0} with {1} steps.</value></data>
+  <data name="GpsTestLogStep" xml:space="preserve"><value>Reached {0} ({1}/{2}) at {3:F6}, {4:F6}.</value></data>
+  <data name="GpsTestLogOutsideGeofence" xml:space="preserve"><value>Outside {0} geofence: {1:F0} m away, threshold {2:F0} m.</value></data>
+  <data name="GpsTestLogCooldown" xml:space="preserve"><value>Skipped {0} because geofence cooldown is active.</value></data>
+  <data name="GpsTestLogGeofenceTriggered" xml:space="preserve"><value>Triggered geofence at {0} with distance {1:F0} m.</value></data>
+  <data name="GpsTestLogPlaybackAudio" xml:space="preserve"><value>Played file audio for "{0}" ({1}).</value></data>
+  <data name="GpsTestLogPlaybackTts" xml:space="preserve"><value>Used TTS for "{0}" ({1}).</value></data>
+  <data name="GpsTestLogPlaybackError" xml:space="preserve"><value>Playback error for "{0}": {1}</value></data>
+  <data name="GpsTestLogNoTrigger" xml:space="preserve"><value>No geofence was triggered on this step.</value></data>
+  <data name="GpsTestLogStopped" xml:space="preserve"><value>Test stopped. Total triggered POIs: {0}.</value></data>
+  <data name="PlaybackLanguageFormat" xml:space="preserve"><value>Playing audio in the selected language: {0}</value></data>
+  <data name="MapErrorTitle" xml:space="preserve"><value>Map error</value></data>
+  <data name="PoiSelectionErrorTitle" xml:space="preserve"><value>Selection error</value></data>
+  <data name="CameraPermissionBody" xml:space="preserve"><value>Camera permission is required to scan QR codes.</value></data>
+  <data name="ActionOpenQrContent" xml:space="preserve"><value>open content by QR</value></data>
+  <data name="ActionScanQr" xml:space="preserve"><value>scan QR</value></data>
+  <data name="ActionPlayAudio" xml:space="preserve"><value>play audio</value></data>
+  <data name="QrScannerTitle" xml:space="preserve"><value>Scan QR</value></data>
+  <data name="QrScannerHint" xml:space="preserve"><value>Place the QR code inside the frame to scan</value></data>
+  <data name="AuthPageTitle" xml:space="preserve"><value>Account</value></data>
+  <data name="AuthHeroTitle" xml:space="preserve"><value>Sign in / Register</value></data>
+  <data name="GuestSessionStatus" xml:space="preserve"><value>You are using guest mode.</value></data>
+  <data name="LoggedInSessionStatus" xml:space="preserve"><value>Signed in: {0}</value></data>
+  <data name="LoginTab" xml:space="preserve"><value>Sign in</value></data>
+  <data name="RegisterTab" xml:space="preserve"><value>Register</value></data>
+  <data name="LoginSectionTitle" xml:space="preserve"><value>User sign in</value></data>
+  <data name="UsernamePlaceholder" xml:space="preserve"><value>Username</value></data>
+  <data name="PasswordPlaceholder" xml:space="preserve"><value>Password</value></data>
+  <data name="RegisterSectionTitle" xml:space="preserve"><value>Create a new account</value></data>
+  <data name="FullNamePlaceholder" xml:space="preserve"><value>Full name</value></data>
+  <data name="EmailPlaceholder" xml:space="preserve"><value>Email</value></data>
+  <data name="PhonePlaceholder" xml:space="preserve"><value>Phone number</value></data>
+  <data name="RegisterLanguageTitle" xml:space="preserve"><value>Default language</value></data>
+  <data name="RegisterAndLoginButton" xml:space="preserve"><value>Register and sign in</value></data>
+  <data name="LogoutButton" xml:space="preserve"><value>Sign out</value></data>
+  <data name="MissingLoginFields" xml:space="preserve"><value>Please enter both username and password.</value></data>
+  <data name="LoginFailed" xml:space="preserve"><value>Sign in failed.</value></data>
+  <data name="LoginSuccess" xml:space="preserve"><value>Signed in successfully.</value></data>
+  <data name="MissingRegisterFields" xml:space="preserve"><value>Username and password are required for registration.</value></data>
+  <data name="RegisterFailed" xml:space="preserve"><value>Registration failed.</value></data>
+  <data name="RegisterSuccess" xml:space="preserve"><value>Registration succeeded and you are now signed in.</value></data>
+</root>

@@ -153,7 +153,10 @@ public class NoiDungThuyetMinhController(
     [Authorize(Roles = "Admin,BienTap")]
     public async Task<ActionResult<object>> GenerateAudio(int id, CancellationToken cancellationToken)
     {
-        var item = await dbContext.NoiDungThuyetMinhs.FindAsync([id], cancellationToken);
+        var item = await dbContext.NoiDungThuyetMinhs
+            .Include(x => x.DiemThamQuan)
+            .Include(x => x.NgonNgu)
+            .FirstOrDefaultAsync(x => x.MaNoiDung == id, cancellationToken);
         if (item is null)
         {
             return NotFound();
@@ -194,11 +197,14 @@ public class NoiDungThuyetMinhController(
         }
 
         var items = await dbContext.NoiDungThuyetMinhs
+            .Include(x => x.DiemThamQuan)
+            .Include(x => x.NgonNgu)
             .Where(x => x.TrangThaiHoatDong && !string.IsNullOrWhiteSpace(x.NoiDungVanBan))
             .OrderBy(x => x.MaNoiDung)
             .ToListAsync(cancellationToken);
 
         var generated = 0;
+        var failed = new List<object>();
         foreach (var item in items)
         {
             if (!overwrite && !string.IsNullOrWhiteSpace(item.DuongDanAmThanh))
@@ -206,16 +212,29 @@ public class NoiDungThuyetMinhController(
                 continue;
             }
 
-            var oldPath = item.DuongDanAmThanh;
-            var (newPath, duration) = await edgeTtsService.GenerateAudioAsync(item, cancellationToken);
-            item.DuongDanAmThanh = newPath;
-            item.ThoiLuongGiay = duration;
-            item.NgayCapNhat = DateTime.UtcNow;
-            generated++;
-
-            if (overwrite && !string.Equals(oldPath, item.DuongDanAmThanh, StringComparison.OrdinalIgnoreCase))
+            try
             {
-                edgeTtsService.DeleteManagedAudio(oldPath);
+                var oldPath = item.DuongDanAmThanh;
+                var (newPath, duration) = await edgeTtsService.GenerateAudioAsync(item, cancellationToken);
+                item.DuongDanAmThanh = newPath;
+                item.ThoiLuongGiay = duration;
+                item.NgayCapNhat = DateTime.UtcNow;
+                generated++;
+
+                if (overwrite && !string.Equals(oldPath, item.DuongDanAmThanh, StringComparison.OrdinalIgnoreCase))
+                {
+                    edgeTtsService.DeleteManagedAudio(oldPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Khong tao duoc audio batch cho noi dung {MaNoiDung}.", item.MaNoiDung);
+                failed.Add(new
+                {
+                    item.MaNoiDung,
+                    item.TieuDe,
+                    Error = ex.Message
+                });
             }
         }
 
@@ -223,7 +242,9 @@ public class NoiDungThuyetMinhController(
         return Ok(new
         {
             TongNoiDung = items.Count,
-            DaSinhAudio = generated
+            DaSinhAudio = generated,
+            ThatBai = failed.Count,
+            ChiTietThatBai = failed
         });
     }
 
@@ -301,6 +322,7 @@ public class NoiDungThuyetMinhController(
 
         try
         {
+            await EnsureAudioNamingMetadataAsync(item);
             var (newPath, duration) = await edgeTtsService.GenerateAudioAsync(item);
             item.DuongDanAmThanh = newPath;
             item.ThoiLuongGiay = duration;
@@ -319,6 +341,47 @@ public class NoiDungThuyetMinhController(
             item.ThoiLuongGiay = null;
             item.NgayCapNhat = DateTime.UtcNow;
             await dbContext.SaveChangesAsync();
+        }
+    }
+
+    private async Task EnsureAudioNamingMetadataAsync(NoiDungThuyetMinh item)
+    {
+        if (item.DiemThamQuan is not null && item.NgonNgu is not null)
+        {
+            return;
+        }
+
+        var metadata = await dbContext.NoiDungThuyetMinhs
+            .AsNoTracking()
+            .Where(x => x.MaNoiDung == item.MaNoiDung)
+            .Select(x => new
+            {
+                TenDiem = x.DiemThamQuan != null ? x.DiemThamQuan.TenDiem : null,
+                MaNgonNguQuocTe = x.NgonNgu != null ? x.NgonNgu.MaNgonNguQuocTe : null
+            })
+            .FirstOrDefaultAsync();
+
+        if (metadata is null)
+        {
+            return;
+        }
+
+        if (item.DiemThamQuan is null && !string.IsNullOrWhiteSpace(metadata.TenDiem))
+        {
+            item.DiemThamQuan = new DiemThamQuan
+            {
+                MaDiem = item.MaDiem,
+                TenDiem = metadata.TenDiem
+            };
+        }
+
+        if (item.NgonNgu is null && !string.IsNullOrWhiteSpace(metadata.MaNgonNguQuocTe))
+        {
+            item.NgonNgu = new NgonNgu
+            {
+                MaNgonNgu = item.MaNgonNgu,
+                MaNgonNguQuocTe = metadata.MaNgonNguQuocTe
+            };
         }
     }
 }
