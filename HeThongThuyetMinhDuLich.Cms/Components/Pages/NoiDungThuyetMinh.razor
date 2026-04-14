@@ -22,6 +22,11 @@
     <div class="notice notice-success">@_success</div>
 }
 
+@if (Session.IsBienTap)
+{
+    <div class="notice notice-success">Vai tro BienTap duoc phep quan ly noi dung thuyet minh va sinh audio, nhung khong quan ly nguoi dung, tai khoan hoac ngon ngu.</div>
+}
+
 <div class="card" style="margin-bottom:12px;display:grid;gap:10px;">
     <div class="grid-2">
         <div>
@@ -44,43 +49,59 @@
     </div>
     <div>
         <label>Tim kiem noi dung</label>
-        <input placeholder="Tim theo tieu de/noi dung..." @bind="_search" @bind:event="oninput" />
+        <input placeholder="Tim theo tieu de/noi dung..." @bind="SearchText" @bind:event="oninput" />
     </div>
 </div>
 
 @if (CoverageRows.Any())
 {
-    <div class="card" style="margin-bottom:12px;">
-        <h4>Do day du ngon ngu cho demo</h4>
-        <p style="margin-top:6px;color:#475569;">Muc tieu demo: moi diem co du 3 ngon ngu vi, en, zh-CN va san sang sinh audio.</p>
-
-        <div class="table-wrap" style="margin-top:10px;">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Diem tham quan</th>
-                        <th>Ngon ngu hien co</th>
-                        <th>Ngon ngu con thieu</th>
-                        <th>Trang thai</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var row in CoverageRows)
-                    {
-                        <tr>
-                            <td>@row.PoiDisplayName</td>
-                            <td>@row.AvailableLanguagesText</td>
-                            <td>@row.MissingLanguagesText</td>
-                            <td>
-                                <span class="badge @(row.IsComplete ? "badge-success" : "badge-muted")">
-                                    @(row.IsComplete ? "Du 3 ngon ngu" : "Can bo sung")
-                                </span>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+    <div class="card coverage-card" style="margin-bottom:12px;">
+        <div class="section-header">
+            <div>
+                <h4>Tien do ngon ngu</h4>
+                <p>Theo doi nhanh cac diem dang thieu noi dung vi, en, zh-CN de bo sung va tao audio.</p>
+            </div>
+            <span class="badge badge-muted">@CoverageRows.Count() diem</span>
         </div>
+
+        <div class="coverage-summary-grid">
+            <div class="stat-pair-card">
+                <small>Da du ngon ngu</small>
+                <div class="kpi-value">@CoverageRows.Count(x => x.IsComplete)</div>
+            </div>
+
+            <div class="stat-pair-card">
+                <small>Can bo sung</small>
+                <div class="kpi-value">@CoverageRows.Count(x => !x.IsComplete)</div>
+            </div>
+
+            <div class="stat-pair-card">
+                <small>Dang loc</small>
+                <div class="kpi-value">@(_selectedMaDiem == 0 ? "Tat ca" : "1 diem")</div>
+            </div>
+        </div>
+
+        @if (IncompleteCoverageRows.Any())
+        {
+            <div class="coverage-list" style="margin-top:12px;">
+                @foreach (var row in IncompleteCoverageRows)
+                {
+                    <div class="coverage-row">
+                        <div>
+                            <strong>@row.PoiDisplayName</strong>
+                            <small>Hien co: @row.AvailableLanguagesText</small>
+                        </div>
+                        <div class="coverage-row-meta">
+                            <span class="badge badge-muted">Thieu: @row.MissingLanguagesText</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state" style="margin-top:12px;">Tat ca diem trong bo loc hien tai da du ngon ngu.</div>
+        }
     </div>
 }
 
@@ -152,6 +173,15 @@
 }
 
 <div class="card">
+    @{
+        var filteredNoiDungItems = FilteredNoiDungItems.ToList();
+        var totalPages = GetTotalPages(filteredNoiDungItems.Count);
+        var currentPage = GetCurrentPage(filteredNoiDungItems.Count);
+        var pagedItems = GetPagedItems(filteredNoiDungItems);
+        var rangeStart = filteredNoiDungItems.Count == 0 ? 0 : ((currentPage - 1) * _pageSize) + 1;
+        var rangeEnd = filteredNoiDungItems.Count == 0 ? 0 : Math.Min(currentPage * _pageSize, filteredNoiDungItems.Count);
+    }
+
     <h4>Danh sach noi dung</h4>
 
     <div class="table-wrap" style="margin-top:10px;">
@@ -168,7 +198,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var item in FilteredNoiDungItems)
+                @foreach (var item in pagedItems)
                 {
                     <tr>
                         <td>@item.MaNoiDung</td>
@@ -205,7 +235,7 @@
                     </tr>
                 }
 
-                @if (!FilteredNoiDungItems.Any())
+                @if (!filteredNoiDungItems.Any())
                 {
                     <tr>
                         <td colspan="7">Chua co noi dung cho bo loc hien tai.</td>
@@ -214,6 +244,13 @@
             </tbody>
         </table>
     </div>
+
+    <PaginationControls TotalItems="@filteredNoiDungItems.Count"
+                        ItemLabel="noi dung"
+                        PageSize="@_pageSize"
+                        PageSizeChanged="OnPageSizeChanged"
+                        CurrentPage="@currentPage"
+                        CurrentPageChanged="OnPageChanged" />
 </div>
 
 @code {
@@ -232,12 +269,27 @@
     private bool _isGeneratingAllAudio;
     private readonly HashSet<int> _generatingAudioIds = [];
     private static readonly string[] RequiredLanguageCodes = ["vi", "en", "zh-CN"];
+    private int _page = 1;
+    private int _pageSize = 10;
+    private int _jumpPage = 1;
+
+    private string SearchText
+    {
+        get => _search;
+        set
+        {
+            _search = value;
+            ResetPagination();
+        }
+    }
 
     private IEnumerable<PoiCoverageRow> CoverageRows => _diemItems
         .Where(x => _selectedMaDiem == 0 || x.MaDiem == _selectedMaDiem)
         .Select(BuildCoverageRow)
         .OrderBy(x => x.IsComplete ? 1 : 0)
         .ThenBy(x => x.PoiDisplayName);
+
+    private IEnumerable<PoiCoverageRow> IncompleteCoverageRows => CoverageRows.Where(x => !x.IsComplete);
 
     private IEnumerable<NoiDungThuyetMinhItem> FilteredNoiDungItems =>
         _noiDungItems.Where(x =>
@@ -322,7 +374,44 @@
         finally
         {
             _isLoading = false;
+            ResetPagination();
         }
+    }
+
+    private int GetTotalPages(int totalItems)
+        => Math.Max(1, (int)Math.Ceiling(totalItems / (double)_pageSize));
+
+    private int GetCurrentPage(int totalItems)
+    {
+        _page = Math.Clamp(_page, 1, GetTotalPages(totalItems));
+        _jumpPage = _page;
+        return _page;
+    }
+
+    private List<NoiDungThuyetMinhItem> GetPagedItems(IReadOnlyList<NoiDungThuyetMinhItem> items)
+    {
+        var currentPage = GetCurrentPage(items.Count);
+        return items.Skip((currentPage - 1) * _pageSize).Take(_pageSize).ToList();
+    }
+
+    private Task OnPageChanged(int page)
+    {
+        _page = page;
+        _jumpPage = page;
+        return Task.CompletedTask;
+    }
+
+    private Task OnPageSizeChanged(int size)
+    {
+        _pageSize = size;
+        ResetPagination();
+        return Task.CompletedTask;
+    }
+
+    private void ResetPagination()
+    {
+        _page = 1;
+        _jumpPage = 1;
     }
 
     private void ResetForm()
@@ -335,6 +424,8 @@
         _form.DuongDanAmThanh = string.Empty;
         _form.ChoPhepTTS = true;
         // _form.ThoiLuongGiay auto-calculated
+        _form.MaTaiKhoanTao = Session.MaTaiKhoan;
+        _form.MaTaiKhoanCapNhat = Session.MaTaiKhoan ?? 0;
         _form.TrangThaiHoatDong = true;
     }
 
@@ -362,6 +453,8 @@
         _form.DuongDanAmThanh = item.DuongDanAmThanh;
         _form.ChoPhepTTS = item.ChoPhepTTS;
         // ThoiLuongGiay auto-calculated by backend
+        _form.MaTaiKhoanTao = Session.MaTaiKhoan;
+        _form.MaTaiKhoanCapNhat = Session.MaTaiKhoan ?? 0;
         _form.TrangThaiHoatDong = item.TrangThaiHoatDong;
         _showForm = true;
         _error = null;
@@ -382,6 +475,8 @@
             NoiDungVanBan = _form.NoiDungVanBan?.Trim(),
             DuongDanAmThanh = string.IsNullOrWhiteSpace(_form.DuongDanAmThanh) ? null : _form.DuongDanAmThanh.Trim(),
             ChoPhepTTS = _form.ChoPhepTTS,
+            MaTaiKhoanTao = _form.MaTaiKhoanTao,
+            MaTaiKhoanCapNhat = Session.MaTaiKhoan ?? _form.MaTaiKhoanCapNhat,
             // ThoiLuongGiay auto-calculated, omit
             TrangThaiHoatDong = _form.TrangThaiHoatDong
         };

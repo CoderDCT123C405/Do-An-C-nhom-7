@@ -92,85 +92,158 @@
                            FontSize="13"
                            FontFamily="OpenSansSemibold"
                            TextColor="#224870" />
-                    <Label x:Name="GpsTestSectionTitleLabel"
-                           Text=""
-                           Margin="0,8,0,0"
-                           FontFamily="OpenSansSemibold"
-                           FontSize="13"
-                           TextColor="#23395B" />
-                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
-                        <Button x:Name="StartGpsRouteTestButton"
-                                Grid.Column="0"
-                                Text=""
-                                BackgroundColor="#A44C9C"
-                                TextColor="White"
-                                CornerRadius="10"
-                                Padding="10,8"
-                                FontFamily="OpenSansSemibold"
-                                LineBreakMode="WordWrap"
-                                Clicked="OnStartGpsRouteTestClicked" />
-                        <Button x:Name="StartPoiSweepTestButton"
-                                Grid.Column="1"
-                                Text=""
-                                BackgroundColor="#0E7A6A"
-                                TextColor="White"
-                                CornerRadius="10"
-                                Padding="10,8"
-                                FontFamily="OpenSansSemibold"
-                                LineBreakMode="WordWrap"
-                                Clicked="OnStartPoiSweepTestClicked" />
-                        <Button x:Name="StopGpsTestButton"
-                                Grid.Column="2"
-                                Text=""
-                                BackgroundColor="#8B2635"
-                                TextColor="White"
-                                CornerRadius="10"
-                                Padding="10,8"
-                                FontFamily="OpenSansSemibold"
-                                LineBreakMode="WordWrap"
-                                Clicked="OnStopGpsTestClicked" />
-                    </Grid>
-                    <Label x:Name="GpsTestStatusLabel"
-                           Text=""
-                           FontSize="11"
-                           FontFamily="OpenSansRegular"
-                           LineBreakMode="WordWrap"
-                           TextColor="#4D6B8A" />
-                          <Label x:Name="GpsTestProgressTitleLabel"
-                              Text=""
-                              FontSize="12"
-                              FontFamily="OpenSansSemibold"
-                              TextColor="#23395B" />
-                          <ProgressBar x:Name="GpsTestProgressBar"
-                                 Progress="0"
-                                 ProgressColor="#0E7A6A"
-                                 BackgroundColor="#D8E6F7"
-                                 HeightRequest="10" />
-                          <Label x:Name="GpsTestProgressLabel"
-                              Text=""
-                              FontSize="11"
-                              FontFamily="OpenSansRegular"
-                              LineBreakMode="WordWrap"
-                              TextColor="#4D6B8A" />
-                          <Label x:Name="GpsTestLogTitleLabel"
-                              Text=""
-                              FontSize="12"
-                              FontFamily="OpenSansSemibold"
-                              TextColor="#23395B" />
-                          <CollectionView x:Name="GpsTestLogCollection"
-                                 HeightRequest="140"
-                                 SelectionMode="None">
-                           <CollectionView.ItemTemplate>
-                            <DataTemplate>
-                                <Label Text="{Binding .}"
-                                    FontSize="11"
-                                    FontFamily="OpenSansRegular"
-                                    LineBreakMode="WordWrap"
-                                    Margin="0,0,0,6"
-                                    TextColor="#406080" />
-                            </DataTemplate>
-                           </CollectionView.ItemTemplate>
-                          </CollectionView>
+                    <Border Background="#F5F8FF"
+                            Stroke="#D7E3F7"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 14"
+                            Padding="12"
+                            Margin="0,8,0,0">
+                        <VerticalStackLayout Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label x:Name="GpsTestSectionTitleLabel"
+                                           Text=""
+                                           FontFamily="OpenSansSemibold"
+                                           FontSize="14"
+                                           TextColor="#23395B" />
+                                    <Label x:Name="GpsTestHintLabel"
+                                           Text=""
+                                           FontSize="11"
+                                           FontFamily="OpenSansRegular"
+                                           LineBreakMode="WordWrap"
+                                           TextColor="#5C7491" />
+                                </VerticalStackLayout>
+                                <Border x:Name="GpsTestModeBadgeBorder"
+                                        Background="#E7EEF8"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 999"
+                                        Padding="10,5"
+                                        HorizontalOptions="End"
+                                        VerticalOptions="Start">
+                                    <Label x:Name="GpsTestModeBadgeLabel"
+                                           Text=""
+                                           FontSize="11"
+                                           FontFamily="OpenSansSemibold"
+                                           TextColor="#33506F" />
+                                </Border>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                                <Button x:Name="StartGpsRouteTestButton"
+                                        Grid.Row="0"
+                                        Grid.Column="0"
+                                        Text=""
+                                        BackgroundColor="#A44C9C"
+                                        TextColor="White"
+                                        CornerRadius="12"
+                                        Padding="12,10"
+                                        FontFamily="OpenSansSemibold"
+                                        LineBreakMode="WordWrap"
+                                        Clicked="OnStartGpsRouteTestClicked" />
+                                <Button x:Name="StartPoiSweepTestButton"
+                                        Grid.Row="0"
+                                        Grid.Column="1"
+                                        Text=""
+                                        BackgroundColor="#0E7A6A"
+                                        TextColor="White"
+                                        CornerRadius="12"
+                                        Padding="12,10"
+                                        FontFamily="OpenSansSemibold"
+                                        LineBreakMode="WordWrap"
+                                        Clicked="OnStartPoiSweepTestClicked" />
+                                <Button x:Name="StopGpsTestButton"
+                                        Grid.Row="1"
+                                        Grid.Column="0"
+                                        Grid.ColumnSpan="2"
+                                        Text=""
+                                        BackgroundColor="#8B2635"
+                                        TextColor="White"
+                                        CornerRadius="12"
+                                        Padding="12,10"
+                                        FontFamily="OpenSansSemibold"
+                                        LineBreakMode="WordWrap"
+                                        Clicked="OnStopGpsTestClicked" />
+                            </Grid>
+
+                            <Border Background="#FFFFFF"
+                                    Stroke="#E1EAF8"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 12"
+                                    Padding="10">
+                                <VerticalStackLayout Spacing="6">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                        <Label x:Name="GpsTestProgressTitleLabel"
+                                               Grid.Column="0"
+                                               Text=""
+                                               FontSize="12"
+                                               FontFamily="OpenSansSemibold"
+                                               TextColor="#23395B" />
+                                        <Label x:Name="GpsTestProgressLabel"
+                                               Grid.Column="1"
+                                               Text=""
+                                               FontSize="11"
+                                               FontFamily="OpenSansSemibold"
+                                               HorizontalTextAlignment="End"
+                                               TextColor="#0E7A6A" />
+                                    </Grid>
+                                    <ProgressBar x:Name="GpsTestProgressBar"
+                                                 Progress="0"
+                                                 ProgressColor="#0E7A6A"
+                                                 BackgroundColor="#D8E6F7"
+                                                 HeightRequest="10" />
+                                    <Label x:Name="GpsTestStatusLabel"
+                                           Text=""
+                                           FontSize="11"
+                                           FontFamily="OpenSansRegular"
+                                           LineBreakMode="WordWrap"
+                                           TextColor="#4D6B8A" />
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <Border Background="#FFFFFF"
+                                    Stroke="#E1EAF8"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 12"
+                                    Padding="10">
+                                <VerticalStackLayout Spacing="8">
+                                    <Label x:Name="GpsTestLogTitleLabel"
+                                           Text=""
+                                           FontSize="12"
+                                           FontFamily="OpenSansSemibold"
+                                           TextColor="#23395B" />
+                                    <CollectionView x:Name="GpsTestLogCollection"
+                                                    HeightRequest="168"
+                                                    SelectionMode="None">
+                                        <CollectionView.EmptyView>
+                                            <Label x:Name="GpsTestLogEmptyLabel"
+                                                   Text=""
+                                                   FontSize="11"
+                                                   FontFamily="OpenSansRegular"
+                                                   HorizontalTextAlignment="Center"
+                                                   LineBreakMode="WordWrap"
+                                                   TextColor="#7A8FA8" />
+                                        </CollectionView.EmptyView>
+                                        <CollectionView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,0,0,8"
+                                                        Padding="10,8"
+                                                        Background="#F8FBFF"
+                                                        Stroke="#E6EEF9"
+                                                        StrokeThickness="1"
+                                                        StrokeShape="RoundRectangle 10">
+                                                    <Label Text="{Binding .}"
+                                                           FontSize="11"
+                                                           FontFamily="OpenSansRegular"
+                                                           LineBreakMode="WordWrap"
+                                                           TextColor="#406080" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </CollectionView.ItemTemplate>
+                                    </CollectionView>
+                                </VerticalStackLayout>
+                            </Border>
+                        </VerticalStackLayout>
+                    </Border>
                 </VerticalStackLayout>
             </Border>
 
@@ -183,11 +256,12 @@
                       HeightRequest="250" />
             </Border>
 
-            <Border Background="#FFFFFF"
+                <Border Background="#FFFFFF"
                     Stroke="#D8E6F7"
                     StrokeThickness="1"
                     StrokeShape="RoundRectangle 16"
-                    Padding="12">
+                    Padding="12"
+                    IsVisible="False">
                 <VerticalStackLayout Spacing="8">
                           <Label x:Name="LanguageSectionTitleLabel"
                               Text=""
@@ -218,46 +292,58 @@
             <Border Background="#FFFFFF"
                     Stroke="#D8E6F7"
                     StrokeThickness="1"
-                    StrokeShape="RoundRectangle 16"
-                    Padding="12">
-                <VerticalStackLayout Spacing="8">
-                          <Label x:Name="QrSectionTitleLabel"
-                              Text=""
-                           FontFamily="OpenSansSemibold"
-                           FontSize="15"
-                           TextColor="#23395B" />
-                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
-                           <Entry x:Name="QrEntry"
-                               Grid.Row="0"
-                               Grid.Column="0"
-                               Grid.ColumnSpan="2"
-                               Placeholder=""
-                               ClearButtonVisibility="WhileEditing"
-                               BackgroundColor="#F6FAFF"
-                               ReturnType="Go" />
-                        <Button x:Name="OpenQrButton"
-                            Grid.Row="1"
-                            Grid.Column="0"
-                                Text=""
-                                BackgroundColor="#A44C9C"
-                                TextColor="White"
-                                CornerRadius="10"
-                                Padding="12,10"
-                                FontFamily="OpenSansSemibold"
-                                LineBreakMode="WordWrap"
-                                Clicked="OnLookupQrClicked" />
-                        <Button x:Name="ScanQrButton"
-                            Grid.Row="1"
-                            Grid.Column="1"
-                                Text=""
-                                BackgroundColor="#2E5BCA"
-                                TextColor="White"
-                                CornerRadius="10"
-                                Padding="12,10"
-                                FontFamily="OpenSansSemibold"
-                                LineBreakMode="WordWrap"
-                                Clicked="OnScanQrClicked" />
-                    </Grid>
+                    StrokeShape="RoundRectangle 18"
+                    Padding="12"
+                    Shadow="0,4,12,#12000000">
+                <VerticalStackLayout Spacing="12">
+                    <Border Background="#183F73"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 14"
+                            Padding="14">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                            <Border Background="#2E5BCA"
+                                    Stroke="#8DB8FF"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 14"
+                                    WidthRequest="46"
+                                    HeightRequest="46"
+                                    Padding="0"
+                                    VerticalOptions="Start">
+                                <Label Text="QR"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"
+                                       HorizontalTextAlignment="Center"
+                                       VerticalTextAlignment="Center"
+                                       FontFamily="OpenSansSemibold"
+                                       FontSize="18"
+                                       TextColor="White" />
+                            </Border>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                <Label x:Name="QrSectionTitleLabel"
+                                       Text=""
+                                       FontFamily="OpenSansSemibold"
+                                       FontSize="16"
+                                       TextColor="White" />
+                                <Label x:Name="QrSectionBodyLabel"
+                                       Text=""
+                                       FontSize="12"
+                                       LineBreakMode="WordWrap"
+                                       TextColor="#D9E9FF" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+
+                    <Button x:Name="ScanQrButton"
+                            Text=""
+                            BackgroundColor="#2E5BCA"
+                            TextColor="White"
+                            CornerRadius="14"
+                            HeightRequest="52"
+                            Padding="16,12"
+                            FontFamily="OpenSansSemibold"
+                            FontSize="15"
+                            Clicked="OnScanQrClicked" />
                 </VerticalStackLayout>
             </Border>
 
@@ -272,10 +358,27 @@
                            FontFamily="OpenSansSemibold"
                            FontSize="15"
                            TextColor="#23395B" />
+                    <SearchBar x:Name="PoiSearchBar"
+                               Placeholder=""
+                               SearchCommandParameter="poi"
+                               TextChanged="OnPoiSearchTextChanged"
+                               BackgroundColor="#F7FAFF"
+                               CancelButtonColor="#2E5BCA"
+                               PlaceholderColor="#6A7F96"
+                               TextColor="#1F3552" />
                     <CollectionView x:Name="PoiCollection"
                                     SelectionMode="Single"
                                     SelectionChanged="OnPoiSelectionChanged"
                                     HeightRequest="230">
+                        <CollectionView.EmptyView>
+                            <Label x:Name="PoiEmptyStateLabel"
+                                   Text=""
+                                   FontSize="12"
+                                   FontFamily="OpenSansRegular"
+                                   HorizontalTextAlignment="Center"
+                                   LineBreakMode="WordWrap"
+                                   TextColor="#7A8FA8" />
+                        </CollectionView.EmptyView>
                         <CollectionView.ItemTemplate>
                             <DataTemplate>
                                 <Border Margin="0,0,0,8"
@@ -283,25 +386,43 @@
                                         Stroke="#E3ECF9"
                                         Background="#F9FCFF"
                                         StrokeShape="RoundRectangle 12">
-                                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
-                                        <Label Grid.Row="0" Grid.Column="0"
+                                    <Grid ColumnDefinitions="86,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="4">
+                                        <Border Grid.RowSpan="5"
+                                          Background="#EAF2FF"
+                                          Stroke="#D7E3F7"
+                                          StrokeThickness="1"
+                                          StrokeShape="RoundRectangle 12"
+                                          HeightRequest="86"
+                                          WidthRequest="86"
+                                          Padding="0">
+                                          <Image Source="{Binding AnhDaiDienUrl}"
+                                              Aspect="AspectFill" />
+                                     </Border>
+                                     <Label Grid.Row="0" Grid.Column="1"
                                                Text="{Binding TenDiem}"
                                                FontFamily="OpenSansSemibold"
                                                FontSize="14"
                                                TextColor="#1F3552" />
-                                        <Label Grid.Row="0" Grid.Column="1"
+                                     <Label Grid.Row="1" Grid.Column="1"
                                                Text="{Binding MaDinhDanh}"
                                                FontSize="11"
-                                                 HorizontalTextAlignment="End"
+                                         HorizontalTextAlignment="Start"
                                                  LineBreakMode="TailTruncation"
                                                TextColor="#4D6B8A" />
-                                        <Label Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     <Label Grid.Row="2" Grid.Column="1"
+                                         Text="{Binding MoTaNgan}"
+                                         FontSize="12"
+                                         MaxLines="2"
+                                         LineBreakMode="TailTruncation"
+                                         TextColor="#425D78" />
+                                     <Label Grid.Row="3" Grid.Column="1"
                                                Text="{Binding DiaChi}"
                                                FontSize="12"
                                                  LineBreakMode="WordWrap"
                                                TextColor="#5F7895" />
-                                        <Label Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                                               Text="{Binding CoordinateText}"
+                                     <Label Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
+                                         Margin="0,6,0,0"
+                                         Text="{Binding CoordinateText}"
                                                FontSize="11"
                                                  LineBreakMode="WordWrap"
                                                TextColor="#6A7F96" />
@@ -324,6 +445,12 @@
                            FontSize="13"
                            LineBreakMode="WordWrap"
                            TextColor="#E5F0FF" />
+                      <Label x:Name="SelectedPoiMetaLabel"
+                          Text=""
+                           FontFamily="OpenSansRegular"
+                           FontSize="11"
+                           LineBreakMode="WordWrap"
+                           TextColor="#D9E9FF" />
                       <Label x:Name="FallbackLanguageLabel"
                           Text=""
                            IsVisible="False"
@@ -331,6 +458,63 @@
                            FontSize="11"
                            LineBreakMode="WordWrap"
                            TextColor="#D9E9FF" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border x:Name="PoiGalleryCard"
+                    Background="#FFFFFF"
+                    Stroke="#D8E6F7"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 16"
+                    Padding="12"
+                    IsVisible="False">
+                <VerticalStackLayout Spacing="10">
+                    <Label x:Name="PoiGalleryTitleLabel"
+                           Text=""
+                           FontFamily="OpenSansSemibold"
+                           FontSize="15"
+                           TextColor="#23395B" />
+                    <Border Background="#F6FAFF"
+                            Stroke="#DCE8F7"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 14"
+                            Padding="0">
+                        <Grid>
+                            <Image x:Name="SelectedPoiHeroImage"
+                                   Aspect="AspectFill"
+                                   HeightRequest="220" />
+                            <Label x:Name="PoiGalleryEmptyLabel"
+                                   Text=""
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"
+                                   HorizontalTextAlignment="Center"
+                                   LineBreakMode="WordWrap"
+                                   Margin="16"
+                                   FontSize="12"
+                                   TextColor="#6A7F96" />
+                        </Grid>
+                    </Border>
+                    <CollectionView x:Name="PoiGalleryCollection"
+                                    HeightRequest="92"
+                                    SelectionMode="Single"
+                                    SelectionChanged="OnPoiImageSelectionChanged"
+                                    ItemsLayout="HorizontalList">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="0,0,10,0"
+                                        Padding="0"
+                                        Background="#F6FAFF"
+                                        Stroke="#DCE8F7"
+                                        StrokeThickness="1"
+                                        StrokeShape="RoundRectangle 12">
+                                    <Image Source="{Binding DuongDanHinhAnh}"
+                                           Aspect="AspectFill"
+                                           HeightRequest="84"
+                                           WidthRequest="84" />
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
                 </VerticalStackLayout>
             </Border>
 
@@ -342,11 +526,26 @@
                     Padding="12"
                     IsVisible="False">
                 <VerticalStackLayout Spacing="6">
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="12">
                           <Label x:Name="AudioPlayerTitleLabel"
-                              Text=""
-                           FontFamily="OpenSansSemibold"
-                           FontSize="15"
-                           TextColor="#23395B" />
+                                 Grid.Column="0"
+                                 Text=""
+                                 FontFamily="OpenSansSemibold"
+                                 FontSize="15"
+                                 VerticalOptions="Center"
+                                 TextColor="#23395B" />
+                        <Button x:Name="StopAudioButton"
+                                Grid.Column="1"
+                                Text=""
+                                BackgroundColor="#D94F3D"
+                                TextColor="White"
+                                FontSize="12"
+                                CornerRadius="10"
+                                Padding="12,8"
+                                FontFamily="OpenSansSemibold"
+                                Clicked="OnStopAudioClicked" />
+                    </Grid>
                     <WebView x:Name="AudioWebView"
                              HeightRequest="120" />
                 </VerticalStackLayout>

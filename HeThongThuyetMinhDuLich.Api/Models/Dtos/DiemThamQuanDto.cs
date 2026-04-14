@@ -5,6 +5,7 @@ namespace HeThongThuyetMinhDuLich.Api.Models.Dtos;
 public class DiemThamQuanDto
 {
     public int MaDiem { get; set; }
+    public string? AnhDaiDienUrl { get; set; }
 
     [Required]
     [StringLength(50)]

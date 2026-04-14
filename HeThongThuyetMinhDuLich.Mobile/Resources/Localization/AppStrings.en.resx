@@ -30,17 +30,24 @@
   <data name="LanguageFallbackAppliedFormat" xml:space="preserve"><value>This POI does not have {0}. It is using {1} automatically.</value></data>
   <data name="LanguageFallbackNoPreferredFormat" xml:space="preserve"><value>This POI is currently shown in {0} because no better language match is available.</value></data>
   <data name="QrSectionTitle" xml:space="preserve"><value>Open with QR</value></data>
+  <data name="QrSectionBody" xml:space="preserve"><value>Scan the code at the point of interest to quickly open narration content and play audio in the most suitable language.</value></data>
   <data name="QrPlaceholder" xml:space="preserve"><value>Example: QR_POI001</value></data>
   <data name="OpenQr" xml:space="preserve"><value>Open QR</value></data>
   <data name="ScanQr" xml:space="preserve"><value>Scan</value></data>
   <data name="PoiListTitle" xml:space="preserve"><value>Points of interest</value></data>
+  <data name="PoiSearchPlaceholder" xml:space="preserve"><value>Search by place name, code, or address</value></data>
+  <data name="PoiSearchEmpty" xml:space="preserve"><value>No matching points of interest were found.</value></data>
   <data name="CoordinateFormat" xml:space="preserve"><value>Coordinates: {0:F6}, {1:F6}</value></data>
   <data name="SelectedPoiDefault" xml:space="preserve"><value>No place selected.</value></data>
   <data name="SelectedPoiFormat" xml:space="preserve"><value>Selected: {0} ({1})</value></data>
+  <data name="SelectedPoiMetaDefault" xml:space="preserve"><value>Select a place to view its summary and images.</value></data>
+  <data name="PoiGalleryTitle" xml:space="preserve"><value>Place images</value></data>
+  <data name="PoiGalleryEmpty" xml:space="preserve"><value>This place does not have any images yet.</value></data>
   <data name="AudioPlayerTitle" xml:space="preserve"><value>Now playing</value></data>
   <data name="ContentSectionTitle" xml:space="preserve"><value>Narration content</value></data>
   <data name="ContentLanguageFormat" xml:space="preserve"><value>Language: {0}</value></data>
   <data name="PlayButton" xml:space="preserve"><value>Play</value></data>
+  <data name="StopAudioButton" xml:space="preserve"><value>Stop playback</value></data>
   <data name="LanguageActionTitle" xml:space="preserve"><value>Choose app language</value></data>
   <data name="CancelAction" xml:space="preserve"><value>Cancel</value></data>
   <data name="ConfirmAction" xml:space="preserve"><value>OK</value></data>
@@ -72,22 +79,33 @@
   <data name="AudioUnavailableBody" xml:space="preserve"><value>Unable to play audio for this content.{0}</value></data>
   <data name="AudioErrorDetailPrefix" xml:space="preserve"><value>
 Audio details: {0}</value></data>
+  <data name="TtsEngineUnavailableBody" xml:space="preserve"><value>The device could not initialize the Text to Speech engine. Check the device TTS settings or use content that already has an audio file. Details: {0}</value></data>
   <data name="DirectQrPlaying" xml:space="preserve"><value>QR -&gt; Playing direct audio</value></data>
   <data name="QrInvalidBody" xml:space="preserve"><value>Enter or scan a QR code first.</value></data>
   <data name="QrNotFoundTitle" xml:space="preserve"><value>Not found</value></data>
   <data name="QrNotFoundBody" xml:space="preserve"><value>The QR code is invalid or does not exist.</value></data>
   <data name="QrLookupErrorBody" xml:space="preserve"><value>Unable to look up QR: {0}</value></data>
   <data name="QrPoiSelectedFormat" xml:space="preserve"><value>QR -&gt; {0}</value></data>
+  <data name="QrLanguageActionTitle" xml:space="preserve"><value>Choose a language to listen</value></data>
+  <data name="QrLanguageSelectedFormat" xml:space="preserve"><value>QR -&gt; {0} | Language: {1}</value></data>
+  <data name="PoiLanguageActionTitle" xml:space="preserve"><value>Choose a language for this POI</value></data>
+  <data name="PoiLanguageSelectedFormat" xml:space="preserve"><value>POI -&gt; {0} | Language: {1}</value></data>
+  <data name="QrNoContentBody" xml:space="preserve"><value>This POI does not have any available narration content yet.</value></data>
   <data name="NearestPoiUnknown" xml:space="preserve"><value>Nearest POI: unknown.</value></data>
   <data name="NearestPoiFormat" xml:space="preserve"><value>Nearest POI: {0} (~{1:F0} m)</value></data>
   <data name="NearestPinFormat" xml:space="preserve"><value>Nearest: {0}</value></data>
   <data name="AutoGeofenceFormat" xml:space="preserve"><value>Auto geofence: {0}</value></data>
   <data name="GpsTestSectionTitle" xml:space="preserve"><value>GPS tracking test</value></data>
+  <data name="GpsTestHint" xml:space="preserve"><value>Simulate geofences and autoplay to validate route runs, POI sweeps, and audio behavior inside the app.</value></data>
   <data name="GpsTestRouteButton" xml:space="preserve"><value>Run GPX route</value></data>
   <data name="GpsTestPoiSweepButton" xml:space="preserve"><value>Trigger all POIs</value></data>
   <data name="GpsTestStopButton" xml:space="preserve"><value>Stop test</value></data>
+  <data name="GpsTestModeIdle" xml:space="preserve"><value>Idle</value></data>
+  <data name="GpsTestModeReady" xml:space="preserve"><value>Ready</value></data>
+  <data name="GpsTestModeRunning" xml:space="preserve"><value>Running</value></data>
   <data name="GpsTestProgressTitle" xml:space="preserve"><value>Route progress</value></data>
   <data name="GpsTestLogTitle" xml:space="preserve"><value>Geofence log</value></data>
+  <data name="GpsTestLogEmpty" xml:space="preserve"><value>No test logs yet. Run the GPX route or trigger all POIs to inspect the simulation history.</value></data>
   <data name="GpsTestIdleStatus" xml:space="preserve"><value>GPS test: route data has not been loaded yet.</value></data>
   <data name="GpsTestReadyStatus" xml:space="preserve"><value>GPS test: ready with {0} GPX waypoints.</value></data>
   <data name="GpsTestRunningStatus" xml:space="preserve"><value>{0}: step {1}/{2}, triggered {3} POIs.</value></data>

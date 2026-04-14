@@ -40,6 +40,7 @@ public class MobileAuthResult
 public class DiemThamQuanItem
 {
     public int MaDiem { get; set; }
+    public string? AnhDaiDienUrl { get; set; }
     public string MaDinhDanh { get; set; } = string.Empty;
     public string TenDiem { get; set; } = string.Empty;
     public string? MoTaNgan { get; set; }
@@ -51,6 +52,16 @@ public class DiemThamQuanItem
     public bool TrangThaiHoatDong { get; set; }
     public DateTime NgayCapNhat { get; set; }
     public string CoordinateText { get; set; } = string.Empty;
+}
+
+public class HinhAnhDiemThamQuanItem
+{
+    public int MaHinhAnh { get; set; }
+    public int MaDiem { get; set; }
+    public string TenTepTin { get; set; } = string.Empty;
+    public string DuongDanHinhAnh { get; set; } = string.Empty;
+    public bool LaAnhDaiDien { get; set; }
+    public int? ThuTuHienThi { get; set; }
 }
 
 public class NoiDungItem

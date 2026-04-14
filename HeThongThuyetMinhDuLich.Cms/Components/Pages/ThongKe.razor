@@ -1,142 +1,16 @@
 ﻿@page "/thongke"
-@inject CmsApiClient ApiClient
-@inject CmsSession Session
 @inject NavigationManager Navigation
 
 <PageTitle>Thong ke</PageTitle>
 
-<div class="page-title">
-    <div>
-        <h3>Thong ke va lich su phat</h3>
-        <p>So lieu tong hop va lich su phat thuyet minh.</p>
-    </div>
-    <button class="btn btn-secondary" @onclick="LoadAsync" disabled="@_isLoading">Tai lai</button>
-</div>
-
-@if (!string.IsNullOrWhiteSpace(_error))
-{
-    <div class="notice notice-error">@_error</div>
-}
-
-<div class="grid-2">
-    <div class="card">
-        <h4>Theo diem tham quan</h4>
-        <div class="table-wrap" style="margin-top:10px;">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Diem</th>
-                        <th>Luot nghe</th>
-                        <th>Tong thoi luong</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in _theoDiem)
-                    {
-                        <tr>
-                            <td>@item.TenDiem</td>
-                            <td>@item.SoLuotNghe</td>
-                            <td>@item.TongThoiLuongDaNghe giay</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="card">
-        <h4>Theo cach kich hoat</h4>
-        <div class="table-wrap" style="margin-top:10px;">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Cach kich hoat</th>
-                        <th>So luot phat</th>
-                        <th>Tong thoi luong</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in _theoKichHoat)
-                    {
-                        <tr>
-                            <td>@item.CachKichHoat</td>
-                            <td>@item.SoLuotPhat</td>
-                            <td>@item.TongThoiLuongDaNghe giay</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
 <div class="card">
-    <h4>Lich su phat thuyet minh</h4>
-    <div class="table-wrap" style="margin-top:10px;">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Ma Lich Su</th>
-                    <th>Ten Nguoi Dung</th>
-                    <th>Diem Tham Quan</th>
-                    <th>Noi Dung</th>
-                    <th>Thoi Gian Bat Dau</th>
-                    <th>Thoi Luong Da Nghe</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in _lichSuPhat)
-                {
-                    <tr>
-                        <td>@item.MaLichSuPhat</td>
-                        <td>@item.TenNguoiDung</td>
-                        <td>@item.TenDiem</td>
-                        <td>@item.TieuDeNoiDung</td>
-                        <td>@item.ThoiGianBatDau</td>
-                        <td>@item.ThoiLuongDaNghe giay</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+    <h4>Dang chuyen ve dashboard</h4>
+    <p>Trang thong ke da duoc gop vao trang chu.</p>
 </div>
 
 @code {
-    private List<ThongKeTheoDiemItem> _theoDiem = [];
-    private List<ThongKeTheoKichHoatItem> _theoKichHoat = [];
-    private List<LichSuPhatItem> _lichSuPhat = [];
-    private bool _isLoading;
-    private string? _error;
-
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        if (!Session.IsAuthenticated)
-        {
-            Navigation.NavigateTo("/login", true);
-            return;
-        }
-
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        _isLoading = true;
-        _error = null;
-
-        try
-        {
-            _theoDiem = (await ApiClient.GetThongKeTheoDiemAsync()).ToList();
-            _theoKichHoat = (await ApiClient.GetThongKeTheoKichHoatAsync()).ToList();
-            _lichSuPhat = (await ApiClient.GetLichSuPhatAsync()).ToList();
-        }
-        catch (Exception ex)
-        {
-            _error = $"Loi khi tai du lieu: {ex.Message}";
-        }
-        finally
-        {
-            _isLoading = false;
-        }
+        Navigation.NavigateTo("/", true);
     }
 }

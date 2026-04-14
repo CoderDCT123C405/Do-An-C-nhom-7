@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace HeThongThuyetMinhDuLich.Cms.Models;
 
@@ -47,6 +48,7 @@ public class LoaiDiemThamQuanCreate
 public class DiemThamQuanItem
 {
     public int MaDiem { get; set; }
+    public string? AnhDaiDienUrl { get; set; }
     public string MaDinhDanh { get; set; } = string.Empty;
     public string TenDiem { get; set; } = string.Empty;
     public string? MoTaNgan { get; set; }
@@ -56,6 +58,23 @@ public class DiemThamQuanItem
     public string? DiaChi { get; set; }
     public int MaLoai { get; set; }
     public bool TrangThaiHoatDong { get; set; }
+}
+
+public class HinhAnhDiemThamQuanItem
+{
+    public int MaHinhAnh { get; set; }
+    public int MaDiem { get; set; }
+    public string TenTepTin { get; set; } = string.Empty;
+    public string DuongDanHinhAnh { get; set; } = string.Empty;
+    public bool LaAnhDaiDien { get; set; }
+    public int? ThuTuHienThi { get; set; }
+    public DateTime NgayTaiLen { get; set; }
+}
+
+public class HinhAnhDiemThamQuanUpdate
+{
+    public bool LaAnhDaiDien { get; set; }
+    public int? ThuTuHienThi { get; set; }
 }
 
 public class DiemThamQuanCreate
@@ -235,15 +254,35 @@ public class NguoiDungCreate
 public class TaiKhoanItem
 {
     public int MaTaiKhoan { get; set; }
+    [JsonPropertyName("tenDangNhap")]
     public string TenTaiKhoan { get; set; } = string.Empty;
+    [JsonPropertyName("hoTen")]
+    public string HoTen { get; set; } = string.Empty;
+    [JsonPropertyName("email")]
+    public string? Email { get; set; }
     public string VaiTro { get; set; } = string.Empty;
     public bool TrangThaiHoatDong { get; set; }
 }
 
 public class TaiKhoanCreate
 {
+    [JsonPropertyName("tenDangNhap")]
+    [Required(ErrorMessage = "Ten tai khoan la bat buoc.")]
     public string TenTaiKhoan { get; set; } = string.Empty;
+
+    [JsonPropertyName("matKhau")]
     public string MatKhau { get; set; } = string.Empty;
+
+    [JsonPropertyName("hoTen")]
+    [Required(ErrorMessage = "Ho ten la bat buoc.")]
+    public string HoTen { get; set; } = string.Empty;
+
+    [JsonPropertyName("email")]
+    public string? Email { get; set; }
+
+    [JsonPropertyName("vaiTro")]
     public string VaiTro { get; set; } = string.Empty;
+
+    [JsonPropertyName("trangThaiHoatDong")]
     public bool TrangThaiHoatDong { get; set; }
 }

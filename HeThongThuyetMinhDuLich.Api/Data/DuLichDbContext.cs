@@ -142,7 +142,7 @@ public class DuLichDbContext(DbContextOptions<DuLichDbContext> options) : DbCont
             entity.ToTable("MaQR");
             entity.HasKey(x => x.MaQR);
             entity.HasIndex(x => x.GiaTriQR).IsUnique();
-            entity.HasIndex(x => x.MaDiem);
+            entity.HasIndex(x => x.MaDiem).IsUnique();
             entity.Property(x => x.GiaTriQR).HasMaxLength(255).IsRequired();
             entity.HasOne(x => x.DiemThamQuan)
                 .WithMany(x => x.MaQrs)

@@ -25,11 +25,15 @@ public class DiemThamQuanController(
         pageSize = pageSize < 1 ? 100 : (pageSize > 100 ? 100 : pageSize);
         var query = dbContext.DiemThamQuans
             .AsNoTracking()
-            .Include(x => x.LoaiDiemThamQuan)
             .OrderBy(x => x.TenDiem)
             .Select(x => new DiemThamQuanDto
             {
                 MaDiem = x.MaDiem,
+                AnhDaiDienUrl = x.HinhAnhDiemThamQuans
+                    .OrderByDescending(h => h.LaAnhDaiDien)
+                    .ThenBy(h => h.ThuTuHienThi ?? int.MaxValue)
+                    .Select(h => h.DuongDanHinhAnh)
+                    .FirstOrDefault(),
                 MaDinhDanh = x.MaDinhDanh,
                 TenDiem = x.TenDiem,
                 MoTaNgan = x.MoTaNgan,
@@ -58,6 +62,11 @@ public class DiemThamQuanController(
             .Select(x => new
             {
                 x.MaDiem,
+                AnhDaiDienUrl = x.HinhAnhDiemThamQuans
+                    .OrderByDescending(h => h.LaAnhDaiDien)
+                    .ThenBy(h => h.ThuTuHienThi ?? int.MaxValue)
+                    .Select(h => h.DuongDanHinhAnh)
+                    .FirstOrDefault(),
                 x.MaDinhDanh,
                 x.TenDiem,
                 x.MoTaNgan,
@@ -97,7 +106,8 @@ public class DiemThamQuanController(
                 TenLoai = x.LoaiDiemThamQuan != null ? x.LoaiDiemThamQuan.TenLoai : null,
                 x.TrangThaiHoatDong,
                 HinhAnh = x.HinhAnhDiemThamQuans
-                    .OrderBy(h => h.ThuTuHienThi)
+                    .OrderByDescending(h => h.LaAnhDaiDien)
+                    .ThenBy(h => h.ThuTuHienThi ?? int.MaxValue)
                     .Select(h => new
                     {
                         h.MaHinhAnh,

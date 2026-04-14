@@ -249,7 +249,8 @@ namespace HeThongThuyetMinhDuLich.Api.Migrations
                     b.HasIndex("GiaTriQR")
                         .IsUnique();
 
-                    b.HasIndex("MaDiem");
+                    b.HasIndex("MaDiem")
+                        .IsUnique();
 
                     b.HasIndex("MaTaiKhoanTao");
 

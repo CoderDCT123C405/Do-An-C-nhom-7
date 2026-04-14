@@ -9,7 +9,7 @@ namespace HeThongThuyetMinhDuLich.Mobile.Services;
 public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheStore cacheStore, AuthSession authSession)
 {
     private const string CacheGenerationPreferenceKey = "mobile.cache.generation";
-    private const string CurrentCacheGeneration = "sqlserver-sync-v2";
+    private const string CurrentCacheGeneration = "sqlserver-sync-v3-images";
 
     private string? _resolvedBaseUrl;
     private bool _cacheCompatibilityChecked;
@@ -107,6 +107,45 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
         return ResolveAudioUrl(item.DuongDanAmThanh);
     }
 
+    public string ResolveImageUrl(string? pathOrUrl)
+    {
+        if (string.IsNullOrWhiteSpace(pathOrUrl))
+        {
+            return string.Empty;
+        }
+
+        if (Uri.TryCreate(pathOrUrl, UriKind.Absolute, out var absolute))
+        {
+            if (DeviceInfo.Platform == DevicePlatform.Android &&
+                (string.Equals(absolute.Host, "localhost", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(absolute.Host, "127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(absolute.Host, "::1", StringComparison.OrdinalIgnoreCase)))
+            {
+                if (!string.IsNullOrWhiteSpace(_resolvedBaseUrl) &&
+                    Uri.TryCreate(_resolvedBaseUrl, UriKind.Absolute, out var resolvedBase))
+                {
+                    var resolvedBuilder = new UriBuilder(resolvedBase)
+                    {
+                        Path = absolute.AbsolutePath,
+                        Query = absolute.Query.TrimStart('?')
+                    };
+                    return resolvedBuilder.Uri.ToString();
+                }
+
+                var androidBuilder = new UriBuilder(absolute)
+                {
+                    Host = "10.0.2.2"
+                };
+                return androidBuilder.Uri.ToString();
+            }
+
+            return absolute.ToString();
+        }
+
+        var baseUrl = _resolvedBaseUrl ?? GetCandidateBaseUrls().First();
+        return new Uri(new Uri(baseUrl), pathOrUrl.TrimStart('/')).ToString();
+    }
+
     public async Task<string> GetPlayableAudioSourceAsync(NoiDungItem item)
     {
         if (!string.IsNullOrWhiteSpace(item.TepAmThanhNoiBo) &&
@@ -186,16 +225,52 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
             try
             {
                 await SyncPoisAsync();
-                return await cacheStore.GetPoisAsync();
+                return NormalizePoiList(await cacheStore.GetPoisAsync());
             }
             catch (Exception ex)
             {
                 Console.WriteLine("API ERROR: " + ex.Message);
-                return await cacheStore.GetPoisAsync();
+                return NormalizePoiList(await cacheStore.GetPoisAsync());
             }
         }
 
-        return await cacheStore.GetPoisAsync();
+        return NormalizePoiList(await cacheStore.GetPoisAsync());
+    }
+
+    public async Task<IReadOnlyList<HinhAnhDiemThamQuanItem>> GetHinhAnhByDiemAsync(int maDiem)
+    {
+        await EnsureCacheCompatibilityAsync();
+
+        if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+        {
+            var cachedPoi = await cacheStore.GetPoiAsync(maDiem);
+            if (cachedPoi is null || string.IsNullOrWhiteSpace(cachedPoi.AnhDaiDienUrl))
+            {
+                return [];
+            }
+
+            return
+            [
+                new HinhAnhDiemThamQuanItem
+                {
+                    MaHinhAnh = cachedPoi.MaDiem,
+                    MaDiem = cachedPoi.MaDiem,
+                    TenTepTin = cachedPoi.TenDiem,
+                    DuongDanHinhAnh = ResolveImageUrl(cachedPoi.AnhDaiDienUrl),
+                    LaAnhDaiDien = true,
+                    ThuTuHienThi = 0
+                }
+            ];
+        }
+
+        using var client = await CreateApiClientAsync();
+        var items = await client.GetFromJsonAsync<List<HinhAnhDiemThamQuanItem>>($"api/hinhanhdiemthamquan/diem/{maDiem}") ?? [];
+        foreach (var item in items)
+        {
+            item.DuongDanHinhAnh = ResolveImageUrl(item.DuongDanHinhAnh);
+        }
+
+        return items;
     }
 
     // ================== NOI DUNG ==================
@@ -293,6 +368,8 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
                     result.DiemThamQuan.NgayCapNhat = DateTime.UtcNow;
                 }
 
+                result.DiemThamQuan = NormalizePoi(result.DiemThamQuan);
+
                 await cacheStore.SavePoiAsync(result.DiemThamQuan);
             }
 
@@ -314,7 +391,7 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
             }
 
             ApplyFallbackMetadata(result, fallbackResponse);
-            result.NoiDung = PrioritizePreferredLanguage(cachedContents, preferredLanguageId).ToList();
+            result.NoiDung = cachedContents.ToList();
 
             await cacheStore.SaveNoiDungAsync(result.MaDiem, cachedContents);
             await cacheStore.SaveQrMappingAsync(new QrSummaryItem
@@ -592,7 +669,7 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
         var requestStartedAtUtc = DateTime.UtcNow;
         var lastSyncUtc = await cacheStore.GetSyncCheckpointAsync(SyncKeyPois);
         var query = BuildUpdatedSinceQuery("api/diemthamquan/sync", lastSyncUtc);
-        var items = await client.GetFromJsonAsync<List<DiemThamQuanItem>>(query) ?? [];
+        var items = NormalizePoiList(await client.GetFromJsonAsync<List<DiemThamQuanItem>>(query) ?? []);
         await cacheStore.SavePoisAsync(items, replaceMissing: lastSyncUtc is null);
         var nextCheckpointUtc = ComputeNextSyncCheckpoint(items.Select(x => x.NgayCapNhat), requestStartedAtUtc);
         await cacheStore.SetSyncCheckpointAsync(SyncKeyPois, nextCheckpointUtc);
@@ -660,6 +737,17 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
         var previousCheckpoint = lastSyncUtc?.ToString("O", CultureInfo.InvariantCulture) ?? "FULL";
         var nextCheckpoint = nextCheckpointUtc.ToString("O", CultureInfo.InvariantCulture);
         Console.WriteLine($"SYNC [{area}] delta={deltaCount} from={previousCheckpoint} to={nextCheckpoint}");
+    }
+
+    private List<DiemThamQuanItem> NormalizePoiList(IEnumerable<DiemThamQuanItem> items)
+    {
+        return items.Select(NormalizePoi).ToList();
+    }
+
+    private DiemThamQuanItem NormalizePoi(DiemThamQuanItem item)
+    {
+        item.AnhDaiDienUrl = ResolveImageUrl(item.AnhDaiDienUrl);
+        return item;
     }
 
     private async Task<IReadOnlyList<NoiDungItem>> PrepareOfflineReadyNoiDungAsync(IEnumerable<NoiDungItem> items)
@@ -773,7 +861,7 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
             NgonNguKhaDung = fallbackResponse?.NgonNguKhaDung ?? [],
             NgonNguThayThe = fallbackResponse?.NgonNguThayThe ?? [],
             DiemThamQuan = poi,
-            NoiDung = PrioritizePreferredLanguage(allNoiDung, preferredLanguageId).ToList()
+            NoiDung = allNoiDung.ToList()
         };
     }
 

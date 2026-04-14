@@ -84,7 +84,17 @@
     }
 
     <div class="card">
-        <h4>Danh sach Nguoi Dung</h4>
+        @{
+            var filteredItems = FilteredItems.ToList();
+            var currentPage = GetCurrentPage(filteredItems.Count);
+            var pagedItems = GetPagedItems(filteredItems);
+        }
+
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h4>Danh sach Nguoi Dung</h4>
+            <input placeholder="Tim ten dang nhap, ho ten, email..." style="max-width:320px;" @bind="SearchText" @bind:event="oninput" />
+        </div>
+
         <div class="table-wrap">
             <table class="table">
                 <thead>
@@ -100,7 +110,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in _nguoiDungItems)
+                    @foreach (var item in pagedItems)
                     {
                         <tr>
                             <td>@item.MaNguoiDung</td>
@@ -113,13 +123,17 @@
                             <td>
                                 <div style="display:flex;gap:8px;">
                                     <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(item)">Sua</button>
-                                    <button type="button" class="btn btn-danger" @onclick="() => DeleteAsync(item)">Xoa</button>
+                                    <button type="button"
+                                            class="btn @(item.TrangThaiHoatDong ? "btn-danger" : "btn-primary")"
+                                            @onclick="() => ToggleVisibilityAsync(item)">
+                                        @(item.TrangThaiHoatDong ? "An" : "Hien")
+                                    </button>
                                 </div>
                             </td>
                         </tr>
                     }
 
-                    @if (!_nguoiDungItems.Any())
+                    @if (!filteredItems.Any())
                     {
                         <tr>
                             <td colspan="8">Khong co du lieu phu hop.</td>
@@ -128,6 +142,14 @@
                 </tbody>
             </table>
         </div>
+
+        <PaginationControls TotalItems="@filteredItems.Count"
+                            ItemLabel="nguoi dung"
+                            PageSize="@_pageSize"
+                            PageSizeChanged="OnPageSizeChanged"
+                            CurrentPage="@currentPage"
+                            CurrentPageChanged="OnPageChanged" />
+
     </div>
 </div>
 
@@ -140,12 +162,40 @@
     private bool _isSaving;
     private string? _error;
     private string? _success;
+    private string _search = string.Empty;
+    private int _page = 1;
+    private int _pageSize = 10;
+    private int _jumpPage = 1;
+
+    private string SearchText
+    {
+        get => _search;
+        set
+        {
+            _search = value;
+            ResetPagination();
+        }
+    }
+
+    private IEnumerable<NguoiDungItem> FilteredItems => _nguoiDungItems.Where(x =>
+        string.IsNullOrWhiteSpace(_search)
+        || x.TenDangNhap.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase)
+        || x.HoTen.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase)
+        || x.Email.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase)
+        || x.SoDienThoai.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase)
+        || x.TenNgonNgu.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
         if (!Session.IsAuthenticated)
         {
             Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        if (!Session.IsAdmin)
+        {
+            Navigation.NavigateTo("/khong-co-quyen", true);
             return;
         }
 
@@ -158,11 +208,48 @@
         {
             _nguoiDungItems = (await ApiClient.GetNguoiDungAsync()).ToList();
             _ngonNguItems = (await ApiClient.GetNgonNguAsync()).ToList();
+            ResetPagination();
         }
         catch (Exception ex)
         {
             _error = $"Loi khi tai du lieu: {ex.Message}";
         }
+    }
+
+    private int GetTotalPages(int totalItems)
+        => Math.Max(1, (int)Math.Ceiling(totalItems / (double)_pageSize));
+
+    private int GetCurrentPage(int totalItems)
+    {
+        _page = Math.Clamp(_page, 1, GetTotalPages(totalItems));
+        _jumpPage = _page;
+        return _page;
+    }
+
+    private List<NguoiDungItem> GetPagedItems(IReadOnlyList<NguoiDungItem> items)
+    {
+        var currentPage = GetCurrentPage(items.Count);
+        return items.Skip((currentPage - 1) * _pageSize).Take(_pageSize).ToList();
+    }
+
+    private Task OnPageChanged(int page)
+    {
+        _page = page;
+        _jumpPage = page;
+        return Task.CompletedTask;
+    }
+
+    private Task OnPageSizeChanged(int size)
+    {
+        _pageSize = size;
+        ResetPagination();
+        return Task.CompletedTask;
+    }
+
+    private void ResetPagination()
+    {
+        _page = 1;
+        _jumpPage = 1;
     }
 
     private void ToggleCreateForm()
@@ -249,28 +336,41 @@
         await LoadAsync();
     }
 
-    private async Task DeleteAsync(NguoiDungItem item)
+    private async Task ToggleVisibilityAsync(NguoiDungItem item)
     {
-        if (!await Js.InvokeAsync<bool>("confirm", $"Ban co chac muon xoa Nguoi Dung {item.HoTen}?"))
+        var nextStateLabel = item.TrangThaiHoatDong ? "an" : "hien";
+        if (!await Js.InvokeAsync<bool>("confirm", $"Ban co chac muon {nextStateLabel} Nguoi Dung {item.HoTen}?"))
         {
             return;
         }
 
         try
         {
-            var result = await ApiClient.DeleteNguoiDungAsync(item.MaNguoiDung);
+            _error = null;
+            _success = null;
+
+            var result = await ApiClient.UpdateNguoiDungAsync(item.MaNguoiDung, new NguoiDungCreate
+            {
+                TenDangNhap = item.TenDangNhap,
+                HoTen = item.HoTen,
+                Email = item.Email,
+                SoDienThoai = item.SoDienThoai,
+                MaNgonNguMacDinh = item.MaNgonNguMacDinh,
+                TrangThaiHoatDong = !item.TrangThaiHoatDong
+            });
+
             if (!result.Success)
             {
                 _error = result.ErrorMessage;
                 return;
             }
 
-            _success = "Da xoa Nguoi Dung thanh cong.";
+            _success = item.TrangThaiHoatDong ? "Da an Nguoi Dung thanh cong." : "Da hien Nguoi Dung thanh cong.";
             await LoadAsync();
         }
         catch (Exception ex)
         {
-            _error = $"Loi khi xoa Nguoi Dung: {ex.Message}";
+            _error = $"Loi khi cap nhat trang thai Nguoi Dung: {ex.Message}";
         }
     }
 }

@@ -9,7 +9,7 @@ namespace HeThongThuyetMinhDuLich.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Roles = "Admin")]
 public class TaiKhoanController(DuLichDbContext dbContext) : ControllerBase
 {
     [HttpGet]
@@ -97,6 +97,11 @@ public class TaiKhoanController(DuLichDbContext dbContext) : ControllerBase
             return NotFound();
         }
 
+        if (IsProtectedAdmin(item))
+        {
+            return BadRequest(new { message = "Tai khoan Admin duoc bao ve, khong the sua hoac an." });
+        }
+
         item.TenDangNhap = model.TenDangNhap;
         item.HoTen = model.HoTen;
         item.Email = model.Email;
@@ -122,8 +127,16 @@ public class TaiKhoanController(DuLichDbContext dbContext) : ControllerBase
             return NotFound();
         }
 
+        if (IsProtectedAdmin(item))
+        {
+            return BadRequest(new { message = "Tai khoan Admin duoc bao ve, khong the xoa." });
+        }
+
         dbContext.TaiKhoans.Remove(item);
         await dbContext.SaveChangesAsync();
         return NoContent();
     }
+
+    private static bool IsProtectedAdmin(TaiKhoan item)
+        => string.Equals(item.VaiTro, "Admin", StringComparison.OrdinalIgnoreCase);
 }

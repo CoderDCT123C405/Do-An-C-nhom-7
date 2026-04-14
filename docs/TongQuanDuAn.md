@@ -1,4 +1,4 @@
-# TONG QUAN DU AN - CAP NHAT 01/04/2026
+# TONG QUAN DU AN - CAP NHAT 12/04/2026
 
 ## 1. Muc tieu hien tai
 
@@ -10,7 +10,8 @@ He thong gom 3 module chinh:
 Trang thai tong quan:
 - API/CMS da co bo trang admin va endpoint cot loi de van hanh MVP
 - Luong audio thuyet minh da ho tro generate local bang `edge-tts`
-- Mobile da co khung MAUI + service dong bo/cache theo huong offline-first
+- Mobile da co luong GPS, QR, fallback ngon ngu, offline-first va geofence test
+- Nhanh lam viec chuan hien tai la `main`
 
 ## 2. Nhanh ve backend API
 
@@ -76,11 +77,13 @@ powershell -ExecutionPolicy Bypass -File .\Run-DoAn.ps1 -Mode offline -ResetOffl
 
 ## 6. Tai lieu lien quan
 
+- `docs/README.md`
 - `docs/PRD.md`
 - `docs/YeuCau.md`
 - `docs/KienTrucVaAPI.md`
 - `docs/TestCase.md`
 - `docs/ThuMucCauTruc.md`
+- `docs/BaoCao_Admin.md`
 - `docs/TODO.md`
 
 ## 7. Ghi chu

@@ -21,7 +21,8 @@ public sealed class LanguageService
         [
             new AppLanguageOption("vi", "Tieng Viet", "VI"),
             new AppLanguageOption("en", "English", "EN"),
-            new AppLanguageOption("zh-CN", "中文(简体)", "中文")
+            new AppLanguageOption("zh-CN", "中文(简体)", "中文"),
+            new AppLanguageOption("fr-FR", "Français", "FR")
         ];
 
         var savedCode = Preferences.Default.Get(PreferenceKey, "vi");

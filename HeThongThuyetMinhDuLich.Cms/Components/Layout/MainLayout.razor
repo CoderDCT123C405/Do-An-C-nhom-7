@@ -11,7 +11,7 @@
                 <div class="brand-mark">AG</div>
                 <div>
                     <h1>Audio Guide CMS</h1>
-                    <p>Admin Portal</p>
+                    <p>@PortalSubtitle</p>
                 </div>
             </div>
 
@@ -33,9 +33,9 @@
             <header class="topbar glass">
                 <div>
                     <h2>Quan tri he thong thuyet minh du lich</h2>
-                    <p>Giam sat noi dung, du lieu va thong ke theo thoi gian thuc.</p>
+                    <p>@TopbarDescription</p>
                 </div>
-                <div class="status-pill">Online</div>
+                <div class="status-pill">@StatusPillText</div>
             </header>
         }
 
@@ -47,6 +47,14 @@
 
 @code {
     private bool IsLoginPage => Navigation.Uri.EndsWith("/login", StringComparison.OrdinalIgnoreCase);
+
+    private string PortalSubtitle => Session.IsBienTap ? "Bien tap Portal" : "Admin Portal";
+
+    private string TopbarDescription => Session.IsBienTap
+        ? "Ban dang o che do BienTap: quan ly noi dung, QR, diem va loai diem; khong quan ly he thong."
+        : "Giam sat noi dung, du lieu va thong ke theo thoi gian thuc.";
+
+    private string StatusPillText => Session.IsBienTap ? "Role: BienTap" : "Role: Admin";
 
     private void Logout()
     {

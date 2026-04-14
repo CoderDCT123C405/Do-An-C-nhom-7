@@ -1,6 +1,7 @@
 using HeThongThuyetMinhDuLich.Api.Data;
 using HeThongThuyetMinhDuLich.Api.Models;
 using HeThongThuyetMinhDuLich.Api.Models.Dtos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +9,7 @@ namespace HeThongThuyetMinhDuLich.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Admin")]
 public class NguoiDungController(DuLichDbContext dbContext) : ControllerBase
 {
     [HttpGet]

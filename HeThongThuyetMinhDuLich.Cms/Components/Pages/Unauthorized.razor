@@ -1,0 +1,29 @@
+@page "/khong-co-quyen"
+@inject NavigationManager Navigation
+@inject CmsSession Session
+
+<PageTitle>Khong co quyen truy cap</PageTitle>
+
+<div class="card" style="max-width:760px;display:grid;gap:12px;">
+    <div>
+        <h3>Khong co quyen truy cap</h3>
+        <p style="margin-top:6px;color:#5b6b7e;">
+            @(Session.IsBienTap
+                ? "Tai khoan BienTap chi duoc quan ly noi dung, diem tham quan, loai diem, QR va thuyet minh."
+                : "Tai khoan hien tai khong co quyen mo chuc nang nay.")
+        </p>
+    </div>
+
+    <div class="notice notice-error" style="margin-bottom:0;">
+        Neu ban can quyen quan tri he thong, hay dang nhap bang tai khoan Admin.
+    </div>
+
+    <div class="form-actions" style="justify-content:flex-start;">
+        <button type="button" class="btn btn-secondary" @onclick="GoHome">Ve dashboard</button>
+    </div>
+</div>
+
+@code {
+    private void GoHome()
+        => Navigation.NavigateTo("/", true);
+}

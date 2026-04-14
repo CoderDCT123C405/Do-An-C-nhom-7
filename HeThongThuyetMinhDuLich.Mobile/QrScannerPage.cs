@@ -1,4 +1,5 @@
 using HeThongThuyetMinhDuLich.Mobile.Services;
+using System.Reflection;
 using ZXing.Net.Maui;
 using ZXing.Net.Maui.Controls;
 
@@ -24,11 +25,12 @@ public class QrScannerPage : ContentPage
             IsDetecting = true,
             Options = new BarcodeReaderOptions
             {
-                Formats = BarcodeFormats.TwoDimensional,
+                Formats = BarcodeFormat.QrCode,
                 AutoRotate = true,
                 Multiple = false
             }
         };
+        ConfigurePreferredRearCamera();
         _cameraView.BarcodesDetected += OnBarcodesDetected;
 
         var closeButton = new Button
@@ -79,7 +81,7 @@ public class QrScannerPage : ContentPage
     {
         var languageService = Application.Current?.Handler?.MauiContext?.Services.GetService<LanguageService>();
         var page = new QrScannerPage(languageService);
-        await navigation.PushModalAsync(page);
+        await navigation.PushModalAsync(page, false);
         return await page._resultSource.Task;
     }
 
@@ -98,6 +100,9 @@ public class QrScannerPage : ContentPage
             return;
         }
 
+        _cameraView.IsDetecting = false;
+        _cameraView.BarcodesDetected -= OnBarcodesDetected;
+
         await MainThread.InvokeOnMainThreadAsync(() => FinishAsync(value));
     }
 
@@ -112,6 +117,64 @@ public class QrScannerPage : ContentPage
         _cameraView.IsDetecting = false;
         _cameraView.BarcodesDetected -= OnBarcodesDetected;
         _resultSource.TrySetResult(result);
-        await Navigation.PopModalAsync();
+        await Navigation.PopModalAsync(false);
+    }
+
+    private void ConfigurePreferredRearCamera()
+    {
+        try
+        {
+            var cameraLocationProperty = _cameraView.GetType().GetProperty("CameraLocation", BindingFlags.Instance | BindingFlags.Public);
+            if (cameraLocationProperty?.CanWrite == true)
+            {
+                var cameraLocationType = cameraLocationProperty.PropertyType;
+                var rearValue = Enum.GetNames(cameraLocationType)
+                    .FirstOrDefault(name => string.Equals(name, "Rear", StringComparison.OrdinalIgnoreCase) ||
+                                            string.Equals(name, "Back", StringComparison.OrdinalIgnoreCase));
+
+                if (!string.IsNullOrWhiteSpace(rearValue))
+                {
+                    cameraLocationProperty.SetValue(_cameraView, Enum.Parse(cameraLocationType, rearValue));
+                    return;
+                }
+            }
+
+            var selectedCameraProperty = _cameraView.GetType().GetProperty("SelectedCamera", BindingFlags.Instance | BindingFlags.Public);
+            var camerasProperty = _cameraView.GetType().GetProperty("Cameras", BindingFlags.Instance | BindingFlags.Public);
+            var cameras = camerasProperty?.GetValue(_cameraView) as System.Collections.IEnumerable;
+            if (selectedCameraProperty?.CanWrite != true || cameras is null)
+            {
+                return;
+            }
+
+            object? preferredRearCamera = null;
+            foreach (var camera in cameras)
+            {
+                if (camera is null)
+                {
+                    continue;
+                }
+
+                var name = camera.GetType().GetProperty("Name", BindingFlags.Instance | BindingFlags.Public)?.GetValue(camera)?.ToString();
+                var locationValue = camera.GetType().GetProperty("Location", BindingFlags.Instance | BindingFlags.Public)?.GetValue(camera)?.ToString();
+                if ((locationValue?.Contains("Rear", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (locationValue?.Contains("Back", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (name?.Contains("Rear", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (name?.Contains("Back", StringComparison.OrdinalIgnoreCase) ?? false))
+                {
+                    preferredRearCamera = camera;
+                    break;
+                }
+            }
+
+            if (preferredRearCamera is not null)
+            {
+                selectedCameraProperty.SetValue(_cameraView, preferredRearCamera);
+            }
+        }
+        catch
+        {
+            // best effort: scanner still works if camera selection API differs by platform/package version
+        }
     }
 }

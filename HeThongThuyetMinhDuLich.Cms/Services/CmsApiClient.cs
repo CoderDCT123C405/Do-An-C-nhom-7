@@ -158,6 +158,67 @@ public class CmsApiClient(
         return await SendAsync(() => client.DeleteAsync($"api/diemthamquan/{id}", cancellationToken));
     }
 
+    public async Task<IReadOnlyList<HinhAnhDiemThamQuanItem>> GetHinhAnhTheoDiemAsync(int maDiem, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var client = CreateClient();
+            return await client.GetFromJsonAsync<List<HinhAnhDiemThamQuanItem>>($"api/hinhanhdiemthamquan/diem/{maDiem}", cancellationToken) ?? [];
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    public async Task<ApiOperationResult> UploadHinhAnhAsync(
+        int maDiem,
+        string fileName,
+        Stream fileStream,
+        bool laAnhDaiDien,
+        int? thuTuHienThi,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var client = CreateClient();
+            using var content = new MultipartFormDataContent();
+            using var fileContent = new StreamContent(fileStream);
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+
+            content.Add(new StringContent(maDiem.ToString()), "MaDiem");
+            content.Add(new StringContent(laAnhDaiDien.ToString().ToLowerInvariant()), "LaAnhDaiDien");
+            if (thuTuHienThi.HasValue)
+            {
+                content.Add(new StringContent(thuTuHienThi.Value.ToString()), "ThuTuHienThi");
+            }
+
+            if (session.MaTaiKhoan is int maTaiKhoan && maTaiKhoan > 0)
+            {
+                content.Add(new StringContent(maTaiKhoan.ToString()), "MaTaiKhoanTao");
+            }
+
+            content.Add(fileContent, "TepTin", fileName);
+            return await SendAsync(() => client.PostAsync("api/hinhanhdiemthamquan/upload", content, cancellationToken));
+        }
+        catch
+        {
+            return ApiOperationResult.Fail("Khong the tai anh len. Vui long thu lai.");
+        }
+    }
+
+    public async Task<ApiOperationResult> UpdateHinhAnhAsync(int id, HinhAnhDiemThamQuanUpdate model, CancellationToken cancellationToken = default)
+    {
+        using var client = CreateClient();
+        return await SendAsync(() => client.PutAsJsonAsync($"api/hinhanhdiemthamquan/{id}", model, cancellationToken));
+    }
+
+    public async Task<ApiOperationResult> DeleteHinhAnhAsync(int id, CancellationToken cancellationToken = default)
+    {
+        using var client = CreateClient();
+        return await SendAsync(() => client.DeleteAsync($"api/hinhanhdiemthamquan/{id}", cancellationToken));
+    }
+
     public async Task<IReadOnlyList<NoiDungThuyetMinhItem>> GetNoiDungTheoDiemAsync(int maDiem, CancellationToken cancellationToken = default)
     {
         try

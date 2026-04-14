@@ -1,4 +1,5 @@
 ﻿@page "/diemthamquan"
+@using Microsoft.AspNetCore.Components.Forms
 @inject CmsApiClient ApiClient
 @inject CmsSession Session
 @inject NavigationManager Navigation
@@ -22,6 +23,11 @@
 @if (!string.IsNullOrWhiteSpace(_success))
 {
     <div class="notice notice-success">@_success</div>
+}
+
+@if (Session.IsBienTap)
+{
+    <div class="notice notice-success">Vai tro BienTap duoc phep tao, sua va quan ly trang thai diem tham quan.</div>
 }
 
 <div class="card">
@@ -95,6 +101,86 @@
                     <InputCheckbox @bind-Value="_form.TrangThaiHoatDong" />
                 </label>
 
+                @if (_editingId is int editingId)
+                {
+                    <div class="card" style="margin-top:8px;background:#f8fbff;border:1px solid #dbe7f5;">
+                        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+                            <div>
+                                <h5 style="margin:0 0 4px 0;">Hinh anh diem tham quan</h5>
+                                <p style="margin:0;color:#58708c;">Moi POI co the co nhieu anh, nhung chi co 1 anh dai dien.</p>
+                            </div>
+                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                <InputFile OnChange="OnImageFilesSelected" multiple />
+                                <label style="display:flex;align-items:center;gap:6px;margin:0;">
+                                    <InputCheckbox @bind-Value="_uploadAsRepresentative" />
+                                    Dat anh dau tien lam dai dien
+                                </label>
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        disabled="@(_isUploadingImages || _selectedImageFiles.Count == 0)"
+                                        @onclick="() => UploadSelectedImagesAsync(editingId)">
+                                    @(_isUploadingImages ? "Dang tai..." : $"Tai len {_selectedImageFiles.Count} anh")
+                                </button>
+                            </div>
+                        </div>
+
+                        @if (_selectedImageFiles.Count > 0)
+                        {
+                            <div style="margin-top:10px;color:#58708c;">
+                                Da chon: @string.Join(", ", _selectedImageFiles.Select(x => x.Name))
+                            </div>
+                        }
+
+                        @if (_hinhAnhItems.Count == 0)
+                        {
+                            <div style="margin-top:12px;color:#58708c;">POI nay chua co hinh anh. Tai len anh dau tien de lam anh dai dien.</div>
+                        }
+                        else
+                        {
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px;">
+                                @foreach (var image in _hinhAnhItems)
+                                {
+                                    <div class="card" style="margin:0;padding:10px;display:grid;gap:10px;">
+                                        <img src="@ResolveImageUrl(image.DuongDanHinhAnh)"
+                                             alt="@image.TenTepTin"
+                                             style="width:100%;height:140px;object-fit:cover;border-radius:12px;border:1px solid #d9e2ef;background:#fff;" />
+                                        <div>
+                                            <div style="font-weight:600;word-break:break-word;">@image.TenTepTin</div>
+                                            <div style="margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                                <span class="badge @(image.LaAnhDaiDien ? "badge-success" : "badge-muted")">
+                                                    @(image.LaAnhDaiDien ? "Anh dai dien" : "Anh phu")
+                                                </span>
+                                                <span style="color:#58708c;">Thu tu: @(image.ThuTuHienThi ?? 0)</span>
+                                            </div>
+                                        </div>
+                                        <div style="display:flex;gap:8px;align-items:center;">
+                                            <input type="number"
+                                                   min="0"
+                                                   value="@GetImageOrder(image)"
+                                                   @onchange="e => OnImageOrderChanged(image, e)"
+                                                   style="max-width:88px;" />
+                                            <button type="button" class="btn btn-secondary" @onclick="() => SaveImageOrderAsync(image)">Luu thu tu</button>
+                                        </div>
+                                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                            <button type="button"
+                                                    class="btn btn-primary"
+                                                    disabled="@image.LaAnhDaiDien"
+                                                    @onclick="() => SetRepresentativeImageAsync(image)">
+                                                Dat dai dien
+                                            </button>
+                                            <button type="button" class="btn btn-danger" @onclick="() => DeleteImageAsync(image)">Xoa anh</button>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="notice notice-success">Luu diem moi truoc, sau do quay lai de tai va sap xep hinh anh.</div>
+                }
+
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" @onclick="CloseForm">Huy</button>
                     <button type="submit" class="btn btn-primary" disabled="@_isSaving">
@@ -110,13 +196,13 @@
         <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;">
             <div style="flex:1 1 300px;min-width:220px;">
                 <label>Tim kiem</label>
-                <input placeholder="Tim ten diem..."
-                       @bind="_search"
+                  <input placeholder="Tim ten diem..."
+                      @bind="SearchText"
                        @bind:event="oninput" />
             </div>
             <div style="width:240px;max-width:100%;">
                 <label>Loc loai</label>
-                <select @bind="_filterLoai">
+                <select @bind="FilterLoaiValue">
                     <option value="0">Tat ca loai</option>
                     @foreach (var loai in _loaiItems)
                     {
@@ -127,6 +213,15 @@
         </div>
     </div>
 
+    @{
+        var filteredItems = FilteredItems.ToList();
+        var totalPages = GetTotalPages(filteredItems.Count);
+        var currentPage = GetCurrentPage(filteredItems.Count);
+        var pagedItems = GetPagedItems(filteredItems);
+        var rangeStart = filteredItems.Count == 0 ? 0 : ((currentPage - 1) * _pageSize) + 1;
+        var rangeEnd = filteredItems.Count == 0 ? 0 : Math.Min(currentPage * _pageSize, filteredItems.Count);
+    }
+
     <!-- TABLE -->
     <div class="table-wrap">
         <table class="table">
@@ -134,6 +229,7 @@
                 <tr>
                     <th>Ma</th>
                     <th>Ten diem</th>
+                    <th>Anh dai dien</th>
                     <th>Dia chi</th>
                     <th>Loai</th>
                     <th>QR Scan</th>
@@ -142,26 +238,40 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var item in FilteredItems)
+                @foreach (var item in pagedItems)
                 {
                     <tr>
                         <td>@item.MaDinhDanh</td>
                         <td>@item.TenDiem</td>
+                        <td>
+                            @if (!string.IsNullOrWhiteSpace(item.AnhDaiDienUrl))
+                            {
+                                <img src="@ResolveImageUrl(item.AnhDaiDienUrl)"
+                                     alt="@item.TenDiem"
+                                     width="84"
+                                     height="84"
+                                     style="border:1px solid #d9e2ef;border-radius:10px;background:#fff;object-fit:cover;" />
+                            }
+                            else
+                            {
+                                <span>Chua co anh</span>
+                            }
+                        </td>
                         <td>@item.DiaChi</td>
                         <td>@GetLoaiName(item.MaLoai)</td>
                         <td>
-                            @if (TryGetAudioUrlForDiem(item.MaDiem, out var audioUrl))
+                            @if (TryGetQrValueForDiem(item.MaDiem, out var qrValue))
                             {
-                                <img src="@BuildQrImageUrl(audioUrl)"
+                                <img src="@BuildQrImageUrl(qrValue)"
                                      alt="QR diem @item.MaDiem"
                                      width="84"
                                      height="84"
                                      style="border:1px solid #d9e2ef;border-radius:8px;background:#fff;padding:4px;"
-                                     title="Quet de phat audio" />
+                                     title="Quet de mo POI va chon ngon ngu" />
                             }
                             else
                             {
-                                <span>Chua co audio</span>
+                                <span>Chua co QR</span>
                             }
                         </td>
                         <td>
@@ -171,43 +281,85 @@
                         </td>
                         <td>
                             <div style="display:flex;gap:8px;">
-                                <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(item)">Sua</button>
-                                <button type="button" class="btn btn-danger" @onclick="() => DeleteAsync(item)">An</button>
+                                <button type="button" class="btn btn-secondary" @onclick="() => OpenImageManager(item.MaDiem)">Anh</button>
+                                <button type="button" class="btn btn-secondary" @onclick="() => StartEditAsync(item)">Sua</button>
+                                <button type="button"
+                                        class="btn @(item.TrangThaiHoatDong ? "btn-danger" : "btn-primary")"
+                                        @onclick="() => ToggleVisibilityAsync(item)">
+                                    @(item.TrangThaiHoatDong ? "An" : "Hien")
+                                </button>
                             </div>
                         </td>
                     </tr>
                 }
 
-                @if (!FilteredItems.Any())
+                @if (!filteredItems.Any())
                 {
                     <tr>
-                        <td colspan="7">Khong co quan</td>
+                        <td colspan="8">Khong co quan</td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
+
+    <PaginationControls TotalItems="@filteredItems.Count"
+                        ItemLabel="diem"
+                        PageSize="@_pageSize"
+                        PageSizeChanged="OnPageSizeChanged"
+                        CurrentPage="@currentPage"
+                        CurrentPageChanged="OnPageChanged" />
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "maDiem")]
+    public int? QueryMaDiem { get; set; }
+
     private readonly DiemThamQuanCreate _form = new();
     private List<DiemThamQuanItem> _diemItems = new();
     private List<LoaiDiemThamQuanItem> _loaiItems = new();
     private List<NgonNguItem> _ngonNguItems = new();
     private List<MaQRItem> _qrItems = new();
-    private readonly Dictionary<int, string> _audioUrlByDiem = new();
+    private List<HinhAnhDiemThamQuanItem> _hinhAnhItems = new();
+    private Dictionary<int, int?> _imageOrders = new();
+    private IReadOnlyList<IBrowserFile> _selectedImageFiles = [];
 
     private int? _editingId;
     private bool _showForm;
     private bool _isSaving;
+    private bool _isUploadingImages;
+    private bool _uploadAsRepresentative;
 
     private string _search = "";
     private int _filterLoai;
+    private int _page = 1;
+    private int _pageSize = 10;
+    private int _jumpPage = 1;
 
     private string? _error;
     private string? _success;
     private string _qrGiaTri = "";
     private string _thuyetMinhNoiDung = "";
+
+    private string SearchText
+    {
+        get => _search;
+        set
+        {
+            _search = value;
+            ResetPagination();
+        }
+    }
+
+    private int FilterLoaiValue
+    {
+        get => _filterLoai;
+        set
+        {
+            _filterLoai = value;
+            ResetPagination();
+        }
+    }
 
     private IEnumerable<DiemThamQuanItem> FilteredItems => _diemItems.Where(x =>
         (string.IsNullOrWhiteSpace(_search) ||
@@ -224,6 +376,14 @@
         }
 
         await LoadAsync();
+        if (QueryMaDiem.HasValue && QueryMaDiem.Value > 0)
+        {
+            var point = _diemItems.FirstOrDefault(x => x.MaDiem == QueryMaDiem.Value);
+            if (point is not null)
+            {
+                await StartEditAsync(point);
+            }
+        }
     }
 
     private async Task LoadAsync()
@@ -232,7 +392,43 @@
         _ngonNguItems = (await ApiClient.GetNgonNguAsync()).Where(x => x.TrangThaiHoatDong).ToList();
         _diemItems = (await ApiClient.GetDiemAsync()).OrderBy(x => x.TenDiem).ToList();
         _qrItems = (await ApiClient.GetMaQRAsync()).ToList();
-        await LoadAudioUrlsByDiemAsync();
+        ResetPagination();
+    }
+
+    private int GetTotalPages(int totalItems)
+        => Math.Max(1, (int)Math.Ceiling(totalItems / (double)_pageSize));
+
+    private int GetCurrentPage(int totalItems)
+    {
+        _page = Math.Clamp(_page, 1, GetTotalPages(totalItems));
+        _jumpPage = _page;
+        return _page;
+    }
+
+    private List<DiemThamQuanItem> GetPagedItems(IReadOnlyList<DiemThamQuanItem> items)
+    {
+        var currentPage = GetCurrentPage(items.Count);
+        return items.Skip((currentPage - 1) * _pageSize).Take(_pageSize).ToList();
+    }
+
+    private Task OnPageChanged(int page)
+    {
+        _page = page;
+        _jumpPage = page;
+        return Task.CompletedTask;
+    }
+
+    private Task OnPageSizeChanged(int size)
+    {
+        _pageSize = size;
+        ResetPagination();
+        return Task.CompletedTask;
+    }
+
+    private void ResetPagination()
+    {
+        _page = 1;
+        _jumpPage = 1;
     }
 
     private void ResetForm()
@@ -247,8 +443,14 @@
         _form.DiaChi = "";
         _form.MaLoai = 0;
         _form.TrangThaiHoatDong = true;
+        _form.MaTaiKhoanTao = Session.MaTaiKhoan;
+        _form.MaTaiKhoanCapNhat = Session.MaTaiKhoan ?? 0;
         _qrGiaTri = "";
         _thuyetMinhNoiDung = "";
+        _hinhAnhItems = new();
+        _imageOrders = new();
+        _selectedImageFiles = [];
+        _uploadAsRepresentative = false;
     }
 
     private void ToggleCreateForm()
@@ -270,7 +472,7 @@
         _showForm = false;
     }
 
-    private void StartEdit(DiemThamQuanItem item)
+    private async Task StartEditAsync(DiemThamQuanItem item)
     {
         _editingId = item.MaDiem;
         _form.MaDinhDanh = item.MaDinhDanh;
@@ -282,8 +484,150 @@
         _form.DiaChi = item.DiaChi;
         _form.MaLoai = item.MaLoai;
         _form.TrangThaiHoatDong = item.TrangThaiHoatDong;
+        _form.MaTaiKhoanTao = Session.MaTaiKhoan;
+        _form.MaTaiKhoanCapNhat = Session.MaTaiKhoan ?? 0;
         _qrGiaTri = _qrItems.FirstOrDefault(x => x.MaDiem == item.MaDiem)?.GiaTriQR ?? "";
         _showForm = true;
+        await LoadImagesAsync(item.MaDiem);
+    }
+
+    private async Task LoadImagesAsync(int maDiem)
+    {
+        _hinhAnhItems = (await ApiClient.GetHinhAnhTheoDiemAsync(maDiem))
+            .OrderByDescending(x => x.LaAnhDaiDien)
+            .ThenBy(x => x.ThuTuHienThi ?? int.MaxValue)
+            .ThenBy(x => x.MaHinhAnh)
+            .ToList();
+        _imageOrders = _hinhAnhItems.ToDictionary(x => x.MaHinhAnh, x => x.ThuTuHienThi);
+        StateHasChanged();
+    }
+
+    private void OnImageFilesSelected(InputFileChangeEventArgs args)
+    {
+        _selectedImageFiles = args.GetMultipleFiles();
+    }
+
+    private int GetImageOrder(HinhAnhDiemThamQuanItem image)
+    {
+        return _imageOrders.TryGetValue(image.MaHinhAnh, out var order)
+            ? order ?? 0
+            : image.ThuTuHienThi ?? 0;
+    }
+
+    private void OnImageOrderChanged(HinhAnhDiemThamQuanItem image, ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var parsedOrder))
+        {
+            _imageOrders[image.MaHinhAnh] = parsedOrder;
+            return;
+        }
+
+        _imageOrders[image.MaHinhAnh] = image.ThuTuHienThi;
+    }
+
+    private async Task UploadSelectedImagesAsync(int maDiem)
+    {
+        if (_selectedImageFiles.Count == 0)
+        {
+            return;
+        }
+
+        _isUploadingImages = true;
+        _error = null;
+        _success = null;
+
+        try
+        {
+            var currentMaxOrder = _hinhAnhItems.Max(x => x.ThuTuHienThi ?? 0);
+
+            for (var index = 0; index < _selectedImageFiles.Count; index++)
+            {
+                var file = _selectedImageFiles[index];
+                await using var stream = file.OpenReadStream(10_000_000);
+
+                var shouldBeRepresentative = (_hinhAnhItems.Count == 0 && index == 0) || (_uploadAsRepresentative && index == 0);
+                var result = await ApiClient.UploadHinhAnhAsync(
+                    maDiem,
+                    file.Name,
+                    stream,
+                    shouldBeRepresentative,
+                    currentMaxOrder + index + 1);
+
+                if (!result.Success)
+                {
+                    _error = result.ErrorMessage;
+                    return;
+                }
+            }
+
+            _selectedImageFiles = [];
+            _uploadAsRepresentative = false;
+            await LoadImagesAsync(maDiem);
+            await LoadAsync();
+            _success = "Da cap nhat hinh anh cho diem tham quan.";
+        }
+        finally
+        {
+            _isUploadingImages = false;
+        }
+    }
+
+    private async Task SaveImageOrderAsync(HinhAnhDiemThamQuanItem image)
+    {
+        var result = await ApiClient.UpdateHinhAnhAsync(image.MaHinhAnh, new HinhAnhDiemThamQuanUpdate
+        {
+            LaAnhDaiDien = image.LaAnhDaiDien,
+            ThuTuHienThi = GetImageOrder(image)
+        });
+
+        if (!result.Success)
+        {
+            _error = result.ErrorMessage;
+            return;
+        }
+
+        await LoadImagesAsync(image.MaDiem);
+        await LoadAsync();
+        _success = "Da cap nhat thu tu hien thi anh.";
+    }
+
+    private async Task SetRepresentativeImageAsync(HinhAnhDiemThamQuanItem image)
+    {
+        var result = await ApiClient.UpdateHinhAnhAsync(image.MaHinhAnh, new HinhAnhDiemThamQuanUpdate
+        {
+            LaAnhDaiDien = true,
+            ThuTuHienThi = GetImageOrder(image)
+        });
+
+        if (!result.Success)
+        {
+            _error = result.ErrorMessage;
+            return;
+        }
+
+        await LoadImagesAsync(image.MaDiem);
+        await LoadAsync();
+        _success = "Da doi anh dai dien cho POI.";
+    }
+
+    private async Task DeleteImageAsync(HinhAnhDiemThamQuanItem image)
+    {
+        var confirmed = await Js.InvokeAsync<bool>("confirm", $"Ban co chac muon xoa anh '{image.TenTepTin}' khong?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var result = await ApiClient.DeleteHinhAnhAsync(image.MaHinhAnh);
+        if (!result.Success)
+        {
+            _error = result.ErrorMessage;
+            return;
+        }
+
+        await LoadImagesAsync(image.MaDiem);
+        await LoadAsync();
+        _success = "Da xoa anh cua diem tham quan.";
     }
 
     private async Task SaveAsync()
@@ -310,6 +654,8 @@
             BanKinhKichHoat = _form.BanKinhKichHoat,
             DiaChi = _form.DiaChi?.Trim(),
             MaLoai = _form.MaLoai,
+            MaTaiKhoanTao = _form.MaTaiKhoanTao,
+            MaTaiKhoanCapNhat = Session.MaTaiKhoan ?? _form.MaTaiKhoanCapNhat,
             TrangThaiHoatDong = _form.TrangThaiHoatDong
         };
 
@@ -341,17 +687,9 @@
         var savedPoint = _diemItems.FirstOrDefault(x =>
             string.Equals(x.MaDinhDanh, payload.MaDinhDanh, StringComparison.OrdinalIgnoreCase));
 
-        if (savedPoint is not null)
+        if (isCreating && savedPoint is not null)
         {
-            ApiOperationResult qrResult;
-            if (isCreating)
-            {
-                qrResult = await CreateNarrationAndQrForNewPointAsync(savedPoint);
-            }
-            else
-            {
-                qrResult = await UpsertQrForPointAsync(savedPoint.MaDiem, _qrGiaTri);
-            }
+            var qrResult = await CreateNarrationAndQrForNewPointAsync(savedPoint);
 
             if (!qrResult.Success)
             {
@@ -367,12 +705,35 @@
         await LoadAsync();
     }
 
-    private async Task DeleteAsync(DiemThamQuanItem item)
+    private async Task ToggleVisibilityAsync(DiemThamQuanItem item)
     {
-        var confirmed = await Js.InvokeAsync<bool>("confirm", $"An '{item.TenDiem}'?");
+        var nextStateLabel = item.TrangThaiHoatDong ? "an" : "hien";
+        var confirmed = await Js.InvokeAsync<bool>("confirm", $"Ban co chac muon {nextStateLabel} '{item.TenDiem}' khong?");
         if (!confirmed) return;
 
-        await ApiClient.DeleteDiemAsync(item.MaDiem);
+        _error = null;
+        _success = null;
+
+        var result = await ApiClient.UpdateDiemAsync(item.MaDiem, new DiemThamQuanCreate
+        {
+            MaDinhDanh = item.MaDinhDanh,
+            TenDiem = item.TenDiem,
+            MoTaNgan = item.MoTaNgan,
+            ViDo = item.ViDo,
+            KinhDo = item.KinhDo,
+            BanKinhKichHoat = item.BanKinhKichHoat,
+            DiaChi = item.DiaChi,
+            MaLoai = item.MaLoai,
+            TrangThaiHoatDong = !item.TrangThaiHoatDong
+        });
+
+        if (!result.Success)
+        {
+            _error = result.ErrorMessage;
+            return;
+        }
+
+        _success = item.TrangThaiHoatDong ? "Da an diem tham quan." : "Da hien diem tham quan.";
         await LoadAsync();
     }
 
@@ -387,22 +748,37 @@
         return $"https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={encoded}";
     }
 
-    private async Task LoadAudioUrlsByDiemAsync()
+    private bool TryGetQrValueForDiem(int maDiem, out string qrValue)
     {
-        _audioUrlByDiem.Clear();
-        foreach (var diem in _diemItems)
+        var item = _qrItems.FirstOrDefault(x => x.MaDiem == maDiem);
+        if (item is null || string.IsNullOrWhiteSpace(item.GiaTriQR))
         {
-            await LoadAudioUrlForPointAsync(diem.MaDiem);
+            qrValue = string.Empty;
+            return false;
         }
-    }
 
-    private bool TryGetAudioUrlForDiem(int maDiem, out string url)
-    {
-        return _audioUrlByDiem.TryGetValue(maDiem, out url!);
+        qrValue = item.GiaTriQR;
+        return true;
     }
 
     private string ResolveAudioUrl(string path)
     {
+        if (Uri.TryCreate(path, UriKind.Absolute, out var absolute))
+        {
+            return absolute.ToString();
+        }
+
+        var baseUrl = Config["Api:BaseUrl"] ?? "http://localhost:5000/";
+        return $"{baseUrl.TrimEnd('/')}/{path.TrimStart('/')}";
+    }
+
+    private string ResolveImageUrl(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return string.Empty;
+        }
+
         if (Uri.TryCreate(path, UriKind.Absolute, out var absolute))
         {
             return absolute.ToString();
@@ -468,44 +844,22 @@
             return createNoiDungResult;
         }
 
-        await LoadAudioUrlForPointAsync(savedPoint.MaDiem);
-        if (!_audioUrlByDiem.TryGetValue(savedPoint.MaDiem, out var audioUrl) &&
-            createNoiDungResult.ResourceId is int maNoiDung)
+        if (createNoiDungResult.ResourceId is int maNoiDung)
         {
-            var generateResult = await ApiClient.GenerateAudioForNoiDungAsync(maNoiDung);
-            if (!generateResult.Success)
-            {
-                return ApiOperationResult.Fail("Tao noi dung thanh cong, nhung tao audio that bai.");
-            }
-
-            await LoadAudioUrlForPointAsync(savedPoint.MaDiem);
-            _audioUrlByDiem.TryGetValue(savedPoint.MaDiem, out audioUrl);
+            await ApiClient.GenerateAudioForNoiDungAsync(maNoiDung);
         }
 
-        if (string.IsNullOrWhiteSpace(audioUrl))
-        {
-            return ApiOperationResult.Fail("Da tao noi dung nhung chua lay duoc duong dan audio de tao QR.");
-        }
-
-        _qrGiaTri = audioUrl;
-        return await UpsertQrForPointAsync(savedPoint.MaDiem, audioUrl);
+        _qrGiaTri = BuildDefaultQrValue(savedPoint);
+        return await UpsertQrForPointAsync(savedPoint.MaDiem, _qrGiaTri);
     }
 
-    private async Task LoadAudioUrlForPointAsync(int maDiem)
+    private static string BuildDefaultQrValue(DiemThamQuanItem point)
     {
-        var noiDung = await ApiClient.GetNoiDungTheoDiemAsync(maDiem);
-        var firstAudio = noiDung
-            .Where(x => !string.IsNullOrWhiteSpace(x.DuongDanAmThanh))
-            .OrderBy(x => x.MaNgonNgu)
-            .ThenBy(x => x.MaNoiDung)
-            .FirstOrDefault();
+        return $"QR_{point.MaDinhDanh.Trim().ToUpperInvariant()}";
+    }
 
-        if (firstAudio is null)
-        {
-            _audioUrlByDiem.Remove(maDiem);
-            return;
-        }
-
-        _audioUrlByDiem[maDiem] = ResolveAudioUrl(firstAudio.DuongDanAmThanh!);
+    private void OpenImageManager(int maDiem)
+    {
+        Navigation.NavigateTo($"/hinhanhdiemthamquan?maDiem={maDiem}");
     }
 }

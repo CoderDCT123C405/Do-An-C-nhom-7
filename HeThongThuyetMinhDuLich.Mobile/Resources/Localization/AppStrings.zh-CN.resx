@@ -30,17 +30,24 @@
   <data name="LanguageFallbackAppliedFormat" xml:space="preserve"><value>该景点暂不提供 {0}，已自动切换为 {1}。</value></data>
   <data name="LanguageFallbackNoPreferredFormat" xml:space="preserve"><value>该景点当前显示为 {0}，因为暂时没有更合适的语言版本。</value></data>
   <data name="QrSectionTitle" xml:space="preserve"><value>通过二维码打开</value></data>
+  <data name="QrSectionBody" xml:space="preserve"><value>扫描景点二维码即可快速打开讲解内容，并使用最合适的语言播放音频。</value></data>
   <data name="QrPlaceholder" xml:space="preserve"><value>例如：QR_POI001</value></data>
   <data name="OpenQr" xml:space="preserve"><value>打开二维码</value></data>
   <data name="ScanQr" xml:space="preserve"><value>扫描</value></data>
   <data name="PoiListTitle" xml:space="preserve"><value>景点列表</value></data>
+  <data name="PoiSearchPlaceholder" xml:space="preserve"><value>按景点名称、编号或地址搜索</value></data>
+  <data name="PoiSearchEmpty" xml:space="preserve"><value>未找到匹配的景点。</value></data>
   <data name="CoordinateFormat" xml:space="preserve"><value>坐标：{0:F6}, {1:F6}</value></data>
   <data name="SelectedPoiDefault" xml:space="preserve"><value>尚未选择景点。</value></data>
   <data name="SelectedPoiFormat" xml:space="preserve"><value>已选择：{0} ({1})</value></data>
+  <data name="SelectedPoiMetaDefault" xml:space="preserve"><value>选择一个景点以查看简介和图片。</value></data>
+  <data name="PoiGalleryTitle" xml:space="preserve"><value>景点图片</value></data>
+  <data name="PoiGalleryEmpty" xml:space="preserve"><value>该景点暂时没有图片。</value></data>
   <data name="AudioPlayerTitle" xml:space="preserve"><value>正在播放</value></data>
   <data name="ContentSectionTitle" xml:space="preserve"><value>讲解内容</value></data>
   <data name="ContentLanguageFormat" xml:space="preserve"><value>语言：{0}</value></data>
   <data name="PlayButton" xml:space="preserve"><value>播放</value></data>
+  <data name="StopAudioButton" xml:space="preserve"><value>停止播放</value></data>
   <data name="LanguageActionTitle" xml:space="preserve"><value>选择应用语言</value></data>
   <data name="CancelAction" xml:space="preserve"><value>取消</value></data>
   <data name="ConfirmAction" xml:space="preserve"><value>确定</value></data>
@@ -72,22 +79,33 @@
   <data name="AudioUnavailableBody" xml:space="preserve"><value>无法播放此内容的音频。{0}</value></data>
   <data name="AudioErrorDetailPrefix" xml:space="preserve"><value>
 音频详情：{0}</value></data>
+  <data name="TtsEngineUnavailableBody" xml:space="preserve"><value>设备无法初始化 Text to Speech 引擎。请检查设备的 TTS 设置，或改用已有音频文件的内容。详情：{0}</value></data>
   <data name="DirectQrPlaying" xml:space="preserve"><value>二维码 -&gt; 正在直接播放音频</value></data>
   <data name="QrInvalidBody" xml:space="preserve"><value>请先输入或扫描二维码。</value></data>
   <data name="QrNotFoundTitle" xml:space="preserve"><value>未找到</value></data>
   <data name="QrNotFoundBody" xml:space="preserve"><value>二维码无效或不存在。</value></data>
   <data name="QrLookupErrorBody" xml:space="preserve"><value>无法查询二维码：{0}</value></data>
   <data name="QrPoiSelectedFormat" xml:space="preserve"><value>二维码 -&gt; {0}</value></data>
+  <data name="QrLanguageActionTitle" xml:space="preserve"><value>选择要收听的语言</value></data>
+  <data name="QrLanguageSelectedFormat" xml:space="preserve"><value>二维码 -&gt; {0} | 语言：{1}</value></data>
+  <data name="PoiLanguageActionTitle" xml:space="preserve"><value>选择此景点的语言</value></data>
+  <data name="PoiLanguageSelectedFormat" xml:space="preserve"><value>景点 -&gt; {0} | 语言：{1}</value></data>
+  <data name="QrNoContentBody" xml:space="preserve"><value>该 POI 暂无可用的讲解内容。</value></data>
   <data name="NearestPoiUnknown" xml:space="preserve"><value>最近景点：未知。</value></data>
   <data name="NearestPoiFormat" xml:space="preserve"><value>最近景点：{0}（约 {1:F0} 米）</value></data>
   <data name="NearestPinFormat" xml:space="preserve"><value>最近：{0}</value></data>
   <data name="AutoGeofenceFormat" xml:space="preserve"><value>自动围栏：{0}</value></data>
   <data name="GpsTestSectionTitle" xml:space="preserve"><value>GPS 轨迹测试</value></data>
+  <data name="GpsTestHint" xml:space="preserve"><value>在应用内模拟围栏与自动播放，快速验证路线、POI 全量触发和音频行为。</value></data>
   <data name="GpsTestRouteButton" xml:space="preserve"><value>运行 GPX 路线</value></data>
   <data name="GpsTestPoiSweepButton" xml:space="preserve"><value>触发全部 POI</value></data>
   <data name="GpsTestStopButton" xml:space="preserve"><value>停止测试</value></data>
+  <data name="GpsTestModeIdle" xml:space="preserve"><value>未运行</value></data>
+  <data name="GpsTestModeReady" xml:space="preserve"><value>已就绪</value></data>
+  <data name="GpsTestModeRunning" xml:space="preserve"><value>测试中</value></data>
   <data name="GpsTestProgressTitle" xml:space="preserve"><value>路线进度</value></data>
   <data name="GpsTestLogTitle" xml:space="preserve"><value>围栏日志</value></data>
+  <data name="GpsTestLogEmpty" xml:space="preserve"><value>还没有测试日志。运行 GPX 路线或触发全部 POI 后即可查看模拟记录。</value></data>
   <data name="GpsTestIdleStatus" xml:space="preserve"><value>GPS 测试：尚未加载路线数据。</value></data>
   <data name="GpsTestReadyStatus" xml:space="preserve"><value>GPS 测试：已就绪，共 {0} 个 GPX 点。</value></data>
   <data name="GpsTestRunningStatus" xml:space="preserve"><value>{0}：第 {1}/{2} 步，已触发 {3} 个 POI。</value></data>

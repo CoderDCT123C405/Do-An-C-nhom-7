@@ -11,35 +11,38 @@
     else
     {
         <NavLink href="/" class="item" Match="NavLinkMatch.All">
-            Tong quan
+            Dashboard
         </NavLink>
 
         <NavLink href="/diemthamquan" class="item">
             Quản lý Điểm Tham Quan
         </NavLink>
 
+        <NavLink href="/hinhanhdiemthamquan" class="item">
+            Quản lý Hình Ảnh
+        </NavLink>
+
         <NavLink href="/loaidiem" class="item">
             Quản lý Loại Điểm
-        </NavLink>
-
-        <NavLink href="/thongke" class="item">
-            Thống Kê
-        </NavLink>
-
-        <NavLink href="/ngonngu" class="item">
-            Quản lý Ngôn Ngữ
-        </NavLink>
-
-        <NavLink href="/nguoidung" class="item">
-            Quản lý Người Dùng
-        </NavLink>
-
-        <NavLink href="/taikhoan" class="item">
-            Quản lý Tài Khoản
         </NavLink>
 
         <NavLink href="/noidungthuyetminh" class="item">
             Quản lý Nội Dung Thuyết Minh
         </NavLink>
+
+        @if (Session.IsAdmin)
+        {
+            <NavLink href="/ngonngu" class="item">
+                Quản lý Ngôn Ngữ
+            </NavLink>
+
+            <NavLink href="/nguoidung" class="item">
+                Quản lý Người Dùng
+            </NavLink>
+
+            <NavLink href="/taikhoan" class="item">
+                Quản lý Tài Khoản
+            </NavLink>
+        }
     }
 </nav>

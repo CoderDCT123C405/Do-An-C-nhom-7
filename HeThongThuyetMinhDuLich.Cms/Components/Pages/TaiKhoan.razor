@@ -41,6 +41,18 @@
                 </div>
 
                 <div>
+                    <label>Ho Ten</label>
+                    <InputText @bind-Value="_form.HoTen" />
+                    <ValidationMessage For="() => _form.HoTen" />
+                </div>
+
+                <div>
+                    <label>Email</label>
+                    <InputText @bind-Value="_form.Email" />
+                    <ValidationMessage For="() => _form.Email" />
+                </div>
+
+                <div>
                     <label>Mat Khau</label>
                     <InputText @bind-Value="_form.MatKhau" type="password" />
                     <ValidationMessage For="() => _form.MatKhau" />
@@ -70,7 +82,17 @@
     }
 
     <div class="card">
-        <h4>Danh sach Tai Khoan</h4>
+        @{
+            var filteredItems = FilteredItems.ToList();
+            var currentPage = GetCurrentPage(filteredItems.Count);
+            var pagedItems = GetPagedItems(filteredItems);
+        }
+
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h4>Danh sach Tai Khoan</h4>
+            <input placeholder="Tim ten tai khoan, vai tro..." style="max-width:280px;" @bind="SearchText" @bind:event="oninput" />
+        </div>
+
         <div class="table-wrap">
             <table class="table">
                 <thead>
@@ -83,8 +105,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in _taiKhoanItems)
+                    @foreach (var item in pagedItems)
                     {
+                        var isProtectedAdmin = IsProtectedAdmin(item);
                         <tr>
                             <td>@item.MaTaiKhoan</td>
                             <td>@item.TenTaiKhoan</td>
@@ -92,14 +115,26 @@
                             <td>@(item.TrangThaiHoatDong ? "Hoat dong" : "Tam dung")</td>
                             <td>
                                 <div style="display:flex;gap:8px;">
-                                    <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(item)">Sua</button>
-                                    <button type="button" class="btn btn-danger" @onclick="() => DeleteAsync(item)">Xoa</button>
+                                    <button type="button"
+                                            class="btn btn-secondary"
+                                            @onclick="() => StartEdit(item)"
+                                            disabled="@isProtectedAdmin"
+                                            title="@(isProtectedAdmin ? "Tai khoan Admin duoc khoa, khong cho sua." : null)">
+                                        Sua
+                                    </button>
+                                    <button type="button"
+                                            class="btn @(item.TrangThaiHoatDong ? "btn-danger" : "btn-primary")"
+                                            @onclick="() => ToggleVisibilityAsync(item)"
+                                            disabled="@isProtectedAdmin"
+                                            title="@(isProtectedAdmin ? "Tai khoan Admin duoc khoa, khong cho an/hien." : null)">
+                                        @(isProtectedAdmin ? "Khoa" : item.TrangThaiHoatDong ? "An" : "Hien")
+                                    </button>
                                 </div>
                             </td>
                         </tr>
                     }
 
-                    @if (!_taiKhoanItems.Any())
+                    @if (!filteredItems.Any())
                     {
                         <tr>
                             <td colspan="5">Khong co du lieu phu hop.</td>
@@ -108,6 +143,14 @@
                 </tbody>
             </table>
         </div>
+
+        <PaginationControls TotalItems="@filteredItems.Count"
+                            ItemLabel="tai khoan"
+                            PageSize="@_pageSize"
+                            PageSizeChanged="OnPageSizeChanged"
+                            CurrentPage="@currentPage"
+                            CurrentPageChanged="OnPageChanged" />
+
     </div>
 </div>
 
@@ -119,12 +162,37 @@
     private bool _isSaving;
     private string? _error;
     private string? _success;
+    private string _search = string.Empty;
+    private int _page = 1;
+    private int _pageSize = 10;
+    private int _jumpPage = 1;
+
+    private string SearchText
+    {
+        get => _search;
+        set
+        {
+            _search = value;
+            ResetPagination();
+        }
+    }
+
+    private IEnumerable<TaiKhoanItem> FilteredItems => _taiKhoanItems.Where(x =>
+        string.IsNullOrWhiteSpace(_search)
+        || x.TenTaiKhoan.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase)
+        || x.VaiTro.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
         if (!Session.IsAuthenticated)
         {
             Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        if (!Session.IsAdmin)
+        {
+            Navigation.NavigateTo("/khong-co-quyen", true);
             return;
         }
 
@@ -136,11 +204,48 @@
         try
         {
             _taiKhoanItems = (await ApiClient.GetTaiKhoanAsync()).ToList();
+            ResetPagination();
         }
         catch (Exception ex)
         {
             _error = $"Loi khi tai du lieu: {ex.Message}";
         }
+    }
+
+    private int GetTotalPages(int totalItems)
+        => Math.Max(1, (int)Math.Ceiling(totalItems / (double)_pageSize));
+
+    private int GetCurrentPage(int totalItems)
+    {
+        _page = Math.Clamp(_page, 1, GetTotalPages(totalItems));
+        _jumpPage = _page;
+        return _page;
+    }
+
+    private List<TaiKhoanItem> GetPagedItems(IReadOnlyList<TaiKhoanItem> items)
+    {
+        var currentPage = GetCurrentPage(items.Count);
+        return items.Skip((currentPage - 1) * _pageSize).Take(_pageSize).ToList();
+    }
+
+    private Task OnPageChanged(int page)
+    {
+        _page = page;
+        _jumpPage = page;
+        return Task.CompletedTask;
+    }
+
+    private Task OnPageSizeChanged(int size)
+    {
+        _pageSize = size;
+        ResetPagination();
+        return Task.CompletedTask;
+    }
+
+    private void ResetPagination()
+    {
+        _page = 1;
+        _jumpPage = 1;
     }
 
     private void ToggleCreateForm()
@@ -167,6 +272,8 @@
     {
         _editingId = null;
         _form.TenTaiKhoan = string.Empty;
+        _form.HoTen = string.Empty;
+        _form.Email = string.Empty;
         _form.MatKhau = string.Empty;
         _form.VaiTro = string.Empty;
         _form.TrangThaiHoatDong = true;
@@ -174,8 +281,18 @@
 
     private void StartEdit(TaiKhoanItem item)
     {
+        if (IsProtectedAdmin(item))
+        {
+            _error = "Tai khoan Admin duoc bao ve, khong the sua.";
+            _success = null;
+            return;
+        }
+
         _editingId = item.MaTaiKhoan;
         _form.TenTaiKhoan = item.TenTaiKhoan;
+        _form.HoTen = item.HoTen;
+        _form.Email = item.Email;
+        _form.MatKhau = string.Empty;
         _form.VaiTro = item.VaiTro;
         _form.TrangThaiHoatDong = item.TrangThaiHoatDong;
         _showForm = true;
@@ -192,6 +309,8 @@
         var payload = new TaiKhoanCreate
         {
             TenTaiKhoan = _form.TenTaiKhoan.Trim(),
+            HoTen = _form.HoTen.Trim(),
+            Email = string.IsNullOrWhiteSpace(_form.Email) ? null : _form.Email.Trim(),
             MatKhau = _form.MatKhau.Trim(),
             VaiTro = _form.VaiTro,
             TrangThaiHoatDong = _form.TrangThaiHoatDong
@@ -204,6 +323,14 @@
         }
         else
         {
+            var editingItem = _taiKhoanItems.FirstOrDefault(x => x.MaTaiKhoan == _editingId.Value);
+            if (editingItem is not null && IsProtectedAdmin(editingItem))
+            {
+                _isSaving = false;
+                _error = "Tai khoan Admin duoc bao ve, khong the sua.";
+                return;
+            }
+
             result = await ApiClient.UpdateTaiKhoanAsync(_editingId.Value, payload);
         }
 
@@ -220,28 +347,51 @@
         await LoadAsync();
     }
 
-    private async Task DeleteAsync(TaiKhoanItem item)
+    private async Task ToggleVisibilityAsync(TaiKhoanItem item)
     {
-        if (!await Js.InvokeAsync<bool>("confirm", $"Ban co chac muon xoa Tai Khoan {item.TenTaiKhoan}?"))
+        if (IsProtectedAdmin(item))
+        {
+            _error = "Tai khoan Admin duoc bao ve, khong the an hoac hien.";
+            _success = null;
+            return;
+        }
+
+        var nextStateLabel = item.TrangThaiHoatDong ? "an" : "hien";
+        if (!await Js.InvokeAsync<bool>("confirm", $"Ban co chac muon {nextStateLabel} Tai Khoan {item.TenTaiKhoan}?"))
         {
             return;
         }
 
         try
         {
-            var result = await ApiClient.DeleteTaiKhoanAsync(item.MaTaiKhoan);
+            _error = null;
+            _success = null;
+
+            var result = await ApiClient.UpdateTaiKhoanAsync(item.MaTaiKhoan, new TaiKhoanCreate
+            {
+                TenTaiKhoan = item.TenTaiKhoan,
+                HoTen = item.HoTen,
+                Email = item.Email,
+                MatKhau = string.Empty,
+                VaiTro = item.VaiTro,
+                TrangThaiHoatDong = !item.TrangThaiHoatDong
+            });
+
             if (!result.Success)
             {
                 _error = result.ErrorMessage;
                 return;
             }
 
-            _success = "Da xoa Tai Khoan thanh cong.";
+            _success = item.TrangThaiHoatDong ? "Da an Tai Khoan thanh cong." : "Da hien Tai Khoan thanh cong.";
             await LoadAsync();
         }
         catch (Exception ex)
         {
-            _error = $"Loi khi xoa Tai Khoan: {ex.Message}";
+            _error = $"Loi khi cap nhat trang thai Tai Khoan: {ex.Message}";
         }
     }
+
+    private static bool IsProtectedAdmin(TaiKhoanItem item)
+        => string.Equals(item.VaiTro, "Admin", StringComparison.OrdinalIgnoreCase);
 }

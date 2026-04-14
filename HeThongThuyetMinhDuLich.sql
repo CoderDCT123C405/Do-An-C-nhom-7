@@ -280,12 +280,32 @@ INSERT INTO NoiDungThuyetMinh (
     TrangThaiHoatDong
 )
 VALUES
-    (1, 1, N'Thuyết minh Chợ Bến Thành', N'Chợ Bến Thành là một trong những biểu tượng du lịch nổi bật của Thành phố Hồ Chí Minh, nơi du khách có thể cảm nhận nhịp sống thương mại truyền thống và khám phá nhiều đặc sản địa phương.', '/audio/cho-ben-thanh-vi.mp3', 1, 95, 1, 1, 1),
-    (1, 2, N'Ben Thanh Market Audio Guide', N'Ben Thanh Market is one of the most iconic attractions in Ho Chi Minh City, offering visitors a lively local trading atmosphere and a rich selection of regional specialties.', '/audio/cho-ben-thanh-en.mp3', 1, 92, 1, 1, 1),
-    (1, 3, N'边城市场语音导览', N'边城市场是胡志明市最具代表性的旅游地标之一，游客可以在这里感受传统商业氛围，并品尝多种越南地方特色美食。', '/audio/cho-ben-thanh-zh.mp3', 1, 94, 1, 1, 1),
-    (2, 1, N'Thuyết minh Phố đi bộ Nguyễn Huệ', N'Phố đi bộ Nguyễn Huệ là không gian công cộng hiện đại, nơi diễn ra nhiều sự kiện văn hóa, nghệ thuật và lễ hội của thành phố.', '/audio/nguyen-hue-vi.mp3', 1, 110, 1, 2, 1),
-    (2, 2, N'Nguyen Hue Walking Street Audio Guide', N'Nguyen Hue Walking Street is a vibrant public space in the city center where many cultural activities and festivals take place.', '/audio/nguyen-hue-en.mp3', 1, 105, 1, 2, 1),
-    (3, 1, N'Thuyết minh Phố ẩm thực Hồ Thị Kỷ', N'Phố ẩm thực Hồ Thị Kỷ nổi bật với nhiều món ăn đường phố phong phú, không gian nhộn nhịp và mức giá phù hợp với nhiều nhóm du khách.', '/audio/ho-thi-ky-vi.mp3', 1, 88, 2, 2, 1);
+    (1, 1, N'Thuyết minh Chợ Bến Thành', N'Chợ Bến Thành là một trong những biểu tượng du lịch nổi bật của Thành phố Hồ Chí Minh, nơi du khách có thể cảm nhận nhịp sống thương mại truyền thống và khám phá nhiều đặc sản địa phương.', '/audio/tts/noidung-1.mp3', 1, 95, 1, 1, 1),
+    (1, 2, N'Ben Thanh Market Audio Guide', N'Ben Thanh Market is one of the most iconic attractions in Ho Chi Minh City, offering visitors a lively local trading atmosphere and a rich selection of regional specialties.', '/audio/tts/noidung-2.mp3', 1, 92, 1, 1, 1),
+    (1, 3, N'边城市场语音导览', N'边城市场是胡志明市最具代表性的旅游地标之一，游客可以在这里感受传统商业氛围，并品尝多种越南地方特色美食。', NULL, 1, NULL, 1, 1, 1),
+    (2, 1, N'Thuyết minh Phố đi bộ Nguyễn Huệ', N'Phố đi bộ Nguyễn Huệ là không gian công cộng hiện đại, nơi diễn ra nhiều sự kiện văn hóa, nghệ thuật và lễ hội của thành phố.', '/audio/tts/noidung-4.mp3', 1, 110, 1, 2, 1),
+    (2, 2, N'Nguyen Hue Walking Street Audio Guide', N'Nguyen Hue Walking Street is a vibrant public space in the city center where many cultural activities and festivals take place.', '/audio/tts/noidung-5.mp3', 1, 105, 1, 2, 1),
+    (3, 1, N'Thuyết minh Phố ẩm thực Hồ Thị Kỷ', N'Phố ẩm thực Hồ Thị Kỷ nổi bật với nhiều món ăn đường phố phong phú, không gian nhộn nhịp và mức giá phù hợp với nhiều nhóm du khách.', NULL, 1, NULL, 2, 2, 1);
+GO
+
+-- Dong bo lai DuongDanAmThanh cho DB hien co theo cac file TTS da ton tai trong wwwroot/audio/tts.
+-- Cac noi dung chua co file thuc te se duoc de NULL de tranh tro sai duong dan cu.
+UPDATE NoiDungThuyetMinh
+SET DuongDanAmThanh = CASE MaNoiDung
+        WHEN 1 THEN '/audio/tts/noidung-1.mp3'
+        WHEN 2 THEN '/audio/tts/noidung-2.mp3'
+        WHEN 4 THEN '/audio/tts/noidung-4.mp3'
+        WHEN 5 THEN '/audio/tts/noidung-5.mp3'
+        ELSE NULL
+    END,
+    ThoiLuongGiay = CASE MaNoiDung
+        WHEN 1 THEN 95
+        WHEN 2 THEN 92
+        WHEN 4 THEN 110
+        WHEN 5 THEN 105
+        ELSE NULL
+    END
+WHERE MaNoiDung IN (1, 2, 3, 4, 5, 6);
 GO
 
 INSERT INTO HinhAnhDiemThamQuan (

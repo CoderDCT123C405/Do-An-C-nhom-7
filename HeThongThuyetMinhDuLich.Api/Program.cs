@@ -9,8 +9,7 @@ using System.IO;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
-    Args = args,
-    ContentRootPath = AppContext.BaseDirectory
+    Args = args
 });
 builder.Logging.ClearProviders();
 

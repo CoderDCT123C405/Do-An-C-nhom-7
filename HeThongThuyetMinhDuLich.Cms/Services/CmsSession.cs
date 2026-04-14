@@ -16,6 +16,10 @@ public class CmsSession
         || (!string.IsNullOrWhiteSpace(AccessToken)
         && (!HetHanLuc.HasValue || HetHanLuc.Value > DateTime.UtcNow));
 
+    public bool IsAdmin => string.Equals(VaiTro, "Admin", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsBienTap => string.Equals(VaiTro, "BienTap", StringComparison.OrdinalIgnoreCase);
+
     public void SignIn(int? maTaiKhoan, string tenDangNhap, string accessToken, string? hoTen, string? vaiTro, DateTime? hetHanLuc)
     {
         MaTaiKhoan = maTaiKhoan;

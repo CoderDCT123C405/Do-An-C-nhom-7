@@ -1,0 +1,385 @@
+@page "/hinhanhdiemthamquan"
+@using Microsoft.AspNetCore.Components.Forms
+@inject CmsApiClient ApiClient
+@inject CmsSession Session
+@inject NavigationManager Navigation
+@inject IConfiguration Config
+@inject IJSRuntime Js
+
+<PageTitle>Quan ly hinh anh diem tham quan</PageTitle>
+
+<div class="page-title">
+    <div>
+        <h3>Quan ly hinh anh diem tham quan</h3>
+        <p>Chon POI, tai nhieu anh, dat anh dai dien va sap xep thu tu hien thi.</p>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="notice notice-error">@_error</div>
+}
+@if (!string.IsNullOrWhiteSpace(_success))
+{
+    <div class="notice notice-success">@_success</div>
+}
+
+<div class="card" style="display:grid;gap:16px;">
+    <div class="grid-2" style="align-items:end;">
+        <div>
+            <label>Chon diem tham quan</label>
+            <InputSelect @bind-Value="SelectedPoiId" style="max-width:100%;">
+                <option value="0">-- Chon diem tham quan --</option>
+                @foreach (var poi in _poiItems)
+                {
+                    <option value="@poi.MaDiem">@poi.TenDiem (@poi.MaDinhDanh)</option>
+                }
+            </InputSelect>
+        </div>
+        @if (_selectedPoi is not null)
+        {
+            <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
+                <button type="button" class="btn btn-secondary" @onclick="GoToPoiPage">Mo trang diem tham quan</button>
+            </div>
+        }
+    </div>
+
+    @if (_selectedPoi is null)
+    {
+        <div class="notice notice-success" style="margin-bottom:0;">Hay chon 1 POI de mo quan ly hinh anh.</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;">
+            @foreach (var poi in _poiItems.Take(12))
+            {
+                <button type="button"
+                        class="card poi-image-picker"
+                        style="text-align:left;display:grid;gap:10px;"
+                        @onclick="() => SelectPoiAsync(poi.MaDiem)">
+                    @if (!string.IsNullOrWhiteSpace(poi.AnhDaiDienUrl))
+                    {
+                        <img src="@ResolveImageUrl(poi.AnhDaiDienUrl)"
+                             alt="@poi.TenDiem"
+                             style="width:100%;height:160px;object-fit:cover;border-radius:14px;border:1px solid #d9e2ef;" />
+                    }
+                    else
+                    {
+                        <div class="poi-image-placeholder">Chua co anh dai dien</div>
+                    }
+                    <div>
+                        <div style="font-weight:700;">@poi.TenDiem</div>
+                        <div style="margin-top:4px;color:#5b6b7e;">@poi.MaDinhDanh</div>
+                    </div>
+                </button>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="card" style="margin:0;background:#f8fbff;border:1px solid #dbe7f5;display:grid;gap:16px;">
+            <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+                <div style="display:grid;gap:6px;">
+                    <h4>@_selectedPoi.TenDiem</h4>
+                    <div style="color:#5b6b7e;">@_selectedPoi.MaDinhDanh</div>
+                    <div style="color:#5b6b7e;">@(_selectedPoi.DiaChi ?? _selectedPoi.MoTaNgan ?? "Chua co mo ta ngan.")</div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <InputFile OnChange="OnImageFilesSelected" multiple />
+                    <label style="display:flex;align-items:center;gap:6px;margin:0;">
+                        <InputCheckbox @bind-Value="_uploadAsRepresentative" />
+                        Dat anh dau tien lam dai dien
+                    </label>
+                    <button type="button"
+                            class="btn btn-primary"
+                            disabled="@(_isUploadingImages || _selectedImageFiles.Count == 0)"
+                            @onclick="UploadSelectedImagesAsync">
+                        @(_isUploadingImages ? "Dang tai..." : $"Tai len {_selectedImageFiles.Count} anh")
+                    </button>
+                </div>
+            </div>
+
+            @if (_selectedImageFiles.Count > 0)
+            {
+                <div style="color:#5b6b7e;">Da chon: @string.Join(", ", _selectedImageFiles.Select(x => x.Name))</div>
+            }
+
+            @if (_imageItems.Count == 0)
+            {
+                <div class="notice notice-success" style="margin-bottom:0;">POI nay chua co hinh anh. Tai len anh dau tien de hien lam anh dai dien.</div>
+            }
+            else
+            {
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;">
+                    @foreach (var image in _imageItems)
+                    {
+                        <div class="card" style="margin:0;display:grid;gap:10px;">
+                            <img src="@ResolveImageUrl(image.DuongDanHinhAnh)"
+                                 alt="@image.TenTepTin"
+                                 style="width:100%;height:180px;object-fit:cover;border-radius:14px;border:1px solid #d9e2ef;background:#fff;" />
+                            <div style="display:grid;gap:4px;">
+                                <div style="font-weight:600;word-break:break-word;">@image.TenTepTin</div>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                                    <span class="badge @(image.LaAnhDaiDien ? "badge-success" : "badge-muted")">@(image.LaAnhDaiDien ? "Anh dai dien" : "Anh phu")</span>
+                                    <span style="color:#5b6b7e;">Thu tu: @(image.ThuTuHienThi ?? 0)</span>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <input type="number" min="0" value="@GetImageOrder(image)" @onchange="e => OnImageOrderChanged(image, e)" style="max-width:100px;" />
+                                <button type="button" class="btn btn-secondary" @onclick="() => SaveImageOrderAsync(image)">Luu thu tu</button>
+                            </div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                <button type="button" class="btn btn-primary" disabled="@image.LaAnhDaiDien" @onclick="() => SetRepresentativeImageAsync(image)">Dat dai dien</button>
+                                <button type="button" class="btn btn-danger" @onclick="() => DeleteImageAsync(image)">Xoa anh</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "maDiem")]
+    public int? QueryMaDiem { get; set; }
+
+    private List<DiemThamQuanItem> _poiItems = new();
+    private List<HinhAnhDiemThamQuanItem> _imageItems = new();
+    private Dictionary<int, int?> _imageOrders = new();
+    private IReadOnlyList<IBrowserFile> _selectedImageFiles = [];
+    private DiemThamQuanItem? _selectedPoi;
+    private bool _isUploadingImages;
+    private bool _uploadAsRepresentative;
+    private int _selectedPoiId;
+    private string? _error;
+    private string? _success;
+
+    private int SelectedPoiId
+    {
+        get => _selectedPoiId;
+        set
+        {
+            if (_selectedPoiId == value)
+            {
+                return;
+            }
+
+            _selectedPoiId = value;
+            _ = SelectPoiAsync(value);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        await LoadPoisAsync();
+        if (QueryMaDiem.HasValue && QueryMaDiem.Value > 0)
+        {
+            await SelectPoiAsync(QueryMaDiem.Value);
+        }
+    }
+
+    private async Task LoadPoisAsync()
+    {
+        _poiItems = (await ApiClient.GetDiemAsync())
+            .OrderBy(x => x.TenDiem)
+            .ToList();
+    }
+
+    private async Task SelectPoiAsync(int maDiem)
+    {
+        _error = null;
+        _success = null;
+        _selectedPoiId = maDiem;
+        _selectedPoi = _poiItems.FirstOrDefault(x => x.MaDiem == maDiem);
+        _selectedImageFiles = [];
+        _uploadAsRepresentative = false;
+
+        if (_selectedPoi is null)
+        {
+            _imageItems = new();
+            _imageOrders = new();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        await LoadImagesAsync(maDiem);
+        Navigation.NavigateTo($"/hinhanhdiemthamquan?maDiem={maDiem}", false);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadImagesAsync(int maDiem)
+    {
+        _imageItems = (await ApiClient.GetHinhAnhTheoDiemAsync(maDiem))
+            .OrderByDescending(x => x.LaAnhDaiDien)
+            .ThenBy(x => x.ThuTuHienThi ?? int.MaxValue)
+            .ThenBy(x => x.MaHinhAnh)
+            .ToList();
+        _imageOrders = _imageItems.ToDictionary(x => x.MaHinhAnh, x => x.ThuTuHienThi);
+    }
+
+    private void OnImageFilesSelected(InputFileChangeEventArgs args)
+    {
+        _selectedImageFiles = args.GetMultipleFiles();
+    }
+
+    private int GetImageOrder(HinhAnhDiemThamQuanItem image)
+    {
+        return _imageOrders.TryGetValue(image.MaHinhAnh, out var order)
+            ? order ?? 0
+            : image.ThuTuHienThi ?? 0;
+    }
+
+    private void OnImageOrderChanged(HinhAnhDiemThamQuanItem image, ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var parsedOrder))
+        {
+            _imageOrders[image.MaHinhAnh] = parsedOrder;
+            return;
+        }
+
+        _imageOrders[image.MaHinhAnh] = image.ThuTuHienThi;
+    }
+
+    private async Task UploadSelectedImagesAsync()
+    {
+        if (_selectedPoi is null || _selectedImageFiles.Count == 0)
+        {
+            return;
+        }
+
+        _isUploadingImages = true;
+        _error = null;
+        _success = null;
+
+        try
+        {
+            var currentMaxOrder = _imageItems.Max(x => x.ThuTuHienThi ?? 0);
+            for (var index = 0; index < _selectedImageFiles.Count; index++)
+            {
+                var file = _selectedImageFiles[index];
+                await using var stream = file.OpenReadStream(10_000_000);
+                var shouldBeRepresentative = (_imageItems.Count == 0 && index == 0) || (_uploadAsRepresentative && index == 0);
+
+                var result = await ApiClient.UploadHinhAnhAsync(
+                    _selectedPoi.MaDiem,
+                    file.Name,
+                    stream,
+                    shouldBeRepresentative,
+                    currentMaxOrder + index + 1);
+
+                if (!result.Success)
+                {
+                    _error = result.ErrorMessage;
+                    return;
+                }
+            }
+
+            _selectedImageFiles = [];
+            _uploadAsRepresentative = false;
+            _success = "Da tai len hinh anh thanh cong.";
+            await RefreshSelectedPoiAsync();
+        }
+        finally
+        {
+            _isUploadingImages = false;
+        }
+    }
+
+    private async Task SaveImageOrderAsync(HinhAnhDiemThamQuanItem image)
+    {
+        var result = await ApiClient.UpdateHinhAnhAsync(image.MaHinhAnh, new HinhAnhDiemThamQuanUpdate
+        {
+            LaAnhDaiDien = image.LaAnhDaiDien,
+            ThuTuHienThi = GetImageOrder(image)
+        });
+
+        if (!result.Success)
+        {
+            _error = result.ErrorMessage;
+            return;
+        }
+
+        _success = "Da cap nhat thu tu hien thi anh.";
+        await RefreshSelectedPoiAsync();
+    }
+
+    private async Task SetRepresentativeImageAsync(HinhAnhDiemThamQuanItem image)
+    {
+        var result = await ApiClient.UpdateHinhAnhAsync(image.MaHinhAnh, new HinhAnhDiemThamQuanUpdate
+        {
+            LaAnhDaiDien = true,
+            ThuTuHienThi = GetImageOrder(image)
+        });
+
+        if (!result.Success)
+        {
+            _error = result.ErrorMessage;
+            return;
+        }
+
+        _success = "Da doi anh dai dien cho diem tham quan.";
+        await RefreshSelectedPoiAsync();
+    }
+
+    private async Task DeleteImageAsync(HinhAnhDiemThamQuanItem image)
+    {
+        var confirmed = await Js.InvokeAsync<bool>("confirm", $"Ban co chac muon xoa anh '{image.TenTepTin}' khong?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var result = await ApiClient.DeleteHinhAnhAsync(image.MaHinhAnh);
+        if (!result.Success)
+        {
+            _error = result.ErrorMessage;
+            return;
+        }
+
+        _success = "Da xoa anh thanh cong.";
+        await RefreshSelectedPoiAsync();
+    }
+
+    private async Task RefreshSelectedPoiAsync()
+    {
+        await LoadPoisAsync();
+        if (_selectedPoi is null)
+        {
+            return;
+        }
+
+        _selectedPoi = _poiItems.FirstOrDefault(x => x.MaDiem == _selectedPoi.MaDiem);
+        await LoadImagesAsync(_selectedPoiId);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void GoToPoiPage()
+    {
+        if (_selectedPoi is null)
+        {
+            return;
+        }
+
+        Navigation.NavigateTo($"/diemthamquan?maDiem={_selectedPoi.MaDiem}");
+    }
+
+    private string ResolveImageUrl(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return string.Empty;
+        }
+
+        if (Uri.TryCreate(path, UriKind.Absolute, out var absolute))
+        {
+            return absolute.ToString();
+        }
+
+        var baseUrl = Config["Api:BaseUrl"] ?? "http://localhost:5000/";
+        return $"{baseUrl.TrimEnd('/')}/{path.TrimStart('/')}";
+    }
+}

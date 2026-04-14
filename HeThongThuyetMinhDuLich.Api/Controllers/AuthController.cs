@@ -34,6 +34,11 @@ public class AuthController(DuLichDbContext dbContext, JwtTokenService jwtTokenS
             return Unauthorized(new { message = "Ten dang nhap hoac mat khau khong dung." });
         }
 
+        if (!IsCmsRole(taiKhoan.VaiTro))
+        {
+            return Forbid();
+        }
+
         return Ok(jwtTokenService.TaoTokenChoTaiKhoan(taiKhoan));
     }
 
@@ -99,4 +104,8 @@ public class AuthController(DuLichDbContext dbContext, JwtTokenService jwtTokenS
 
         return string.Equals(rawPassword, storedHashOrRaw, StringComparison.Ordinal);
     }
+
+    private static bool IsCmsRole(string? vaiTro)
+        => string.Equals(vaiTro, "Admin", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(vaiTro, "BienTap", StringComparison.OrdinalIgnoreCase);
 }

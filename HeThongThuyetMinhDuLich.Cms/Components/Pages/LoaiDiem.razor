@@ -23,6 +23,11 @@
     <div class="notice notice-success">@_success</div>
 }
 
+@if (Session.IsBienTap)
+{
+    <div class="notice notice-success">Vai tro BienTap duoc phep tao, sua va quan ly trang thai loai diem.</div>
+}
+
 <div class="@(_showForm ? "card" : string.Empty)">
     @if (_showForm)
     {
@@ -58,9 +63,18 @@
     }
 
     <div class="card">
+        @{
+            var filteredItems = FilteredItems.ToList();
+            var totalPages = GetTotalPages(filteredItems.Count);
+            var currentPage = GetCurrentPage(filteredItems.Count);
+            var pagedItems = GetPagedItems(filteredItems);
+            var rangeStart = filteredItems.Count == 0 ? 0 : ((currentPage - 1) * _pageSize) + 1;
+            var rangeEnd = filteredItems.Count == 0 ? 0 : Math.Min(currentPage * _pageSize, filteredItems.Count);
+        }
+
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
             <h4>Danh sach loai diem</h4>
-            <input placeholder="Tim theo ten loai..." style="max-width:220px;" @bind="_search" @bind:event="oninput" />
+            <input placeholder="Tim theo ten loai..." style="max-width:220px;" @bind="SearchText" @bind:event="oninput" />
         </div>
 
         <div class="table-wrap">
@@ -74,7 +88,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in FilteredItems)
+                    @foreach (var item in pagedItems)
                     {
                         <tr>
                             <td>@item.MaLoai</td>
@@ -87,12 +101,16 @@
                             <td>
                                 <div style="display:flex;gap:8px;">
                                     <button type="button" class="btn btn-secondary" @onclick="() => StartEdit(item)">Sua</button>
-                                    <button type="button" class="btn btn-danger" @onclick="() => DeleteAsync(item)">An</button>
+                                    <button type="button"
+                                            class="btn @(item.TrangThaiHoatDong ? "btn-danger" : "btn-primary")"
+                                            @onclick="() => ToggleVisibilityAsync(item)">
+                                        @(item.TrangThaiHoatDong ? "An" : "Hien")
+                                    </button>
                                 </div>
                             </td>
                         </tr>
                     }
-                    @if (!FilteredItems.Any())
+                    @if (!filteredItems.Any())
                     {
                         <tr>
                             <td colspan="4">Khong co du lieu phu hop.</td>
@@ -101,6 +119,13 @@
                 </tbody>
             </table>
         </div>
+
+        <PaginationControls TotalItems="@filteredItems.Count"
+                            ItemLabel="loai"
+                            PageSize="@_pageSize"
+                            PageSizeChanged="OnPageSizeChanged"
+                            CurrentPage="@currentPage"
+                            CurrentPageChanged="OnPageChanged" />
     </div>
 </div>
 
@@ -113,6 +138,19 @@
     private string _search = string.Empty;
     private string? _error;
     private string? _success;
+    private int _page = 1;
+    private int _pageSize = 10;
+    private int _jumpPage = 1;
+
+    private string SearchText
+    {
+        get => _search;
+        set
+        {
+            _search = value;
+            ResetPagination();
+        }
+    }
 
     private IEnumerable<LoaiDiemThamQuanItem> FilteredItems =>
         _items.Where(x => string.IsNullOrWhiteSpace(_search)
@@ -134,6 +172,7 @@
         try
         {
             _items = (await ApiClient.GetLoaiDiemAsync()).OrderBy(x => x.TenLoai).ToList();
+            ResetPagination();
         }
         catch (Exception ex)
         {
@@ -168,6 +207,42 @@
     {
         ResetForm();
         _showForm = false;
+    }
+
+    private int GetTotalPages(int totalItems)
+        => Math.Max(1, (int)Math.Ceiling(totalItems / (double)_pageSize));
+
+    private int GetCurrentPage(int totalItems)
+    {
+        _page = Math.Clamp(_page, 1, GetTotalPages(totalItems));
+        _jumpPage = _page;
+        return _page;
+    }
+
+    private List<LoaiDiemThamQuanItem> GetPagedItems(IReadOnlyList<LoaiDiemThamQuanItem> items)
+    {
+        var currentPage = GetCurrentPage(items.Count);
+        return items.Skip((currentPage - 1) * _pageSize).Take(_pageSize).ToList();
+    }
+
+    private Task OnPageChanged(int page)
+    {
+        _page = page;
+        _jumpPage = page;
+        return Task.CompletedTask;
+    }
+
+    private Task OnPageSizeChanged(int size)
+    {
+        _pageSize = size;
+        ResetPagination();
+        return Task.CompletedTask;
+    }
+
+    private void ResetPagination()
+    {
+        _page = 1;
+        _jumpPage = 1;
     }
 
     private void StartEdit(LoaiDiemThamQuanItem item)
@@ -227,27 +302,36 @@
         }
     }
 
-    private async Task DeleteAsync(LoaiDiemThamQuanItem item)
+    private async Task ToggleVisibilityAsync(LoaiDiemThamQuanItem item)
     {
         _error = null;
         _success = null;
 
         try
         {
-            var confirmed = await Js.InvokeAsync<bool>("confirm", $"Ẩn loại điểm '{item.TenLoai}'?");
+            var nextStateLabel = item.TrangThaiHoatDong ? "an" : "hien";
+            var confirmed = await Js.InvokeAsync<bool>("confirm", $"Ban co chac muon {nextStateLabel} loai diem '{item.TenLoai}' khong?");
             if (!confirmed)
             {
                 return;
             }
 
-            var result = await ApiClient.DeleteLoaiDiemAsync(item.MaLoai);
+            var result = await ApiClient.UpdateLoaiDiemAsync(item.MaLoai, new LoaiDiemThamQuanCreate
+            {
+                TenLoai = item.TenLoai,
+                MoTa = item.MoTa,
+                TrangThaiHoatDong = !item.TrangThaiHoatDong
+            });
+
             if (!result.Success)
             {
                 _error = CleanError(result.ErrorMessage);
                 return;
             }
 
-            _success = $"Đã ẩn loại điểm '{item.TenLoai}'.";
+            _success = item.TrangThaiHoatDong
+                ? $"Da an loai diem '{item.TenLoai}'."
+                : $"Da hien loai diem '{item.TenLoai}'.";
             await LoadAsync();
         }
         catch (Exception ex)

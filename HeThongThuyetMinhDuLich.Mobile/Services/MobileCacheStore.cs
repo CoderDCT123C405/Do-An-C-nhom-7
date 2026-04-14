@@ -37,6 +37,7 @@ public class MobileCacheStore
                 var row = new CachedPoi
                 {
                     MaDiem = item.MaDiem,
+                    AnhDaiDienUrl = item.AnhDaiDienUrl,
                     MaDinhDanh = item.MaDinhDanh,
                     TenDiem = item.TenDiem,
                     MoTaNgan = item.MoTaNgan,
@@ -79,6 +80,7 @@ public class MobileCacheStore
         await _db.InsertOrReplaceAsync(new CachedPoi
         {
             MaDiem = item.MaDiem,
+            AnhDaiDienUrl = item.AnhDaiDienUrl,
             MaDinhDanh = item.MaDinhDanh,
             TenDiem = item.TenDiem,
             MoTaNgan = item.MoTaNgan,
@@ -101,6 +103,7 @@ public class MobileCacheStore
         return rows.Select(x => new DiemThamQuanItem
         {
             MaDiem = x.MaDiem,
+            AnhDaiDienUrl = x.AnhDaiDienUrl,
             MaDinhDanh = x.MaDinhDanh,
             TenDiem = x.TenDiem,
             MoTaNgan = x.MoTaNgan,
@@ -127,6 +130,7 @@ public class MobileCacheStore
         return new DiemThamQuanItem
         {
             MaDiem = row.MaDiem,
+            AnhDaiDienUrl = row.AnhDaiDienUrl,
             MaDinhDanh = row.MaDinhDanh,
             TenDiem = row.TenDiem,
             MoTaNgan = row.MoTaNgan,
@@ -441,6 +445,7 @@ public class MobileCacheStore
         if (_initialized) return;
 
         await _db.CreateTableAsync<CachedPoi>();
+        await EnsureCachedPoiSchemaAsync();
         await _db.CreateTableAsync<CachedNgonNgu>();
         await _db.CreateTableAsync<CachedNoiDung>();
         await _db.CreateTableAsync<CachedQr>();
@@ -452,7 +457,8 @@ public class MobileCacheStore
 
     private static bool AreEquivalent(CachedPoi left, CachedPoi right)
     {
-        return left.MaDinhDanh == right.MaDinhDanh
+        return left.AnhDaiDienUrl == right.AnhDaiDienUrl
+            && left.MaDinhDanh == right.MaDinhDanh
             && left.TenDiem == right.TenDiem
             && left.MoTaNgan == right.MoTaNgan
             && left.ViDo == right.ViDo
@@ -495,11 +501,23 @@ public class MobileCacheStore
             && left.TrangThaiHoatDong == right.TrangThaiHoatDong
             && left.NgayCapNhat == right.NgayCapNhat;
     }
+
+    private async Task EnsureCachedPoiSchemaAsync()
+    {
+        var columns = await _db.QueryAsync<CacheColumnInfo>("PRAGMA table_info('CachedPoi')");
+        if (columns.Any(x => string.Equals(x.Name, nameof(CachedPoi.AnhDaiDienUrl), StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        await _db.ExecuteAsync("ALTER TABLE CachedPoi ADD COLUMN AnhDaiDienUrl TEXT NULL");
+    }
 }
 public class CachedPoi
 {
     [PrimaryKey]
     public int MaDiem { get; set; }
+    public string? AnhDaiDienUrl { get; set; }
     public string MaDinhDanh { get; set; } = string.Empty;
     public string TenDiem { get; set; } = string.Empty;
     public string? MoTaNgan { get; set; }
@@ -573,4 +591,10 @@ public class PendingPlaybackHistory
     public string CachKichHoat { get; set; } = string.Empty;
     public DateTime? ThoiGianBatDau { get; set; }
     public int? ThoiLuongDaNghe { get; set; }
+}
+
+public class CacheColumnInfo
+{
+    [Column("name")]
+    public string Name { get; set; } = string.Empty;
 }

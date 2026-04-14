@@ -4,7 +4,10 @@ using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Devices.Sensors;
 using Microsoft.Maui.Maps;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Net;
+using System.Text;
+using System.Threading;
 using System.Xml.Linq;
 using MauiMap = Microsoft.Maui.Controls.Maps.Map;
 #if ANDROID
@@ -16,6 +19,7 @@ namespace HeThongThuyetMinhDuLich.Mobile;
 public partial class MainPage : ContentPage
 {
     private static readonly TimeSpan GeofenceCooldown = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan GeofenceSuppressionAfterStop = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan GpsTestStepInterval = TimeSpan.FromSeconds(6);
     private static readonly TimeSpan GpsRefreshInterval = TimeSpan.FromSeconds(5);
     private const double DefaultPoiRadiusKm = 0.6;
@@ -29,7 +33,9 @@ public partial class MainPage : ContentPage
     private readonly AuthSession _authSession;
     private readonly LanguageService _languageService;
     private readonly ObservableCollection<DiemThamQuanItem> _diemThamQuan = [];
+    private readonly ObservableCollection<DiemThamQuanItem> _visibleDiemThamQuan = [];
     private readonly ObservableCollection<NoiDungItem> _noiDung = [];
+    private readonly ObservableCollection<HinhAnhDiemThamQuanItem> _selectedPoiImages = [];
     private readonly ObservableCollection<NgonNguItem> _ngonNguItems = [];
     private readonly ObservableCollection<string> _gpsTestEventLogs = [];
     private readonly List<NoiDungItem> _allNoiDung = [];
@@ -55,14 +61,20 @@ public partial class MainPage : ContentPage
     private bool _isUpdatingLanguageSelection;
     private bool _isLanguageSubscribed;
     private bool _isGpsTestRunning;
+    private CancellationTokenSource? _playbackCancellationTokenSource;
     private int _selectedDisplayMaNgonNgu;
     private int _gpsTestWaypointIndex;
     private int _gpsTestRunVersion;
+    private int _playbackRequestVersion;
+    private DateTime? _suppressAutoGeofenceUntilUtc;
     private string? _gpsTestModeName;
     private string? _gpsTestLastTriggeredPoiName;
+    private string _poiSearchText = string.Empty;
     private bool _gpsTestLastStepTriggered;
+    private DiemThamQuanItem? _selectedPoi;
 #if ANDROID
     private MediaPlayer? _androidMediaPlayer;
+    private readonly object _androidMediaPlayerGate = new();
 #endif
 
     public MainPage(MobileApiClient apiClient, AuthSession authSession, LanguageService languageService)
@@ -71,8 +83,9 @@ public partial class MainPage : ContentPage
         _apiClient = apiClient;
         _authSession = authSession;
         _languageService = languageService;
-        PoiCollection.ItemsSource = _diemThamQuan;
+        PoiCollection.ItemsSource = _visibleDiemThamQuan;
         ContentCollection.ItemsSource = _noiDung;
+        PoiGalleryCollection.ItemsSource = _selectedPoiImages;
         DisplayLanguagePicker.ItemsSource = _ngonNguItems;
         GpsTestLogCollection.ItemsSource = _gpsTestEventLogs;
         ApplyLocalization();
@@ -110,7 +123,7 @@ public partial class MainPage : ContentPage
         base.OnDisappearing();
         StopGpsTest(restartRealGps: false);
         StopGpsTimer();
-        StopNativeAudioPlayback();
+        StopPlayback();
         UnsubscribeLanguageChanges();
 
         if (_syncTimer is not null)
@@ -336,6 +349,7 @@ public partial class MainPage : ContentPage
             }
 
             RefreshPoiLocalization();
+            ApplyPoiSearchFilter();
             UpdateNearestPoi();
             RenderMapPins();
             UpdateMapViewport();
@@ -386,7 +400,6 @@ public partial class MainPage : ContentPage
             UpdateNearestPoi();
             RenderMapPins();
             UpdateMapViewport();
-            await CheckAndTriggerGeofenceAsync();
         }
         catch (Exception ex)
         {
@@ -449,7 +462,9 @@ public partial class MainPage : ContentPage
 
         try
         {
+            _selectedPoi = poi;
             SelectedPoiLabel.Text = _languageService.Format("SelectedPoiFormat", poi.TenDiem, poi.MaDinhDanh);
+            UpdateSelectedPoiMeta(poi);
 
             if (focusMap)
             {
@@ -461,12 +476,25 @@ public partial class MainPage : ContentPage
                 PoiCollection.SelectedItem = poi;
             }
 
+            await LoadPoiImagesAsync(poi.MaDiem);
             await LoadNoiDungAsync(poi.MaDiem);
 
             if (!autoPlay)
             {
                 return;
             }
+
+            var selectedLanguageId = await PromptPoiLanguageSelectionAsync();
+            if (!selectedLanguageId.HasValue)
+            {
+                return;
+            }
+
+            ApplySelectedContentLanguage(
+                selectedLanguageId.Value,
+                _languageService.Format("PoiLanguageSelectedFormat", poi.TenDiem, ResolveLanguageDisplayName(selectedLanguageId.Value)));
+
+            ApplyLanguageFilter();
 
             var preferredContent = ResolvePreferredContent();
             if (preferredContent is null)
@@ -504,6 +532,62 @@ public partial class MainPage : ContentPage
         UpdateLanguageStateLabel();
     }
 
+    private void OnPoiSearchTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        _poiSearchText = e.NewTextValue?.Trim() ?? string.Empty;
+        ApplyPoiSearchFilter();
+    }
+
+    private void ApplyPoiSearchFilter()
+    {
+        var query = NormalizeSearchText(_poiSearchText);
+        var selectedPoiId = (PoiCollection.SelectedItem as DiemThamQuanItem)?.MaDiem;
+
+        IEnumerable<DiemThamQuanItem> filtered = string.IsNullOrWhiteSpace(query)
+            ? _diemThamQuan
+            : _diemThamQuan.Where(poi => MatchesPoiSearch(poi, query)).ToList();
+
+        _visibleDiemThamQuan.Clear();
+        foreach (var poi in filtered)
+        {
+            _visibleDiemThamQuan.Add(poi);
+        }
+
+        if (selectedPoiId.HasValue)
+        {
+            PoiCollection.SelectedItem = _visibleDiemThamQuan.FirstOrDefault(x => x.MaDiem == selectedPoiId.Value);
+        }
+    }
+
+    private static bool MatchesPoiSearch(DiemThamQuanItem poi, string normalizedQuery)
+    {
+        return NormalizeSearchText(poi.TenDiem).Contains(normalizedQuery, StringComparison.Ordinal)
+            || NormalizeSearchText(poi.MaDinhDanh).Contains(normalizedQuery, StringComparison.Ordinal)
+            || NormalizeSearchText(poi.DiaChi).Contains(normalizedQuery, StringComparison.Ordinal)
+            || NormalizeSearchText(poi.MoTaNgan).Contains(normalizedQuery, StringComparison.Ordinal);
+    }
+
+    private static string NormalizeSearchText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim().Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder(normalized.Length);
+
+        foreach (var character in normalized)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(character) != UnicodeCategory.NonSpacingMark)
+            {
+                builder.Append(char.ToLowerInvariant(character));
+            }
+        }
+
+        return builder.ToString().Normalize(NormalizationForm.FormC);
+    }
+
     private async Task CheckAndTriggerGeofenceAsync()
     {
         await CheckAndTriggerGeofenceAsync(trackGpsTestTrigger: false);
@@ -516,8 +600,15 @@ public partial class MainPage : ContentPage
             return false;
         }
 
+        if (!trackGpsTestTrigger &&
+            _suppressAutoGeofenceUntilUtc is DateTime suppressUntilUtc &&
+            DateTime.UtcNow < suppressUntilUtc)
+        {
+            return false;
+        }
+
         var candidates = _diemThamQuan
-            .Where(poi => TryCreatePoiLocation(poi, out _))
+            .Where(poi => TryCreatePoiLocation(poi, out _)) // bắt đầu của đoạn trigger gps
             .Select(poi =>
             {
                 TryCreatePoiLocation(poi, out var poiLocation);
@@ -568,11 +659,14 @@ public partial class MainPage : ContentPage
             }
 
             _nearestPoi = poi;
+            _selectedPoi = poi;
 
             var contents = await _apiClient.GetNoiDungByDiemAsync(poi.MaDiem, GetPreferredLanguageId());
             var fallbackInfo = await _apiClient.GetNoiDungFallbackAsync(poi.MaDiem, GetPreferredLanguageId());
             _allNoiDung.Clear();
             _allNoiDung.AddRange(contents);
+            await LoadPoiImagesAsync(poi.MaDiem);
+            UpdateSelectedPoiMeta(poi);
 
             if (fallbackInfo is not null)
             {
@@ -601,7 +695,7 @@ public partial class MainPage : ContentPage
             }
 
             SelectedPoiLabel.Text = _languageService.Format("AutoGeofenceFormat", poi.TenDiem);
-            await PlayNoiDungAsync(autoItem, "gps");
+            await PlayNoiDungAsync(autoItem, "gps"); // kết thúc trigger gps
             return true;
         }
 
@@ -626,6 +720,145 @@ public partial class MainPage : ContentPage
 
         return _allNoiDung.FirstOrDefault(x => x.MaDiem == requestedItem.MaDiem && x.MaNgonNgu == preferredLanguageId)
             ?? requestedItem;
+    }
+
+    private async Task<int?> PromptPoiLanguageSelectionAsync()
+    {
+        var supportedLanguages = GetSupportedContentLanguages(_ngonNguItems).ToList();
+        return await PromptLanguageSelectionAsync(supportedLanguages, T("PoiLanguageActionTitle"));
+    }
+
+    private async Task<int?> PromptQrLanguageSelectionAsync(QrLookupResponse result)
+    {
+        var supportedLanguages = GetSupportedContentLanguages(result.NgonNguKhaDung).ToList();
+        return await PromptLanguageSelectionAsync(supportedLanguages, T("QrLanguageActionTitle"));
+    }
+
+    private async Task<int?> PromptLanguageSelectionAsync(IReadOnlyList<NgonNguItem> supportedLanguages, string title)
+    {
+        if (supportedLanguages.Count == 0)
+        {
+            return null;
+        }
+
+        if (supportedLanguages.Count == 1)
+        {
+            return supportedLanguages[0].MaNgonNgu;
+        }
+
+        var actionMap = supportedLanguages.ToDictionary(
+            ResolveLanguageDisplayName,
+            x => x.MaNgonNgu,
+            StringComparer.Ordinal);
+
+        var selectedAction = await MainThread.InvokeOnMainThreadAsync(() =>
+            Shell.Current.DisplayActionSheetAsync(
+                title,
+                T("CancelAction"),
+                null,
+                actionMap.Keys.ToArray()));
+
+        if (string.IsNullOrWhiteSpace(selectedAction) || selectedAction == T("CancelAction"))
+        {
+            return null;
+        }
+
+        return actionMap.TryGetValue(selectedAction, out var languageId) ? languageId : null;
+    }
+
+    private IEnumerable<NgonNguItem> GetSupportedContentLanguages(IEnumerable<NgonNguItem>? preferredLanguages)
+    {
+        var languageIds = _allNoiDung
+            .Where(x => x.MaNgonNgu > 0)
+            .Select(x => x.MaNgonNgu)
+            .Distinct()
+            .ToHashSet();
+
+        if (languageIds.Count == 0)
+        {
+            return [];
+        }
+
+        var languages = (preferredLanguages ?? [])
+            .Where(x => languageIds.Contains(x.MaNgonNgu))
+            .Concat(_ngonNguItems.Where(x => x.MaNgonNgu > 0 && languageIds.Contains(x.MaNgonNgu)))
+            .GroupBy(x => x.MaNgonNgu)
+            .Select(x => x.First())
+            .ToList();
+
+        foreach (var languageId in languageIds)
+        {
+            if (languages.Any(x => x.MaNgonNgu == languageId))
+            {
+                continue;
+            }
+
+            languages.Add(new NgonNguItem
+            {
+                MaNgonNgu = languageId,
+                TenNgonNgu = ResolveLanguageDisplayName(languageId)
+            });
+        }
+
+        return languages
+            .OrderByDescending(x => x.LaMacDinh)
+            .ThenBy(ResolveLanguageDisplayName)
+            .ToList();
+    }
+
+    private void ApplySelectedContentLanguage(int languageId, string statusText)
+    {
+        ApplyPreferredLanguageSelection(languageId, syncAppLanguage: false);
+        _resolvedContentMaNgonNgu = languageId;
+        _isFallbackActive = false;
+        _fallbackAlternativeLanguageNames = _allNoiDung
+            .Where(x => x.MaNgonNgu > 0 && x.MaNgonNgu != languageId)
+            .Select(x => ResolveLanguageDisplayName(x.MaNgonNgu))
+            .Distinct()
+            .ToList();
+
+        SelectedPoiLabel.Text = statusText;
+        UpdateFallbackLanguageLabel();
+    }
+
+    private void ApplyQrLanguageSelection(int languageId, string poiName)
+    {
+        ApplySelectedContentLanguage(
+            languageId,
+            _languageService.Format(
+                "QrLanguageSelectedFormat",
+                poiName,
+                ResolveLanguageDisplayName(languageId)));
+    }
+
+    private string ResolveLanguageDisplayName(NoiDungItem item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.TenNgonNgu))
+        {
+            return item.TenNgonNgu;
+        }
+
+        return ResolveLanguageDisplayName(item.MaNgonNgu);
+    }
+
+    private string ResolveLanguageDisplayName(NgonNguItem item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.TenNgonNgu))
+        {
+            return item.TenNgonNgu;
+        }
+
+        return ResolveLanguageDisplayName(item.MaNgonNgu);
+    }
+
+    private string ResolveLanguageDisplayName(int languageId)
+    {
+        if (_ngonNguMap.TryGetValue(languageId, out var language) && !string.IsNullOrWhiteSpace(language.TenNgonNgu))
+        {
+            return language.TenNgonNgu;
+        }
+
+        return _languageService.Format("LanguageFallbackGenerated", languageId);
     }
 
     private void SetUnifiedLanguageSelection(int maNgonNgu)
@@ -691,12 +924,20 @@ public partial class MainPage : ContentPage
     private async Task PlayNoiDungAsync(NoiDungItem item, string triggerType)
     {
         var startedAt = DateTime.UtcNow;
+        var playbackRequestVersion = BeginPlaybackRequest();
+        var cancellationToken = _playbackCancellationTokenSource?.Token ?? CancellationToken.None;
         var played = false;
         string? audioError = null;
+        var ttsEngineError = false;
 
         try
         {
             var audioUrl = await _apiClient.GetPlayableAudioSourceAsync(item);
+            if (!IsPlaybackRequestCurrent(playbackRequestVersion))
+            {
+                return;
+            }
+
             if (!string.IsNullOrWhiteSpace(audioUrl))
             {
                 try
@@ -722,10 +963,38 @@ public partial class MainPage : ContentPage
             if (!played && item.ChoPhepTTS && !string.IsNullOrWhiteSpace(item.NoiDungVanBan))
             {
                 AudioPlayerCard.IsVisible = false;
-                await SpeakTextAsync(item);
+                try
+                {
+                    await SpeakTextAsync(item, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch (Exception ex) when (IsTtsEngineInitializationError(ex))
+                {
+                    ttsEngineError = true;
+                    audioError = ex.Message;
+                    played = false;
+
+                    await ShowAlertAsync(
+                        T("AudioPlayErrorTitle"),
+                        _languageService.Format("TtsEngineUnavailableBody", ex.Message),
+                        T("ConfirmAction"));
+                }
+
+                if (ttsEngineError)
+                {
+                    return;
+                }
+
                 played = true;
             }
 
+        }
+        catch (OperationCanceledException)
+        {
+            return;
         }
         catch (Exception ex)
         {
@@ -741,6 +1010,11 @@ public partial class MainPage : ContentPage
         {
             var detail = string.IsNullOrWhiteSpace(audioError) ? string.Empty : _languageService.Format("AudioErrorDetailPrefix", audioError);
             await ShowAlertAsync(T("NotificationTitle"), _languageService.Format("AudioUnavailableBody", detail), T("ConfirmAction"));
+            return;
+        }
+
+        if (!IsPlaybackRequestCurrent(playbackRequestVersion))
+        {
             return;
         }
 
@@ -767,7 +1041,9 @@ public partial class MainPage : ContentPage
 #if ANDROID
         if (TryPlayAudioNativelyOnAndroid(item, audioUrl))
         {
-            AudioPlayerCard.IsVisible = false;
+            AudioPlayerCard.IsVisible = true;
+            AudioWebView.IsVisible = false;
+            AudioWebView.Source = null;
             return;
         }
 #endif
@@ -796,52 +1072,41 @@ public partial class MainPage : ContentPage
             return;
         }
 
-        if (Uri.TryCreate(value, UriKind.Absolute, out var absoluteUrl))
-        {
-            var normalizedUrl = _apiClient.ResolveAudioUrl(absoluteUrl.ToString());
-            if (!string.IsNullOrWhiteSpace(normalizedUrl))
-            {
-                SelectedPoiLabel.Text = T("DirectQrPlaying");
-                PlayAudioInsideApp(item: null, normalizedUrl);
-                return;
-            }
-        }
-
         try
         {
             SetLoading(true);
             ClearFallbackLanguageInfo();
-            var result = await _apiClient.LookupQrAsync(value, GetPreferredLanguageId());
+            var result = await _apiClient.LookupQrAsync(value);
             if (result?.DiemThamQuan is null)
             {
                 await ShowAlertAsync(T("QrNotFoundTitle"), T("QrNotFoundBody"), T("ConfirmAction"));
                 return;
             }
 
+            _selectedPoi = result.DiemThamQuan;
             SelectedPoiLabel.Text = _languageService.Format("QrPoiSelectedFormat", result.DiemThamQuan.TenDiem);
+            UpdateSelectedPoiMeta(result.DiemThamQuan);
             FocusMapOnPoi(result.DiemThamQuan);
+            PoiCollection.SelectedItem = _visibleDiemThamQuan.FirstOrDefault(x => x.MaDiem == result.DiemThamQuan.MaDiem);
+            await LoadPoiImagesAsync(result.DiemThamQuan.MaDiem);
 
             _allNoiDung.Clear();
             _allNoiDung.AddRange(result.NoiDung);
 
-            if (result.MaNgonNguThucTe.HasValue && result.MaNgonNguThucTe.Value > 0)
+            if (_allNoiDung.Count == 0)
             {
-                ApplyFallbackLanguageInfo(new NoiDungFallbackResponse
-                {
-                    MaDiem = result.MaDiem,
-                    MaNgonNguYeuCau = result.MaNgonNguYeuCau,
-                    MaNgonNguThucTe = result.MaNgonNguThucTe,
-                    NgonNguYeuCau = result.NgonNguYeuCau,
-                    NgonNguThucTe = result.NgonNguThucTe,
-                    NgonNguKhaDung = result.NgonNguKhaDung,
-                    NgonNguThayThe = result.NgonNguThayThe,
-                    NoiDung = result.NoiDung
-                });
+                ApplyLanguageFilter();
+                await ShowAlertAsync(T("NotificationTitle"), T("QrNoContentBody"), T("ConfirmAction"));
+                return;
             }
-            else
+
+            var selectedLanguageId = await PromptQrLanguageSelectionAsync(result);
+            if (!selectedLanguageId.HasValue)
             {
-                await EnsureLanguageSupportedForCurrentPoiAsync();
+                return;
             }
+
+            ApplyQrLanguageSelection(selectedLanguageId.Value, result.DiemThamQuan.TenDiem);
 
             ApplyLanguageFilter();
 
@@ -1039,7 +1304,7 @@ public partial class MainPage : ContentPage
 
         try
         {
-            await SelectPoiAsync(poi, autoPlay: false, triggerType: "manual", focusMap: true);
+            await SelectPoiAsync(poi, autoPlay: true, triggerType: "manual", focusMap: true);
         }
         catch (Exception ex)
         {
@@ -1131,6 +1396,7 @@ public partial class MainPage : ContentPage
         StopGpsTest(restartRealGps: false);
         StopGpsTimer();
 
+        _suppressAutoGeofenceUntilUtc = null;
         _lastAutoTriggerUtcByPoi.Clear();
         _gpsTestTriggeredPoiIds.Clear();
         _gpsTestEventLogs.Clear();
@@ -1211,6 +1477,7 @@ public partial class MainPage : ContentPage
             AddGpsTestLog(_languageService.Format("GpsTestLogStopped", _gpsTestTriggeredPoiIds.Count));
         }
 
+        StopPlayback();
         _isGpsTestRunning = false;
         _gpsTestWaypoints = new List<SimulationWaypoint>();
         _gpsTestWaypointIndex = 0;
@@ -1223,8 +1490,46 @@ public partial class MainPage : ContentPage
 
         if (restartRealGps)
         {
+            _suppressAutoGeofenceUntilUtc = DateTime.UtcNow.Add(GeofenceSuppressionAfterStop);
+            SuppressImmediateGeofenceRetrigger();
             StartGpsTimer();
-            MainThread.BeginInvokeOnMainThread(async () => await RefreshGpsAsync(requestPermissionIfNeeded: false, showErrors: false));
+            MainThread.BeginInvokeOnMainThread(() => _ = ResumeRealGpsAfterStopAsync());
+        }
+    }
+
+    private void SuppressImmediateGeofenceRetrigger()
+    {
+        if (_currentLocation is null)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        foreach (var poi in _diemThamQuan)
+        {
+            if (!TryCreatePoiLocation(poi, out var poiLocation))
+            {
+                continue;
+            }
+
+            var distanceMeters = Location.CalculateDistance(_currentLocation, poiLocation, DistanceUnits.Kilometers) * 1000;
+            var triggerRadiusMeters = GetEffectiveTriggerRadiusMeters(poi, _currentLocation);
+            if (distanceMeters <= triggerRadiusMeters)
+            {
+                _lastAutoTriggerUtcByPoi[poi.MaDiem] = now;
+            }
+        }
+    }
+
+    private async Task ResumeRealGpsAfterStopAsync()
+    {
+        try
+        {
+            await RefreshGpsAsync(requestPermissionIfNeeded: false, showErrors: false);
+        }
+        catch
+        {
+            // best effort refresh after stopping simulated GPS
         }
     }
 
@@ -1239,6 +1544,7 @@ public partial class MainPage : ContentPage
         {
             GpsTestStatusLabel.Text = overrideText;
             UpdateGpsTestProgress();
+            UpdateGpsTestUiState();
             return;
         }
 
@@ -1248,6 +1554,7 @@ public partial class MainPage : ContentPage
                 ? _languageService.Format("GpsTestReadyStatus", _gpsTestTrack.Count)
                 : T("GpsTestIdleStatus");
             UpdateGpsTestProgress();
+            UpdateGpsTestUiState();
             return;
         }
 
@@ -1265,6 +1572,7 @@ public partial class MainPage : ContentPage
 
         GpsTestStatusLabel.Text = status;
         UpdateGpsTestProgress();
+        UpdateGpsTestUiState();
     }
 
     private void UpdateGpsTestProgress()
@@ -1280,6 +1588,48 @@ public partial class MainPage : ContentPage
 
         GpsTestProgressBar.Progress = progress;
         GpsTestProgressLabel.Text = _languageService.Format("GpsTestProgressFormat", completedSteps, totalSteps, progress * 100);
+    }
+
+    private void UpdateGpsTestUiState()
+    {
+        if (StartGpsRouteTestButton is null || StartPoiSweepTestButton is null || StopGpsTestButton is null)
+        {
+            return;
+        }
+
+        var canStart = !_isGpsTestRunning;
+        StartGpsRouteTestButton.IsEnabled = canStart;
+        StartPoiSweepTestButton.IsEnabled = canStart;
+        StopGpsTestButton.IsEnabled = !canStart;
+
+        StartGpsRouteTestButton.Opacity = canStart ? 1 : 0.55;
+        StartPoiSweepTestButton.Opacity = canStart ? 1 : 0.55;
+        StopGpsTestButton.Opacity = canStart ? 0.6 : 1;
+
+        if (GpsTestModeBadgeLabel is null || GpsTestModeBadgeBorder is null)
+        {
+            return;
+        }
+
+        if (_isGpsTestRunning)
+        {
+            GpsTestModeBadgeLabel.Text = T("GpsTestModeRunning");
+            GpsTestModeBadgeLabel.TextColor = Color.FromArgb("#166246");
+            GpsTestModeBadgeBorder.Background = Color.FromArgb("#DDF6EA");
+            return;
+        }
+
+        if (_gpsTestTrack.Count > 0)
+        {
+            GpsTestModeBadgeLabel.Text = T("GpsTestModeReady");
+            GpsTestModeBadgeLabel.TextColor = Color.FromArgb("#25548B");
+            GpsTestModeBadgeBorder.Background = Color.FromArgb("#E5F0FF");
+            return;
+        }
+
+        GpsTestModeBadgeLabel.Text = T("GpsTestModeIdle");
+        GpsTestModeBadgeLabel.TextColor = Color.FromArgb("#5E738D");
+        GpsTestModeBadgeBorder.Background = Color.FromArgb("#EEF3F8");
     }
 
     private void MoveMapToLocations(params Location[] locations)
@@ -1334,11 +1684,6 @@ public partial class MainPage : ContentPage
         return true;
     }
 
-    private async void OnLookupQrClicked(object? sender, EventArgs e)
-    {
-        await HandleQrValueAsync(QrEntry.Text ?? string.Empty);
-    }
-
     private async void OnScanQrClicked(object? sender, EventArgs e)
     {
         var cameraPermission = await Permissions.CheckStatusAsync<Permissions.Camera>();
@@ -1359,7 +1704,6 @@ public partial class MainPage : ContentPage
             return;
         }
 
-        QrEntry.Text = value;
         await HandleQrValueAsync(value);
     }
 
@@ -1377,6 +1721,11 @@ public partial class MainPage : ContentPage
         }
 
         await PlayNoiDungAsync(playbackItem, "manual");
+    }
+
+    private void OnStopAudioClicked(object? sender, EventArgs e)
+    {
+        StopPlayback();
     }
 
     private async void OnDisplayLanguageChanged(object? sender, EventArgs e)
@@ -1422,8 +1771,12 @@ public partial class MainPage : ContentPage
         }
     }
 
-    private async Task SpeakTextAsync(NoiDungItem item)
+    private async Task SpeakTextAsync(NoiDungItem item, CancellationToken cancellationToken)
     {
+        AudioPlayerCard.IsVisible = true;
+        AudioWebView.IsVisible = false;
+        AudioWebView.Source = null;
+
         var options = new SpeechOptions();
         var isoCode = _ngonNguMap.TryGetValue(item.MaNgonNgu, out var language)
             ? language.MaNgonNguQuocTe
@@ -1439,12 +1792,20 @@ public partial class MainPage : ContentPage
             }
         }
 
-        await TextToSpeech.Default.SpeakAsync(item.NoiDungVanBan ?? string.Empty, options);
+        await TextToSpeech.Default.SpeakAsync(item.NoiDungVanBan ?? string.Empty, options, cancellationToken);
+        HidePlaybackUi();
 
         if (_isGpsTestRunning)
         {
             AddGpsTestLog(_languageService.Format("GpsTestLogPlaybackTts", item.TieuDe ?? item.MaNoiDung.ToString(), item.TenNgonNgu ?? item.MaNgonNgu.ToString()));
         }
+    }
+
+    private static bool IsTtsEngineInitializationError(Exception exception)
+    {
+        return exception.Message.Contains("text to speech engine", StringComparison.OrdinalIgnoreCase)
+            || exception.Message.Contains("tts engine", StringComparison.OrdinalIgnoreCase)
+            || exception.Message.Contains("Failed to initialize", StringComparison.OrdinalIgnoreCase);
     }
 
     private static Polyline CreatePolyline(IEnumerable<Location> points, string colorHex, float strokeWidth)
@@ -1479,19 +1840,84 @@ public partial class MainPage : ContentPage
         }
     }
 
+    private int BeginPlaybackRequest()
+    {
+        CancelPlaybackRequests();
+        _playbackCancellationTokenSource = new CancellationTokenSource();
+        return _playbackRequestVersion;
+    }
+
+    private bool IsPlaybackRequestCurrent(int playbackRequestVersion)
+    {
+        return playbackRequestVersion == _playbackRequestVersion
+            && !(_playbackCancellationTokenSource?.IsCancellationRequested ?? true);
+    }
+
+    private void CancelPlaybackRequests()
+    {
+        _playbackRequestVersion++;
+
+        if (_playbackCancellationTokenSource is null)
+        {
+            return;
+        }
+
+        if (!_playbackCancellationTokenSource.IsCancellationRequested)
+        {
+            _playbackCancellationTokenSource.Cancel();
+        }
+
+        _playbackCancellationTokenSource.Dispose();
+        _playbackCancellationTokenSource = null;
+    }
+
+    private void StopPlayback()
+    {
+        CancelPlaybackRequests();
+        HidePlaybackUi();
+        RequestStopNativeAudioPlayback();
+    }
+
+    private void HidePlaybackUi()
+    {
+        AudioWebView.IsVisible = false;
+        AudioWebView.Source = null;
+        AudioPlayerCard.IsVisible = false;
+    }
+
+    private void RequestStopNativeAudioPlayback()
+    {
+#if ANDROID
+        if (MainThread.IsMainThread)
+        {
+            StopNativeAudioPlayback();
+            return;
+        }
+
+        MainThread.BeginInvokeOnMainThread(StopNativeAudioPlayback);
+#endif
+    }
+
     private void StopNativeAudioPlayback()
     {
 #if ANDROID
-        if (_androidMediaPlayer is null)
+        MediaPlayer? player;
+        lock (_androidMediaPlayerGate)
+        {
+            player = _androidMediaPlayer;
+            _androidMediaPlayer = null;
+        }
+
+        if (player is null)
         {
             return;
         }
 
         try
         {
-            if (_androidMediaPlayer.IsPlaying)
+            if (player.IsPlaying)
             {
-                _androidMediaPlayer.Stop();
+                player.Stop();
             }
         }
         catch
@@ -1499,10 +1925,25 @@ public partial class MainPage : ContentPage
             // best effort
         }
 
-        _androidMediaPlayer.Reset();
-        _androidMediaPlayer.Release();
-        _androidMediaPlayer.Dispose();
-        _androidMediaPlayer = null;
+        try
+        {
+            player.Reset();
+        }
+        catch
+        {
+            // best effort
+        }
+
+        try
+        {
+            player.Release();
+        }
+        catch
+        {
+            // best effort
+        }
+
+        player.Dispose();
 #endif
     }
 
@@ -1516,7 +1957,7 @@ public partial class MainPage : ContentPage
 
         try
         {
-            StopNativeAudioPlayback();
+            RequestStopNativeAudioPlayback();
 
             var player = new MediaPlayer();
             var audioAttributesBuilder = new AudioAttributes.Builder();
@@ -1544,7 +1985,8 @@ public partial class MainPage : ContentPage
             {
                 if (ReferenceEquals(_androidMediaPlayer, player))
                 {
-                    StopNativeAudioPlayback();
+                    RequestStopNativeAudioPlayback();
+                    MainThread.BeginInvokeOnMainThread(HidePlaybackUi);
                 }
             };
             player.Error += (_, args) =>
@@ -1554,7 +1996,7 @@ public partial class MainPage : ContentPage
                     AddGpsTestLog(_languageService.Format("GpsTestLogPlaybackError", item?.TieuDe ?? item?.MaNoiDung.ToString() ?? audioUrl, $"MediaPlayer {args.What}/{args.Extra}"));
                 }
 
-                StopNativeAudioPlayback();
+                RequestStopNativeAudioPlayback();
                 args.Handled = true;
             };
 
@@ -1571,12 +2013,15 @@ public partial class MainPage : ContentPage
             }
 
             player.PrepareAsync();
-            _androidMediaPlayer = player;
+            lock (_androidMediaPlayerGate)
+            {
+                _androidMediaPlayer = player;
+            }
             return true;
         }
         catch (Exception ex)
         {
-            StopNativeAudioPlayback();
+            RequestStopNativeAudioPlayback();
             if (_isGpsTestRunning)
             {
                 AddGpsTestLog(_languageService.Format("GpsTestLogPlaybackError", item?.TieuDe ?? item?.MaNoiDung.ToString() ?? audioUrl, ex.Message));
@@ -1691,19 +2136,25 @@ public partial class MainPage : ContentPage
         LocationStatusTitleLabel.Text = T("LocationStatusTitle");
         LanguageSectionTitleLabel.Text = T("LanguageSectionTitle");
         GpsTestSectionTitleLabel.Text = T("GpsTestSectionTitle");
+        GpsTestHintLabel.Text = T("GpsTestHint");
         StartGpsRouteTestButton.Text = T("GpsTestRouteButton");
         StartPoiSweepTestButton.Text = T("GpsTestPoiSweepButton");
         StopGpsTestButton.Text = T("GpsTestStopButton");
         GpsTestProgressTitleLabel.Text = T("GpsTestProgressTitle");
         GpsTestLogTitleLabel.Text = T("GpsTestLogTitle");
+        GpsTestLogEmptyLabel.Text = T("GpsTestLogEmpty");
         DisplayLanguageTitleLabel.Text = T("LanguagePreferenceLabel");
         DisplayLanguagePicker.Title = T("LanguagePreferencePickerTitle");
         QrSectionTitleLabel.Text = T("QrSectionTitle");
-        QrEntry.Placeholder = T("QrPlaceholder");
-        OpenQrButton.Text = T("OpenQr");
+        QrSectionBodyLabel.Text = T("QrSectionBody");
         ScanQrButton.Text = T("ScanQr");
         PoiSectionTitleLabel.Text = T("PoiListTitle");
+        PoiSearchBar.Placeholder = T("PoiSearchPlaceholder");
+        PoiEmptyStateLabel.Text = T("PoiSearchEmpty");
+        PoiGalleryTitleLabel.Text = T("PoiGalleryTitle");
+        PoiGalleryEmptyLabel.Text = T("PoiGalleryEmpty");
         AudioPlayerTitleLabel.Text = T("AudioPlayerTitle");
+        StopAudioButton.Text = T("StopAudioButton");
         ContentSectionTitleLabel.Text = T("ContentSectionTitle");
         RefreshPoiLocalization();
         RefreshContentLocalization();
@@ -1719,19 +2170,23 @@ public partial class MainPage : ContentPage
             SetCurrentLocationText(_currentLocation);
         }
 
-        if (PoiCollection.SelectedItem is not DiemThamQuanItem selectedPoi)
+        if (_selectedPoi is not DiemThamQuanItem selectedPoi)
         {
             SelectedPoiLabel.Text = T("SelectedPoiDefault");
+            SelectedPoiMetaLabel.Text = T("SelectedPoiMetaDefault");
+            PoiGalleryCard.IsVisible = _selectedPoiImages.Count > 0;
         }
         else
         {
             SelectedPoiLabel.Text = _languageService.Format("SelectedPoiFormat", selectedPoi.TenDiem, selectedPoi.MaDinhDanh);
+            UpdateSelectedPoiMeta(selectedPoi);
         }
 
         UpdateNearestPoi();
         UpdateLanguageStateLabel();
         UpdateFallbackLanguageLabel();
         UpdateGpsTestStatusLabel();
+        UpdateGpsTestUiState();
     }
 
     private void ApplyFallbackLanguageInfo(NoiDungFallbackResponse fallbackInfo)
@@ -1889,10 +2344,7 @@ public partial class MainPage : ContentPage
             poi.CoordinateText = _languageService.Format("CoordinateFormat", poi.ViDo, poi.KinhDo);
         }
 
-        var selectedItem = PoiCollection.SelectedItem;
-        PoiCollection.ItemsSource = null;
-        PoiCollection.ItemsSource = _diemThamQuan;
-        PoiCollection.SelectedItem = selectedItem;
+        ApplyPoiSearchFilter();
     }
 
     private void RefreshContentLocalization()
@@ -1910,6 +2362,61 @@ public partial class MainPage : ContentPage
     {
         ContentCollection.ItemsSource = null;
         ContentCollection.ItemsSource = _noiDung;
+    }
+
+    private async Task LoadPoiImagesAsync(int maDiem)
+    {
+        var images = await _apiClient.GetHinhAnhByDiemAsync(maDiem);
+        _selectedPoiImages.Clear();
+        foreach (var image in images)
+        {
+            _selectedPoiImages.Add(image);
+        }
+
+        PoiGalleryCard.IsVisible = _selectedPoiImages.Count > 0;
+        PoiGalleryEmptyLabel.IsVisible = _selectedPoiImages.Count == 0;
+        PoiGalleryCollection.IsVisible = _selectedPoiImages.Count > 1;
+
+        var heroImage = _selectedPoiImages.FirstOrDefault(x => x.LaAnhDaiDien) ?? _selectedPoiImages.FirstOrDefault();
+        SetHeroImage(heroImage?.DuongDanHinhAnh);
+
+        if (heroImage is not null)
+        {
+            PoiGalleryCollection.SelectedItem = heroImage;
+        }
+        else
+        {
+            PoiGalleryCollection.SelectedItem = null;
+        }
+    }
+
+    private void SetHeroImage(string? imageUrl)
+    {
+        SelectedPoiHeroImage.Source = string.IsNullOrWhiteSpace(imageUrl) ? null : ImageSource.FromUri(new Uri(imageUrl));
+        PoiGalleryEmptyLabel.IsVisible = string.IsNullOrWhiteSpace(imageUrl);
+    }
+
+    private void UpdateSelectedPoiMeta(DiemThamQuanItem? poi)
+    {
+        if (poi is null)
+        {
+            SelectedPoiMetaLabel.Text = T("SelectedPoiMetaDefault");
+            return;
+        }
+
+        SelectedPoiMetaLabel.Text = string.IsNullOrWhiteSpace(poi.MoTaNgan)
+            ? (poi.DiaChi ?? T("SelectedPoiMetaDefault"))
+            : $"{poi.MoTaNgan}{(string.IsNullOrWhiteSpace(poi.DiaChi) ? string.Empty : $" | {poi.DiaChi}")}";
+    }
+
+    private void OnPoiImageSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (e.CurrentSelection.FirstOrDefault() is not HinhAnhDiemThamQuanItem image)
+        {
+            return;
+        }
+
+        SetHeroImage(image.DuongDanHinhAnh);
     }
 
     private string T(string key) => _languageService.GetText(key);

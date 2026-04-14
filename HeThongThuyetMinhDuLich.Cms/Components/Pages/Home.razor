@@ -1,17 +1,48 @@
 @page "/"
+@using System.Globalization
 @inject CmsApiClient ApiClient
 @inject CmsSession Session
 @inject NavigationManager Navigation
-@using Microsoft.AspNetCore.Components
 
-<PageTitle>Tong quan</PageTitle>
+<PageTitle>Dashboard</PageTitle>
+
+@{
+    var filteredLichSu = GetFilteredLichSu();
+    var totalPages = GetTotalPages(filteredLichSu.Count);
+    var currentPage = Math.Min(_historyPage, totalPages);
+    var pagedLichSu = GetPagedLichSu(filteredLichSu, currentPage);
+    var rangeStart = filteredLichSu.Count == 0 ? 0 : ((currentPage - 1) * _historyPageSize) + 1;
+    var rangeEnd = filteredLichSu.Count == 0 ? 0 : Math.Min(currentPage * _historyPageSize, filteredLichSu.Count);
+    var tongLuotNghe = filteredLichSu.Count;
+    var tongThoiGian = filteredLichSu.Sum(x => x.ThoiLuongDaNghe);
+    var thoiGianTrungBinh = tongLuotNghe > 0 ? tongThoiGian / (double)tongLuotNghe : 0;
+    var topPoiRows = GetTopPoiRows(filteredLichSu, _topCount);
+    var topNguoiDungRows = GetTopNguoiDungRows(filteredLichSu, _topCount);
+    var topNoiDungRows = GetTopNoiDungRows(filteredLichSu, _topCount);
+    var timeBuckets = GetTimeBuckets(filteredLichSu);
+    var activationRows = GetActivationRows();
+    var durationBands = GetDurationBands(filteredLichSu);
+    var totalQrCodes = _maQr.Count;
+    var topPoi = topPoiRows.FirstOrDefault();
+    var topUser = topNguoiDungRows.FirstOrDefault();
+    var topContent = topNoiDungRows.FirstOrDefault();
+    var peakHour = GetHourlyBuckets(filteredLichSu).OrderByDescending(x => x.Count).FirstOrDefault();
+    var qrShare = GetActivationShare("qr");
+    var gpsShare = GetActivationShare("gps");
+    var longSessionShare = tongLuotNghe > 0
+        ? filteredLichSu.Count(x => x.ThoiLuongDaNghe >= LongSessionThresholdSeconds) / (double)tongLuotNghe
+        : 0;
+}
 
 <div class="page-title">
     <div>
-        <h3>Tong quan he thong</h3>
-        <p>Theo doi nhanh du lieu admin va hien trang van hanh.</p>
+        <h3>Dashboard tong quan</h3>
+        <p>Tap trung vao KPI chinh, xu huong nghe va bang lich su de thao tac nhanh hon.</p>
     </div>
-    <button class="btn btn-secondary" @onclick="LoadAsync" disabled="@_isLoading">Tai lai</button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-secondary" @onclick="ResetFilters" disabled="@_isLoading">Xoa filter</button>
+        <button class="btn btn-secondary" @onclick="LoadAsync" disabled="@_isLoading">Tai lai</button>
+    </div>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(_error))
@@ -19,35 +50,449 @@
     <div class="notice notice-error">@_error</div>
 }
 
-<div class="grid-3">
-    <div class="card">
+@if (Session.IsBienTap)
+{
+    <div class="notice notice-success">Ban dang dang nhap voi vai tro BienTap. Cac chuc nang quan tri he thong nhu ngon ngu, nguoi dung va tai khoan da duoc an.</div>
+}
+
+<div class="card dashboard-filter-card">
+    <div class="section-header">
+        <div>
+            <h4>Filter du lieu</h4>
+            <p>Ap dung cho KPI, top du lieu, xu huong nghe va bang lich su.</p>
+        </div>
+        <span class="badge badge-muted">Cap nhat theo bo loc hien tai</span>
+    </div>
+
+    <div class="dashboard-filter-grid">
+        <div>
+            <label>Tu ngay</label>
+            <InputDate @bind-Value="_fromDate" TValue="DateTime?" />
+        </div>
+
+        <div>
+            <label>Den ngay</label>
+            <InputDate @bind-Value="_toDate" TValue="DateTime?" />
+        </div>
+
+        <div>
+            <label>Diem tham quan</label>
+            <select @bind="_selectedMaDiem">
+                <option value="0">Tat ca diem</option>
+                @foreach (var diem in _diem.OrderBy(x => x.TenDiem))
+                {
+                    <option value="@diem.MaDiem">@diem.TenDiem</option>
+                }
+            </select>
+        </div>
+
+        <div>
+            <label>Min thoi gian nghe</label>
+            <InputNumber @bind-Value="_minDurationSeconds" TValue="int?" />
+        </div>
+
+        <div>
+            <label>Tu khoa</label>
+            <input placeholder="Nguoi dung, diem, noi dung..." @bind="_search" @bind:event="oninput" />
+        </div>
+
+        <div>
+            <label>Bieu do theo</label>
+            <select @bind="_timeResolution">
+                <option value="day">Ngay</option>
+                <option value="hour">Khung gio</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Top hien thi</label>
+            <select @bind="_topCount">
+                <option value="5">Top 5</option>
+                <option value="10">Top 10</option>
+            </select>
+        </div>
+    </div>
+ </div>
+
+<div class="dashboard-kpi-grid">
+    <div class="card dashboard-kpi-card">
         <small>Tong diem tham quan</small>
-        <div class="kpi-value">@_tongDiem</div>
+        <div class="kpi-value">@_diem.Count</div>
+        <p>@_theoDiem.Count(x => x.SoLuotNghe > 0) diem da phat it nhat 1 lan</p>
     </div>
 
-    <div class="card">
-        <small>Tong loai diem</small>
-        <div class="kpi-value">@_tongLoai</div>
+    <div class="card dashboard-kpi-card">
+        <small>Luot nghe theo filter</small>
+        <div class="kpi-value">@tongLuotNghe</div>
+        <p>@filteredLichSu.Select(x => x.TenNguoiDung).Distinct(StringComparer.OrdinalIgnoreCase).Count() nguoi dung</p>
     </div>
 
-    <div class="card">
-        <small>Tong luot nghe</small>
-        <div class="kpi-value">@_tongLuotNghe</div>
+    <div class="card dashboard-kpi-card">
+        <small>Tong thoi gian nghe</small>
+        <div class="kpi-value">@FormatDurationCompact(tongThoiGian)</div>
+        <p>@tongThoiGian giay da nghe</p>
+    </div>
+
+    <div class="card dashboard-kpi-card">
+        <small>Trung binh moi luot</small>
+        <div class="kpi-value">@FormatSeconds(thoiGianTrungBinh)</div>
+        <p>@ToPercent(longSessionShare) phien >= @LongSessionThresholdSeconds giay</p>
+    </div>
+
+    <div class="card dashboard-kpi-card">
+        <small>Top POI hien tai</small>
+        <div class="kpi-value">@(topPoi?.Count ?? 0)</div>
+        <p>@(topPoi?.Label ?? "Chua co du lieu")</p>
+    </div>
+
+    <div class="card dashboard-kpi-card">
+        <small>Ma QR hien co</small>
+        <div class="kpi-value">@totalQrCodes</div>
+        <p>QR share @ToPercent(qrShare)</p>
     </div>
 </div>
 
+<div class="grid-2" style="margin-top:14px;">
+    <div class="card dashboard-panel">
+        <div class="section-header">
+            <div>
+                <h4>Bieu do theo @(_timeResolution == "hour" ? "khung gio" : "thoi gian")</h4>
+                <p>Theo so luot nghe sau khi ap filter hien tai.</p>
+            </div>
+            <span class="badge badge-muted">@timeBuckets.Count moc</span>
+        </div>
+
+        @if (timeBuckets.Count == 0)
+        {
+            <div class="empty-state">Khong co du lieu de ve bieu do thoi gian.</div>
+        }
+        else
+        {
+            var maxBucket = Math.Max(1, timeBuckets.Max(x => x.Count));
+
+            <div class="time-chart">
+                @foreach (var bucket in timeBuckets)
+                {
+                    <div class="time-chart-item" title="@($"{bucket.Label}: {bucket.Count} luot, {bucket.TotalSeconds} giay")">
+                        <div class="time-chart-bar-wrap">
+                            <div class="time-chart-bar" style="height:@ToCssPercent(bucket.Count / (double)maxBucket);"></div>
+                        </div>
+                        <small>@bucket.ShortLabel</small>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="card dashboard-panel">
+        <div class="section-header">
+            <div>
+                <h4>GPS / QR / cach kich hoat</h4>
+                <p>So lieu tong hop toan he thong theo endpoint thong ke kich hoat.</p>
+            </div>
+            <span class="badge badge-muted">@activationRows.Sum(x => x.Count) luot</span>
+        </div>
+
+        <div class="stat-pair-grid" style="margin-bottom:12px;">
+            <div class="stat-pair-card">
+                <small>QR share</small>
+                <div class="kpi-value">@ToPercent(qrShare)</div>
+            </div>
+
+            <div class="stat-pair-card">
+                <small>GPS share</small>
+                <div class="kpi-value">@ToPercent(gpsShare)</div>
+            </div>
+
+            <div class="stat-pair-card">
+                <small>Ma QR hien co</small>
+                <div class="kpi-value">@totalQrCodes</div>
+            </div>
+        </div>
+
+        @if (activationRows.Count == 0)
+        {
+            <div class="empty-state">Chua co so lieu kich hoat.</div>
+        }
+        else
+        {
+            var maxActivation = Math.Max(1, activationRows.Max(x => x.Count));
+
+            <div class="progress-list">
+                @foreach (var row in activationRows)
+                {
+                    <div class="progress-row">
+                        <div class="progress-row-header">
+                            <strong>@row.Label</strong>
+                            <span>@row.Count luot</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill progress-fill-alt" style="width:@ToCssPercent(row.Count / (double)maxActivation);"></div>
+                        </div>
+                        <small>@FormatDurationCompact(row.TotalSeconds)</small>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<div class="grid-2" style="margin-top:14px;">
+    <div class="card dashboard-panel">
+        <div class="section-header">
+            <div>
+                <h4>Top POI</h4>
+                <p>Xep hang diem tham quan theo luot nghe sau khi ap filter.</p>
+            </div>
+            <span class="badge badge-muted">Top @_topCount</span>
+        </div>
+
+        @if (topPoiRows.Count == 0)
+        {
+            <div class="empty-state">Khong co du lieu POI theo bo loc hien tai.</div>
+        }
+        else
+        {
+            var maxPoi = Math.Max(1, topPoiRows.Max(x => x.Count));
+
+            <div class="progress-list">
+                @foreach (var row in topPoiRows)
+                {
+                    <div class="progress-row">
+                        <div class="progress-row-header">
+                            <strong>@row.Label</strong>
+                            <span>@row.Count luot</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width:@ToCssPercent(row.Count / (double)maxPoi);"></div>
+                        </div>
+                        <small>@FormatDurationCompact(row.TotalSeconds) tong nghe</small>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="card dashboard-panel">
+        <div class="section-header">
+            <div>
+                <h4>Thong ke thoi gian nghe</h4>
+                <p>Tong hop chat luong phien nghe tu lich su phat.</p>
+            </div>
+            <span class="badge badge-muted">@tongLuotNghe phien</span>
+        </div>
+
+        <div class="stat-pair-grid">
+            <div class="stat-pair-card">
+                <small>Trung binh</small>
+                <div class="kpi-value">@FormatSeconds(thoiGianTrungBinh)</div>
+            </div>
+
+            <div class="stat-pair-card">
+                <small>Dai nhat</small>
+                <div class="kpi-value">@FormatDurationCompact(filteredLichSu.Count == 0 ? 0 : filteredLichSu.Max(x => x.ThoiLuongDaNghe))</div>
+            </div>
+
+            <div class="stat-pair-card">
+                <small>Nhieu nhat theo gio</small>
+                <div class="kpi-value">@(peakHour?.ShortLabel ?? "--")</div>
+            </div>
+        </div>
+
+        @if (durationBands.Count == 0)
+        {
+            <div class="empty-state">Chua co du lieu thoi luong nghe.</div>
+        }
+        else
+        {
+            var maxBand = Math.Max(1, durationBands.Max(x => x.Count));
+
+            <div class="progress-list" style="margin-top:12px;">
+                @foreach (var band in durationBands)
+                {
+                    <div class="progress-row">
+                        <div class="progress-row-header">
+                            <strong>@band.Label</strong>
+                            <span>@band.Count phien</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill progress-fill-soft" style="width:@ToCssPercent(band.Count / (double)maxBand);"></div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<div class="dashboard-top-grid" style="margin-top:14px;">
+    <div class="card dashboard-panel">
+        <div class="section-header">
+            <div>
+                <h4>Top nguoi dung</h4>
+                <p>Ai nghe nhieu nhat trong bo loc hien tai.</p>
+            </div>
+        </div>
+
+        @if (topNguoiDungRows.Count == 0)
+        {
+            <div class="empty-state">Chua co du lieu nguoi dung.</div>
+        }
+        else
+        {
+            <div class="top-data-list">
+                @foreach (var row in topNguoiDungRows)
+                {
+                    <div class="top-data-item">
+                        <div>
+                            <strong>@row.Label</strong>
+                            <small>@row.Count luot nghe</small>
+                        </div>
+                        <span>@FormatDurationCompact(row.TotalSeconds)</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="card dashboard-panel">
+        <div class="section-header">
+            <div>
+                <h4>Top noi dung</h4>
+                <p>Noi dung thuyet minh duoc nghe nhieu nhat.</p>
+            </div>
+        </div>
+
+        @if (topNoiDungRows.Count == 0)
+        {
+            <div class="empty-state">Chua co du lieu noi dung.</div>
+        }
+        else
+        {
+            <div class="top-data-list">
+                @foreach (var row in topNoiDungRows)
+                {
+                    <div class="top-data-item">
+                        <div>
+                            <strong>@row.Label</strong>
+                            <small>@row.Count luot nghe</small>
+                        </div>
+                        <span>@FormatDurationCompact(row.TotalSeconds)</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="card dashboard-panel">
+        <div class="section-header">
+            <div>
+                <h4>Tong hop nhanh</h4>
+                <p>Tom tat nhung chi so can nhin dau tien.</p>
+            </div>
+        </div>
+
+        <div class="summary-list">
+            <div class="summary-item">
+                <span>Top POI</span>
+                <strong>@(topPoi?.Label ?? "Chua co du lieu")</strong>
+            </div>
+
+            <div class="summary-item">
+                <span>Top noi dung</span>
+                <strong>@(topContent?.Label ?? "Chua co du lieu")</strong>
+            </div>
+
+            <div class="summary-item">
+                <span>Top nguoi dung</span>
+                <strong>@(topUser?.Label ?? "Chua co du lieu")</strong>
+            </div>
+
+            <div class="summary-item">
+                <span>Khung gio cao diem</span>
+                <strong>@(peakHour?.Label ?? "Chua co du lieu")</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card dashboard-panel" style="margin-top:14px;">
+    <div class="section-header">
+        <div>
+            <h4>Bang chi tiet lich su phat</h4>
+            <p>Danh sach chi tiet theo filter, sap xep moi nhat truoc.</p>
+        </div>
+        <span class="badge badge-muted">@filteredLichSu.Count dong</span>
+    </div>
+
+    @if (filteredLichSu.Count == 0)
+    {
+        <div class="empty-state">Khong co lich su phat phu hop bo loc.</div>
+    }
+    else
+    {
+        <div class="table-wrap" style="margin-top:10px;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Ma lich su</th>
+                        <th>Nguoi dung</th>
+                        <th>Diem tham quan</th>
+                        <th>Noi dung</th>
+                        <th>Bat dau</th>
+                        <th>Da nghe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in pagedLichSu)
+                    {
+                        <tr>
+                            <td>@item.MaLichSuPhat</td>
+                            <td>@item.TenNguoiDung</td>
+                            <td>@item.TenDiem</td>
+                            <td>@item.TieuDeNoiDung</td>
+                            <td>@item.ThoiGianBatDau.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@FormatDurationCompact(item.ThoiLuongDaNghe)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <PaginationControls TotalItems="@filteredLichSu.Count"
+                            ItemLabel="dong"
+                            PageSize="@_historyPageSize"
+                            PageSizeChanged="OnHistoryPageSizeChanged"
+                            CurrentPage="@currentPage"
+                            CurrentPageChanged="OnHistoryPageChanged" />
+    }
+</div>
+
 @code {
+    private const int LongSessionThresholdSeconds = 120;
+
+    private List<DiemThamQuanItem> _diem = [];
+    private List<LoaiDiemThamQuanItem> _loai = [];
+    private List<ThongKeTheoDiemItem> _theoDiem = [];
+    private List<ThongKeTheoKichHoatItem> _theoKichHoat = [];
+    private List<LichSuPhatItem> _lichSuPhat = [];
+    private List<MaQRItem> _maQr = [];
     private bool _isLoading;
     private string? _error;
-    private int _tongDiem;
-    private int _tongLoai;
-    private int _tongLuotNghe;
+    private string _search = string.Empty;
+    private int _selectedMaDiem;
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
+    private int? _minDurationSeconds;
+    private string _timeResolution = "day";
+    private int _topCount = 5;
+    private int _historyPage = 1;
+    private int _historyPageSize = 10;
 
     protected override async Task OnInitializedAsync()
     {
         if (!Session.IsAuthenticated)
         {
-            Navigation.NavigateTo("/login");
+            Navigation.NavigateTo("/login", true);
             return;
         }
 
@@ -61,22 +506,247 @@
 
         try
         {
-            var diem = await ApiClient.GetDiemAsync();
-            var loai = await ApiClient.GetLoaiDiemAsync();
-            var thongKe = await ApiClient.GetThongKeTheoDiemAsync();
+            var diemTask = ApiClient.GetDiemAsync();
+            var loaiTask = ApiClient.GetLoaiDiemAsync();
+            var theoDiemTask = ApiClient.GetThongKeTheoDiemAsync();
+            var theoKichHoatTask = ApiClient.GetThongKeTheoKichHoatAsync();
+            var lichSuTask = ApiClient.GetLichSuPhatAsync();
+            var maQrTask = ApiClient.GetMaQRAsync();
 
-            _tongDiem = diem.Count;
-            _tongLoai = loai.Count;
-            _tongLuotNghe = thongKe.Sum(x => x.SoLuotNghe);
+            await Task.WhenAll(diemTask, loaiTask, theoDiemTask, theoKichHoatTask, lichSuTask, maQrTask);
+
+            _diem = diemTask.Result.ToList();
+            _loai = loaiTask.Result.ToList();
+            _theoDiem = theoDiemTask.Result.ToList();
+            _theoKichHoat = theoKichHoatTask.Result.ToList();
+            _lichSuPhat = lichSuTask.Result.ToList();
+            _maQr = maQrTask.Result.ToList();
         }
-        catch
+        catch (Exception ex)
         {
-            _error = "Khong tai duoc du lieu tong quan.";
+            _error = $"Khong tai duoc du lieu dashboard: {ex.Message}";
         }
         finally
         {
             _isLoading = false;
         }
     }
+
+    private void ResetFilters()
+    {
+        _search = string.Empty;
+        _selectedMaDiem = 0;
+        _fromDate = null;
+        _toDate = null;
+        _minDurationSeconds = null;
+        _timeResolution = "day";
+        _topCount = 5;
+        _historyPage = 1;
+    }
+
+    private List<LichSuPhatItem> GetFilteredLichSu()
+    {
+        IEnumerable<LichSuPhatItem> query = _lichSuPhat;
+
+        if (_fromDate.HasValue)
+        {
+            query = query.Where(x => x.ThoiGianBatDau.Date >= _fromDate.Value.Date);
+        }
+
+        if (_toDate.HasValue)
+        {
+            query = query.Where(x => x.ThoiGianBatDau.Date <= _toDate.Value.Date);
+        }
+
+        if (_selectedMaDiem > 0)
+        {
+            var tenDiem = _diem.FirstOrDefault(x => x.MaDiem == _selectedMaDiem)?.TenDiem;
+
+            if (!string.IsNullOrWhiteSpace(tenDiem))
+            {
+                query = query.Where(x => string.Equals(x.TenDiem, tenDiem, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+        if (_minDurationSeconds is > 0)
+        {
+            query = query.Where(x => x.ThoiLuongDaNghe >= _minDurationSeconds.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            var keyword = _search.Trim();
+            query = query.Where(x =>
+                ContainsIgnoreCase(x.TenNguoiDung, keyword) ||
+                ContainsIgnoreCase(x.TenDiem, keyword) ||
+                ContainsIgnoreCase(x.TieuDeNoiDung, keyword));
+        }
+
+        return query
+            .OrderByDescending(x => x.ThoiGianBatDau)
+            .ToList();
+    }
+
+    private List<AggregateRow> GetTopPoiRows(IReadOnlyCollection<LichSuPhatItem> source, int take)
+        => source
+            .GroupBy(x => x.TenDiem)
+            .Select(group => new AggregateRow(group.Key, group.Count(), group.Sum(x => x.ThoiLuongDaNghe)))
+            .OrderByDescending(x => x.Count)
+            .ThenByDescending(x => x.TotalSeconds)
+            .Take(take)
+            .ToList();
+
+    private List<AggregateRow> GetTopNguoiDungRows(IReadOnlyCollection<LichSuPhatItem> source, int take)
+        => source
+            .GroupBy(x => x.TenNguoiDung)
+            .Select(group => new AggregateRow(group.Key, group.Count(), group.Sum(x => x.ThoiLuongDaNghe)))
+            .OrderByDescending(x => x.Count)
+            .ThenByDescending(x => x.TotalSeconds)
+            .Take(take)
+            .ToList();
+
+    private List<AggregateRow> GetTopNoiDungRows(IReadOnlyCollection<LichSuPhatItem> source, int take)
+        => source
+            .GroupBy(x => x.TieuDeNoiDung)
+            .Select(group => new AggregateRow(group.Key, group.Count(), group.Sum(x => x.ThoiLuongDaNghe)))
+            .OrderByDescending(x => x.Count)
+            .ThenByDescending(x => x.TotalSeconds)
+            .Take(take)
+            .ToList();
+
+    private List<TimeBucketRow> GetTimeBuckets(IReadOnlyCollection<LichSuPhatItem> source)
+    {
+        if (source.Count == 0)
+        {
+            return [];
+        }
+
+        if (string.Equals(_timeResolution, "hour", StringComparison.OrdinalIgnoreCase))
+        {
+            return Enumerable.Range(0, 24)
+                .Select(hour =>
+                {
+                    var bucket = source.Where(x => x.ThoiGianBatDau.Hour == hour).ToList();
+                    return new TimeBucketRow($"{hour:00}:00", $"{hour:00}h", bucket.Count, bucket.Sum(x => x.ThoiLuongDaNghe));
+                })
+                .ToList();
+        }
+
+        return source
+            .GroupBy(x => x.ThoiGianBatDau.Date)
+            .OrderBy(group => group.Key)
+            .TakeLast(14)
+            .Select(group => new TimeBucketRow(
+                group.Key.ToString("dd/MM/yyyy"),
+                group.Key.ToString("dd/MM"),
+                group.Count(),
+                group.Sum(x => x.ThoiLuongDaNghe)))
+            .ToList();
+    }
+
+    private List<TimeBucketRow> GetHourlyBuckets(IReadOnlyCollection<LichSuPhatItem> source)
+        => Enumerable.Range(0, 24)
+            .Select(hour =>
+            {
+                var bucket = source.Where(x => x.ThoiGianBatDau.Hour == hour).ToList();
+                return new TimeBucketRow($"{hour:00}:00", $"{hour:00}h", bucket.Count, bucket.Sum(x => x.ThoiLuongDaNghe));
+            })
+            .ToList();
+
+    private List<AggregateRow> GetActivationRows()
+        => _theoKichHoat
+            .Select(x => new AggregateRow(x.CachKichHoat, x.SoLuotPhat, x.TongThoiLuongDaNghe))
+            .OrderByDescending(x => x.Count)
+            .ToList();
+
+    private List<AggregateRow> GetDurationBands(IReadOnlyCollection<LichSuPhatItem> source)
+    {
+        if (source.Count == 0)
+        {
+            return [];
+        }
+
+        var bands = new List<AggregateRow>
+        {
+            new("0-30 giay", source.Count(x => x.ThoiLuongDaNghe <= 30), 0),
+            new("31-60 giay", source.Count(x => x.ThoiLuongDaNghe > 30 && x.ThoiLuongDaNghe <= 60), 0),
+            new("61-180 giay", source.Count(x => x.ThoiLuongDaNghe > 60 && x.ThoiLuongDaNghe <= 180), 0),
+            new(">180 giay", source.Count(x => x.ThoiLuongDaNghe > 180), 0)
+        };
+
+        return bands.Where(x => x.Count > 0).ToList();
+    }
+
+    private double GetActivationShare(string keyword)
+    {
+        var total = _theoKichHoat.Sum(x => x.SoLuotPhat);
+
+        if (total == 0)
+        {
+            return 0;
+        }
+
+        var matched = _theoKichHoat
+            .Where(x => ContainsIgnoreCase(x.CachKichHoat, keyword))
+            .Sum(x => x.SoLuotPhat);
+
+        return matched / (double)total;
+    }
+
+    private static bool ContainsIgnoreCase(string? source, string keyword)
+        => !string.IsNullOrWhiteSpace(source)
+           && source.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+
+    private int GetTotalPages(int totalItems)
+        => Math.Max(1, (int)Math.Ceiling(totalItems / (double)_historyPageSize));
+
+    private List<LichSuPhatItem> GetPagedLichSu(IReadOnlyList<LichSuPhatItem> source, int currentPage)
+        => source
+            .Skip((Math.Max(1, currentPage) - 1) * _historyPageSize)
+            .Take(_historyPageSize)
+            .ToList();
+
+    private Task OnHistoryPageChanged(int page)
+    {
+        _historyPage = page;
+        return Task.CompletedTask;
+    }
+
+    private Task OnHistoryPageSizeChanged(int size)
+    {
+        _historyPageSize = size;
+        _historyPage = 1;
+        return Task.CompletedTask;
+    }
+
+    private static string FormatDurationCompact(int totalSeconds)
+    {
+        var span = TimeSpan.FromSeconds(Math.Max(0, totalSeconds));
+
+        if (span.TotalHours >= 1)
+        {
+            return $"{(int)span.TotalHours}h {span.Minutes}m";
+        }
+
+        if (span.TotalMinutes >= 1)
+        {
+            return $"{span.Minutes}m {span.Seconds}s";
+        }
+
+        return $"{span.Seconds}s";
+    }
+
+    private static string FormatSeconds(double seconds)
+        => $"{Math.Round(seconds)}s";
+
+    private static string ToPercent(double value)
+        => value.ToString("P0", CultureInfo.InvariantCulture);
+
+    private static string ToCssPercent(double value)
+        => $"{Math.Clamp(value * 100d, 0d, 100d).ToString("0.#", CultureInfo.InvariantCulture)}%";
+
+    private sealed record AggregateRow(string Label, int Count, int TotalSeconds);
+
+    private sealed record TimeBucketRow(string Label, string ShortLabel, int Count, int TotalSeconds);
 }
 

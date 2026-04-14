@@ -113,8 +113,39 @@ public class HinhAnhDiemThamQuanController(DuLichDbContext dbContext, IWebHostEn
         });
     }
 
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin,BienTap")]
+    public async Task<IActionResult> Update(int id, HinhAnhDiemThamQuanUpdateRequest request)
+    {
+        var item = await dbContext.HinhAnhDiemThamQuans.FindAsync(id);
+        if (item is null)
+        {
+            return NotFound();
+        }
+
+        if (request.LaAnhDaiDien)
+        {
+            var siblingImages = await dbContext.HinhAnhDiemThamQuans
+                .Where(x => x.MaDiem == item.MaDiem && x.MaHinhAnh != item.MaHinhAnh && x.LaAnhDaiDien)
+                .ToListAsync();
+
+            foreach (var sibling in siblingImages)
+            {
+                sibling.LaAnhDaiDien = false;
+            }
+        }
+
+        item.LaAnhDaiDien = request.LaAnhDaiDien;
+        item.ThuTuHienThi = request.ThuTuHienThi;
+
+        await EnsureRepresentativeImageAsync(item.MaDiem, preferredImageId: request.LaAnhDaiDien ? item.MaHinhAnh : null);
+        await dbContext.SaveChangesAsync();
+
+        return NoContent();
+    }
+
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,BienTap")]
     public async Task<IActionResult> Delete(int id)
     {
         var item = await dbContext.HinhAnhDiemThamQuans.FindAsync(id);
@@ -141,6 +172,44 @@ public class HinhAnhDiemThamQuanController(DuLichDbContext dbContext, IWebHostEn
 
         dbContext.HinhAnhDiemThamQuans.Remove(item);
         await dbContext.SaveChangesAsync();
+
+        await EnsureRepresentativeImageAsync(item.MaDiem);
+        await dbContext.SaveChangesAsync();
+
         return NoContent();
+    }
+
+    private async Task EnsureRepresentativeImageAsync(int maDiem, int? preferredImageId = null)
+    {
+        var images = await dbContext.HinhAnhDiemThamQuans
+            .Where(x => x.MaDiem == maDiem)
+            .OrderByDescending(x => x.LaAnhDaiDien)
+            .ThenBy(x => x.ThuTuHienThi ?? int.MaxValue)
+            .ThenBy(x => x.MaHinhAnh)
+            .ToListAsync();
+
+        if (images.Count == 0)
+        {
+            return;
+        }
+
+        HinhAnhDiemThamQuan representative = images.First();
+        if (preferredImageId.HasValue)
+        {
+            representative = images.FirstOrDefault(x => x.MaHinhAnh == preferredImageId.Value) ?? representative;
+        }
+        else if (!images.Any(x => x.LaAnhDaiDien))
+        {
+            representative = images.First();
+        }
+        else
+        {
+            representative = images.First(x => x.LaAnhDaiDien);
+        }
+
+        foreach (var image in images)
+        {
+            image.LaAnhDaiDien = image.MaHinhAnh == representative.MaHinhAnh;
+        }
     }
 }

@@ -95,6 +95,11 @@ public class MaQrController(DuLichDbContext dbContext, AudioPathResolver audioPa
                 DiemThamQuan = x.DiemThamQuan == null ? null : new
                 {
                     x.DiemThamQuan.MaDiem,
+                    AnhDaiDienUrl = x.DiemThamQuan.HinhAnhDiemThamQuans
+                        .OrderByDescending(h => h.LaAnhDaiDien)
+                        .ThenBy(h => h.ThuTuHienThi ?? int.MaxValue)
+                        .Select(h => h.DuongDanHinhAnh)
+                        .FirstOrDefault(),
                     x.DiemThamQuan.MaDinhDanh,
                     x.DiemThamQuan.TenDiem,
                     x.DiemThamQuan.MoTaNgan,
@@ -120,6 +125,7 @@ public class MaQrController(DuLichDbContext dbContext, AudioPathResolver audioPa
                 x.MaNoiDung,
                 x.MaDiem,
                 x.MaNgonNgu,
+                TenNgonNgu = x.NgonNgu != null ? x.NgonNgu.TenNgonNgu : null,
                 x.TieuDe,
                 x.NoiDungVanBan,
                 x.DuongDanAmThanh,
@@ -133,6 +139,7 @@ public class MaQrController(DuLichDbContext dbContext, AudioPathResolver audioPa
             x.MaNoiDung,
             x.MaDiem,
             x.MaNgonNgu,
+            x.TenNgonNgu,
             x.TieuDe,
             x.NoiDungVanBan,
             DuongDanAmThanh = audioPathResolver.ResolveNoiDungAudioPath(x.MaNoiDung, x.DuongDanAmThanh),
@@ -158,10 +165,26 @@ public class MaQrController(DuLichDbContext dbContext, AudioPathResolver audioPa
     [Authorize(Roles = "Admin,BienTap")]
     public async Task<ActionResult<MaQr>> Create(MaQrDto model)
     {
+        var normalizedQrValue = model.GiaTriQR?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedQrValue))
+        {
+            return BadRequest(new { message = "Gia tri QR la bat buoc." });
+        }
+
+        if (await dbContext.MaQrs.AnyAsync(x => x.MaDiem == model.MaDiem))
+        {
+            return Conflict(new { message = "Moi diem tham quan chi duoc gan 1 ma QR." });
+        }
+
+        if (await dbContext.MaQrs.AnyAsync(x => x.GiaTriQR == normalizedQrValue))
+        {
+            return Conflict(new { message = "Gia tri QR da ton tai." });
+        }
+
         var entity = new MaQr
         {
             MaDiem = model.MaDiem,
-            GiaTriQR = model.GiaTriQR,
+            GiaTriQR = normalizedQrValue,
             TrangThaiHoatDong = model.TrangThaiHoatDong,
             MaTaiKhoanTao = model.MaTaiKhoanTao,
             NgayTao = DateTime.UtcNow,
@@ -184,8 +207,24 @@ public class MaQrController(DuLichDbContext dbContext, AudioPathResolver audioPa
             return NotFound();
         }
 
+        var normalizedQrValue = model.GiaTriQR?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedQrValue))
+        {
+            return BadRequest(new { message = "Gia tri QR la bat buoc." });
+        }
+
+        if (await dbContext.MaQrs.AnyAsync(x => x.MaDiem == model.MaDiem && x.MaQR != id))
+        {
+            return Conflict(new { message = "Moi diem tham quan chi duoc gan 1 ma QR." });
+        }
+
+        if (await dbContext.MaQrs.AnyAsync(x => x.GiaTriQR == normalizedQrValue && x.MaQR != id))
+        {
+            return Conflict(new { message = "Gia tri QR da ton tai." });
+        }
+
         item.MaDiem = model.MaDiem;
-        item.GiaTriQR = model.GiaTriQR;
+        item.GiaTriQR = normalizedQrValue;
         item.TrangThaiHoatDong = model.TrangThaiHoatDong;
         item.MaTaiKhoanTao = model.MaTaiKhoanTao;
         item.NgayCapNhat = DateTime.UtcNow;
