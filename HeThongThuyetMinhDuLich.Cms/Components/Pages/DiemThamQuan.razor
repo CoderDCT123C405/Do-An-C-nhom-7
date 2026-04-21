@@ -779,13 +779,18 @@
             return string.Empty;
         }
 
+        const string imageVersion = "v20260417-poi";
+
         if (Uri.TryCreate(path, UriKind.Absolute, out var absolute))
         {
-            return absolute.ToString();
+            var builder = new UriBuilder(absolute);
+            var query = builder.Query.TrimStart('?');
+            builder.Query = string.IsNullOrWhiteSpace(query) ? $"v={imageVersion}" : $"{query}&v={imageVersion}";
+            return builder.Uri.ToString();
         }
 
         var baseUrl = Config["Api:BaseUrl"] ?? "http://localhost:5000/";
-        return $"{baseUrl.TrimEnd('/')}/{path.TrimStart('/')}";
+        return $"{baseUrl.TrimEnd('/')}/{path.TrimStart('/')}?v={imageVersion}";
     }
 
     private async Task<ApiOperationResult> UpsertQrForPointAsync(int maDiem, string? qrValueRaw)

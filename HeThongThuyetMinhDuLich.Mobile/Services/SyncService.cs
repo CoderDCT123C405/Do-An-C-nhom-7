@@ -1,6 +1,9 @@
 using System;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Maui.Controls;
 using Microsoft.Maui.Dispatching;
 using Microsoft.Maui.Networking;
 
@@ -9,46 +12,96 @@ namespace HeThongThuyetMinhDuLich.Mobile.Services;
 public class SyncService
 {
     private readonly MobileApiClient _api;
-    private readonly MobileCacheStore _cache;
+    private readonly string _baseUrl;
 
-    private bool _isSyncing;
+    private readonly SemaphoreSlim _lock = new(1, 1);
     private IDispatcherTimer? _timer;
+    private static readonly HttpClient _http = new();
 
-    public SyncService(
-        MobileApiClient api,
-        MobileCacheStore cache)
+    public SyncService(MobileApiClient api, string baseUrl)
     {
         _api = api;
-        _cache = cache;
+        _baseUrl = baseUrl;
     }
 
     public async Task SyncAllAsync()
     {
-        if (_isSyncing) return; // nếu đang đồng bộ thì không thực hiện đồng bộ mới
-
-        if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet) // nếu không có kết nối internet thì không thực hiện đồng bộ
-            return;
+        if (!await _lock.WaitAsync(0)) return;
 
         try
         {
-            _isSyncing = true;
+            if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+                return;
 
-            await _api.GetDiemThamQuanAsync(); // lấy danh sách điểm tham quan
+            var pois = await _api.GetDiemThamQuanAsync();
 
-            var pois = await _cache.GetPoisAsync();// lấy dữ liệu đã lưu trong máy
+            var semaphore = new SemaphoreSlim(3);
 
-            foreach (var poi in pois)
+            var tasks = pois.Select(async poi =>
             {
-                await _api.GetNoiDungByDiemAsync(poi.MaDiem); // đồng bộ nội dung thuyết minh của từng điểm tham quan
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine("SYNC ERROR: " + ex.Message); // ghi log lỗi nếu có lỗi xảy ra trong quá trình đồng bộ
+                await semaphore.WaitAsync();
+
+                try
+                {
+                    var images = await _api.GetHinhAnhByDiemAsync(poi.MaDiem);
+
+                    foreach (var img in images)
+                    {
+                        var url = img.DuongDanHinhAnh;
+
+                        if (string.IsNullOrWhiteSpace(url))
+                            continue;
+
+                        url = url.Replace("file:///", "")
+                                 .Replace("file:/", "")
+                                 .Replace("\\", "/");
+
+                        if (!url.StartsWith("http"))
+                            url = _baseUrl.TrimEnd('/') + "/" + url.TrimStart('/');
+
+                        var version = poi.NgayCapNhat.Ticks;
+                        var fileName = $"{poi.MaDiem}_{version}_{Path.GetFileName(url)}";
+                        var localPath = Path.Combine(FileSystem.AppDataDirectory, fileName);
+
+                        // xoá file cũ
+                        var prefix = $"{poi.MaDiem}_";
+                        var oldFiles = Directory.GetFiles(FileSystem.AppDataDirectory, prefix + "*");
+
+                        foreach (var file in oldFiles)
+                        {
+                            if (!file.Contains($"_{version}_"))
+                            {
+                                try { File.Delete(file); } catch { }
+                            }
+                        }
+
+                        if (File.Exists(localPath))
+                            continue;
+
+                        try
+                        {
+                            var res = await _http.GetAsync(url);
+                            if (!res.IsSuccessStatusCode) continue;
+
+                            var bytes = await res.Content.ReadAsByteArrayAsync();
+                            if (bytes.Length == 0) continue;
+
+                            File.WriteAllBytes(localPath, bytes);
+                        }
+                        catch { }
+                    }
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            await Task.WhenAll(tasks);
         }
         finally
         {
-            _isSyncing = false;
+            _lock.Release();
         }
     }
 
@@ -57,14 +110,21 @@ public class SyncService
         if (_timer != null) return;
 
         var dispatcher = Application.Current?.Dispatcher;
-        if (dispatcher is null) return;
-
+        if (dispatcher == null) return;
+        _http.Timeout = TimeSpan.FromSeconds(10);
         _timer = dispatcher.CreateTimer();
-        _timer.Interval = TimeSpan.FromSeconds(30); // tự động chạy định kì mỗi 30 giây
+        _timer.Interval = TimeSpan.FromMinutes(5);
 
-        _timer.Tick += async (s, e) =>
+        _timer.Tick += async (_, _) =>
         {
-            await SyncAllAsync();
+            try
+            {
+                await SyncAllAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("TIMER SYNC ERROR: " + ex.Message);
+            }
         };
 
         _timer.Start();

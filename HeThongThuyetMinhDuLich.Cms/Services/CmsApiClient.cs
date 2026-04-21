@@ -321,6 +321,28 @@ public class CmsApiClient(
         }
     }
 
+    public async Task<NguoiDungDangHoatDongResponse> GetNguoiDungDangHoatDongAsync(int withinMinutes = 15, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var client = CreateClient();
+            return await client.GetFromJsonAsync<NguoiDungDangHoatDongResponse>(
+                       $"api/lichsuphat/thong-ke/nguoi-dung-dang-hoat-dong?withinMinutes={withinMinutes}",
+                       cancellationToken)
+                   ?? new NguoiDungDangHoatDongResponse
+                   {
+                       WithinMinutes = withinMinutes
+                   };
+        }
+        catch
+        {
+            return new NguoiDungDangHoatDongResponse
+            {
+                WithinMinutes = withinMinutes
+            };
+        }
+    }
+
     public async Task<IReadOnlyList<LichSuPhatItem>> GetLichSuPhatAsync(CancellationToken cancellationToken = default)
     {
         try

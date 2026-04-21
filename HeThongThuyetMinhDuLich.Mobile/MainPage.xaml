@@ -483,6 +483,7 @@
                             <Image x:Name="SelectedPoiHeroImage"
                                    Aspect="AspectFill"
                                    HeightRequest="220" />
+                            
                             <Label x:Name="PoiGalleryEmptyLabel"
                                    Text=""
                                    HorizontalOptions="Center"
@@ -507,7 +508,7 @@
                                         Stroke="#DCE8F7"
                                         StrokeThickness="1"
                                         StrokeShape="RoundRectangle 12">
-                                    <Image Source="{Binding DuongDanHinhAnh}"
+                                    <Image Source="http://10.0.2.2:5000/images/poi/VK113/01.jpg"
                                            Aspect="AspectFill"
                                            HeightRequest="84"
                                            WidthRequest="84" />

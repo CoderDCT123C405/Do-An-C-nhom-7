@@ -129,6 +129,36 @@ public class LichSuPhatController(DuLichDbContext dbContext) : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("thong-ke/nguoi-dung-dang-hoat-dong")]
+    [Authorize(Roles = "Admin,BienTap")]
+    public async Task<ActionResult<object>> ThongKeNguoiDungDangHoatDong([FromQuery] int withinMinutes = 15)
+    {
+        var normalizedMinutes = Math.Clamp(withinMinutes, 1, 24 * 60);
+        var thresholdUtc = DateTime.UtcNow.AddMinutes(-normalizedMinutes);
+
+        var activeRows = await dbContext.LichSuPhats
+            .AsNoTracking()
+            .Where(x => x.MaNguoiDung.HasValue && x.ThoiGianBatDau >= thresholdUtc)
+            .GroupBy(x => x.MaNguoiDung!.Value)
+            .Select(g => new
+            {
+                MaNguoiDung = g.Key,
+                LanHoatDongGanNhat = g.Max(x => x.ThoiGianBatDau),
+                SoLuotNghe = g.Count()
+            })
+            .OrderByDescending(x => x.LanHoatDongGanNhat)
+            .ToListAsync();
+
+        return Ok(new
+        {
+            WithinMinutes = normalizedMinutes,
+            MocThoiGianUtc = thresholdUtc,
+            SoNguoiDungDangHoatDong = activeRows.Count,
+            TongLuotNgheTrongKhoang = activeRows.Sum(x => x.SoLuotNghe),
+            DanhSach = activeRows
+        });
+    }
+
     [HttpPost]
     public async Task<ActionResult<LichSuPhat>> Create(LichSuPhatDto model)
     {

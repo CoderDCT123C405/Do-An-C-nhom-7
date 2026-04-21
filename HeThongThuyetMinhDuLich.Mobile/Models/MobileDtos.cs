@@ -134,6 +134,18 @@ public class LichSuPhatCreateRequest
     public int? ThoiLuongDaNghe { get; set; }
 }
 
+public class LichSuSuDungItem
+{
+    public long MaLichSuPhat { get; set; }
+    public int MaDiem { get; set; }
+    public string? TenDiem { get; set; }
+    public int MaNoiDung { get; set; }
+    public string? TieuDeNoiDung { get; set; }
+    public string? CachKichHoat { get; set; }
+    public DateTime ThoiGianBatDau { get; set; }
+    public int? ThoiLuongDaNghe { get; set; }
+}
+
 public class NgonNguItem
 {
     public int MaNgonNgu { get; set; }

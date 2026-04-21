@@ -99,4 +99,17 @@
 		<AndroidResource Include="Platforms\Android\Resources\values\colors.xml" LogicalName="values/colors.xml" />
 		<AndroidResource Include="Platforms\Android\Resources\values\google_maps_api.xml" LogicalName="values/google_maps_api.xml" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Compile Update="Resources\Localization\Strings.fr.Designer.cs">
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>Strings.fr.resx</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+	<ItemGroup>
+	  <EmbeddedResource Update="Resources\Localization\Strings.fr.resx">
+	    <Generator>ResXFileCodeGenerator</Generator>
+	    <LastGenOutput>Strings.fr.Designer.cs</LastGenOutput>
+	  </EmbeddedResource>
+	</ItemGroup>
 </Project>

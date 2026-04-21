@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="HeThongThuyetMinhDuLich.Mobile.UsageHistoryPage"
+             Title="Lich su su dung">
+    <Grid RowDefinitions="Auto,*" Padding="16" RowSpacing="12">
+        <Button Grid.Row="0"
+                x:Name="ReloadButton"
+                Text="Tai lai"
+                BackgroundColor="#2E5BCA"
+                TextColor="White"
+                CornerRadius="10"
+                Clicked="OnReloadClicked" />
+
+        <CollectionView Grid.Row="1"
+                        x:Name="HistoryCollection"
+                        SelectionMode="None">
+            <CollectionView.EmptyView>
+                <Label x:Name="EmptyLabel"
+                       Text="Chua co lich su su dung hoac ban dang offline."
+                       HorizontalTextAlignment="Center"
+                       VerticalTextAlignment="Center"
+                       TextColor="#6A7F96" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border Margin="0,0,0,10"
+                            Padding="10"
+                            Stroke="#D8E6F7"
+                            Background="#FFFFFF"
+                            StrokeShape="RoundRectangle 12">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{Binding TieuDeNoiDung}"
+                                   FontFamily="OpenSansSemibold"
+                                   FontSize="14"
+                                   TextColor="#1F3552" />
+                            <Label Text="{Binding TenDiem, StringFormat='Diem: {0}'}"
+                                   FontSize="12"
+                                   TextColor="#4D6B8A" />
+                            <Label Text="{Binding CachKichHoat, StringFormat='Kich hoat: {0}'}"
+                                   FontSize="12"
+                                   TextColor="#4D6B8A" />
+                            <Label Text="{Binding ThoiGianBatDauDisplay}"
+                                   FontSize="12"
+                                   TextColor="#4D6B8A" />
+                            <Label Text="{Binding ThoiLuongDisplay}"
+                                   FontSize="12"
+                                   TextColor="#4D6B8A" />
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

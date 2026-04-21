@@ -9,7 +9,8 @@ namespace HeThongThuyetMinhDuLich.Mobile.Services;
 public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheStore cacheStore, AuthSession authSession)
 {
     private const string CacheGenerationPreferenceKey = "mobile.cache.generation";
-    private const string CurrentCacheGeneration = "sqlserver-sync-v3-images";
+    private const string CurrentCacheGeneration = "sqlserver-sync-v4-poi-images";
+    private const string ApiUrlPreferenceKey = "api_url";
 
     private string? _resolvedBaseUrl;
     private bool _cacheCompatibilityChecked;
@@ -24,13 +25,14 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
     private static readonly string[] AndroidApiBaseUrls =
     [
         "http://10.0.2.2:5000/",
-        "http://10.0.2.2:61397/"
+        "http://127.0.0.1:5000/",
+        "http://localhost:5000/"
     ];
 
     private static readonly string[] DesktopApiBaseUrls =
     [
         "http://localhost:5000/",
-        "http://localhost:61397/"
+        "http://127.0.0.1:5000/"
     ];
 
     private const string SyncKeyPois = MobileCacheStore.SyncKeyPois;
@@ -89,10 +91,9 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
             return absolute.ToString();
         }
 
-        var baseUrl = _resolvedBaseUrl ?? GetCandidateBaseUrls().First();
+        var baseUrl = GetPreferredBaseUrl();
         return new Uri(new Uri(baseUrl), pathOrUrl.TrimStart('/')).ToString();
     }
-
     public string ResolveAudioUrl(NoiDungItem item)
     {
         if (!string.IsNullOrWhiteSpace(item.TepAmThanhNoiBo))
@@ -139,11 +140,11 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
                 return androidBuilder.Uri.ToString();
             }
 
-            return absolute.ToString();
+            return AppendImageCacheVersion(absolute.ToString());
         }
 
-        var baseUrl = _resolvedBaseUrl ?? GetCandidateBaseUrls().First();
-        return new Uri(new Uri(baseUrl), pathOrUrl.TrimStart('/')).ToString();
+        var baseUrl = GetPreferredBaseUrl();
+        return AppendImageCacheVersion(new Uri(new Uri(baseUrl), pathOrUrl.TrimStart('/')).ToString());
     }
 
     public async Task<string> GetPlayableAudioSourceAsync(NoiDungItem item)
@@ -436,6 +437,34 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
 
     // ================== LICH SU PHAT ==================
 
+    public async Task<IReadOnlyList<LichSuSuDungItem>> GetLichSuSuDungCuaToiAsync()
+    {
+        if (!authSession.MaNguoiDung.HasValue || authSession.MaNguoiDung.Value <= 0)
+        {
+            return [];
+        }
+
+        if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+        {
+            return [];
+        }
+
+        try
+        {
+            using var client = await CreateApiClientAsync();
+            var items = await client.GetFromJsonAsync<List<LichSuSuDungItem>>(
+                            $"api/lichsuphat/nguoidung/{authSession.MaNguoiDung.Value}")
+                        ?? [];
+            return items
+                .OrderByDescending(x => x.ThoiGianBatDau)
+                .ToList();
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
     public async Task CreateLichSuPhatAsync(LichSuPhatCreateRequest request)
     {
         var normalizedRequest = NormalizePlaybackHistoryRequest(request);
@@ -545,6 +574,16 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
 
     private async Task<HttpClient> CreateApiClientAsync()
     {
+        var savedBaseUrlRaw = Preferences.Get(ApiUrlPreferenceKey, string.Empty);
+        if (!string.IsNullOrWhiteSpace(savedBaseUrlRaw))
+        {
+            var savedBaseUrl = NormalizeBaseUrl(savedBaseUrlRaw);
+            if (!string.Equals(savedBaseUrl, _resolvedBaseUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                _resolvedBaseUrl = null;
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(_resolvedBaseUrl))
         {
             return CreateClientForBaseUrl(_resolvedBaseUrl);
@@ -636,9 +675,68 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
 
     private static IReadOnlyList<string> GetCandidateBaseUrls()
     {
-        return DeviceInfo.Platform == DevicePlatform.Android
+        var candidates = new List<string>();
+        var savedApiUrl = Preferences.Get(ApiUrlPreferenceKey, string.Empty);
+        if (!string.IsNullOrWhiteSpace(savedApiUrl))
+        {
+            candidates.Add(savedApiUrl);
+        }
+
+        candidates.AddRange(DeviceInfo.Platform == DevicePlatform.Android
             ? AndroidApiBaseUrls
-            : DesktopApiBaseUrls;
+            : DesktopApiBaseUrls);
+
+        return candidates
+            .Select(NormalizeBaseUrl)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string NormalizeBaseUrl(string value)
+    {
+        var trimmed = value.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return "http://localhost:5000/";
+        }
+
+        if (!trimmed.EndsWith("/", StringComparison.Ordinal))
+        {
+            trimmed += "/";
+        }
+
+        return trimmed;
+    }
+
+    private string GetPreferredBaseUrl()
+    {
+        var savedApiUrl = Preferences.Get(ApiUrlPreferenceKey, string.Empty);
+        if (!string.IsNullOrWhiteSpace(savedApiUrl))
+        {
+            return NormalizeBaseUrl(savedApiUrl);
+        }
+
+        return NormalizeBaseUrl(_resolvedBaseUrl ?? GetCandidateBaseUrls().First());
+    }
+
+    private static string AppendImageCacheVersion(string absoluteUrl)
+    {
+        if (!Uri.TryCreate(absoluteUrl, UriKind.Absolute, out var uri))
+        {
+            return absoluteUrl;
+        }
+
+        if (uri.Query.Contains("v=", StringComparison.OrdinalIgnoreCase))
+        {
+            return absoluteUrl;
+        }
+
+        var builder = new UriBuilder(uri);
+        var query = builder.Query.TrimStart('?');
+        builder.Query = string.IsNullOrWhiteSpace(query)
+            ? $"v={CurrentCacheGeneration}"
+            : $"{query}&v={CurrentCacheGeneration}";
+        return builder.Uri.ToString();
     }
 
     private static LichSuPhatCreateRequest NormalizePlaybackHistoryRequest(LichSuPhatCreateRequest request)

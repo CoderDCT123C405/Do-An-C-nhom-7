@@ -12,6 +12,7 @@ namespace HeThongThuyetMinhDuLich.Api.Controllers;
 public class HinhAnhDiemThamQuanController(DuLichDbContext dbContext, IWebHostEnvironment environment) : ControllerBase
 {
     private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
+    private const string PoiImageRequestPrefix = "/images/poi/";
 
     [HttpGet("diem/{maDiem:int}")]
     public async Task<ActionResult<IEnumerable<object>>> GetByDiem(int maDiem)
@@ -58,13 +59,13 @@ public class HinhAnhDiemThamQuanController(DuLichDbContext dbContext, IWebHostEn
             return BadRequest(new { message = "Chi ho tro file jpg, jpeg, png, webp." });
         }
 
-        var rootPath = environment.WebRootPath;
-        if (string.IsNullOrWhiteSpace(rootPath))
+        var poiFolderName = SanitizePathSegment(diem.MaDinhDanh);
+        if (string.IsNullOrWhiteSpace(poiFolderName))
         {
-            rootPath = Path.Combine(environment.ContentRootPath, "wwwroot");
+            poiFolderName = $"POI{request.MaDiem}";
         }
 
-        var uploadFolder = Path.Combine(rootPath, "uploads", "hinhanh");
+        var uploadFolder = Path.Combine(GetSharedPoiImageRootPath(), poiFolderName);
         Directory.CreateDirectory(uploadFolder);
 
         var safeFileName = $"{Guid.NewGuid():N}{extension}";
@@ -87,7 +88,7 @@ public class HinhAnhDiemThamQuanController(DuLichDbContext dbContext, IWebHostEn
             }
         }
 
-        var duongDan = $"/uploads/hinhanh/{safeFileName}";
+        var duongDan = $"{PoiImageRequestPrefix}{poiFolderName}/{safeFileName}";
         var entity = new HinhAnhDiemThamQuan
         {
             MaDiem = request.MaDiem,
@@ -154,16 +155,8 @@ public class HinhAnhDiemThamQuanController(DuLichDbContext dbContext, IWebHostEn
             return NotFound();
         }
 
-        var rootPath = environment.WebRootPath;
-        if (string.IsNullOrWhiteSpace(rootPath))
+        if (TryResolveImagePath(item.DuongDanHinhAnh, out var fullPath))
         {
-            rootPath = Path.Combine(environment.ContentRootPath, "wwwroot");
-        }
-
-        if (!string.IsNullOrWhiteSpace(item.DuongDanHinhAnh))
-        {
-            var relativePath = item.DuongDanHinhAnh.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-            var fullPath = Path.Combine(rootPath, relativePath);
             if (System.IO.File.Exists(fullPath))
             {
                 System.IO.File.Delete(fullPath);
@@ -211,5 +204,74 @@ public class HinhAnhDiemThamQuanController(DuLichDbContext dbContext, IWebHostEn
         {
             image.LaAnhDaiDien = image.MaHinhAnh == representative.MaHinhAnh;
         }
+    }
+
+    private string GetSharedPoiImageRootPath()
+    {
+        return Path.GetFullPath(Path.Combine(environment.ContentRootPath, "..", "wwwroot", "images", "poi"));
+    }
+
+    private string GetApiWebRootPath()
+    {
+        var rootPath = environment.WebRootPath;
+        if (!string.IsNullOrWhiteSpace(rootPath))
+        {
+            return rootPath;
+        }
+
+        return Path.Combine(environment.ContentRootPath, "wwwroot");
+    }
+
+    private bool TryResolveImagePath(string? imagePath, out string fullPath)
+    {
+        fullPath = string.Empty;
+        if (string.IsNullOrWhiteSpace(imagePath))
+        {
+            return false;
+        }
+
+        var normalizedRelativePath = imagePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var comparePath = imagePath.Replace('\\', '/');
+
+        if (comparePath.StartsWith(PoiImageRequestPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            var sharedRoot = GetSharedPoiImageRootPath();
+            return TryBuildPathUnderRoot(sharedRoot, normalizedRelativePath["images/poi/".Length..], out fullPath);
+        }
+
+        return TryBuildPathUnderRoot(GetApiWebRootPath(), normalizedRelativePath, out fullPath);
+    }
+
+    private static bool TryBuildPathUnderRoot(string rootPath, string relativePath, out string fullPath)
+    {
+        fullPath = string.Empty;
+        var rootFullPath = Path.GetFullPath(rootPath);
+        var candidatePath = Path.GetFullPath(Path.Combine(rootFullPath, relativePath));
+        var rootPrefix = rootFullPath.EndsWith(Path.DirectorySeparatorChar)
+            ? rootFullPath
+            : rootFullPath + Path.DirectorySeparatorChar;
+
+        if (!candidatePath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        fullPath = candidatePath;
+        return true;
+    }
+
+    private static string SanitizePathSegment(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var invalid = Path.GetInvalidFileNameChars();
+        var chars = value.Trim()
+            .Select(ch => invalid.Contains(ch) || ch == '/' || ch == '\\' ? '-' : ch)
+            .ToArray();
+
+        return new string(chars).Trim('-', ' ');
     }
 }

@@ -2,7 +2,8 @@ param(
     [ValidateSet("online", "offline")]
     [string]$Mode = "online",
     [switch]$ResetOfflineDb,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$LocalOnlyApi
 )
 
 $ErrorActionPreference = "SilentlyContinue"
@@ -33,6 +34,22 @@ function Get-ListeningPid {
     return [int]$line.Matches[0].Groups[1].Value
 }
 
+function Get-LocalIpv4Addresses {
+    $addresses = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.IPAddress -ne "127.0.0.1" -and
+            $_.PrefixOrigin -ne "WellKnown" -and
+            $_.IPAddress -notlike "169.254.*"
+        } |
+        Select-Object -ExpandProperty IPAddress -Unique
+
+    if (-not $addresses) {
+        return @()
+    }
+
+    return $addresses | Sort-Object
+}
+
 $cmsPort = 5256
 if (Test-PortListening -Port $cmsPort) {
     for ($port = 5257; $port -le 5275; $port++) {
@@ -43,6 +60,10 @@ if (Test-PortListening -Port $cmsPort) {
     }
 }
 $cmsUrl = "http://localhost:$cmsPort"
+$apiPort = 5000
+$apiBindHost = if ($LocalOnlyApi) { "localhost" } else { "0.0.0.0" }
+$apiBindUrl = "http://${apiBindHost}:$apiPort"
+$apiHealthUrl = "http://localhost:$apiPort"
 
 # $dotnetHome = Join-Path (Get-Location) ".dotnet-home"
 # New-Item -ItemType Directory -Path $dotnetHome -Force | Out-Null
@@ -157,17 +178,17 @@ if (-not $SkipBuild) {
     Write-Host "Skip build: using existing binaries."
 }
 
-Write-Host "Starting API at http://localhost:5000 ..."
+Write-Host "Starting API at $apiBindUrl ..."
 $api = $null
 $apiProjectDir = Join-Path (Get-Location) "HeThongThuyetMinhDuLich.Api"
 $apiBinDebug = Join-Path (Get-Location) "HeThongThuyetMinhDuLich.Api\bin\Debug"
 $apiDll = Get-LatestDllPath -ProjectBinDebugDir $apiBinDebug -DllName "HeThongThuyetMinhDuLich.Api.dll"
 $apiProjectPath = "HeThongThuyetMinhDuLich.Api\HeThongThuyetMinhDuLich.Api.csproj"
-$existingApiPid = Get-ListeningPid -Port 5000
+$existingApiPid = Get-ListeningPid -Port $apiPort
 $apiReused = $false
 if ($existingApiPid) {
     try {
-        $apiStatus = (Invoke-WebRequest -Uri "http://localhost:5000/swagger/index.html" -UseBasicParsing -TimeoutSec 4).StatusCode
+        $apiStatus = (Invoke-WebRequest -Uri "$apiHealthUrl/swagger/index.html" -UseBasicParsing -TimeoutSec 4).StatusCode
         if ($apiStatus -ge 200 -and $apiStatus -lt 400) {
             $apiReused = $true
             Write-Host "API already running on :5000 (PID: $existingApiPid). Reusing existing process."
@@ -190,7 +211,7 @@ if (-not $apiReused) {
         }
     }
     $api = Start-Process -FilePath "dotnet" `
-        -ArgumentList "exec `"$apiDll`" --urls http://localhost:5000 --contentRoot `"$apiProjectDir`"" `
+        -ArgumentList "exec `"$apiDll`" --urls $apiBindUrl --contentRoot `"$apiProjectDir`"" `
         -WorkingDirectory (Get-Location) `
         -RedirectStandardOutput ".\api.run.log" `
         -RedirectStandardError ".\api.run.err.log" `
@@ -230,7 +251,7 @@ for ($i = 0; $i -lt 10 -and -not ($apiOk -and $cmsOk); $i++) {
     Start-Sleep -Seconds 2
     if (-not $apiOk) {
         try {
-            $apiStatus = (Invoke-WebRequest -Uri "http://localhost:5000/swagger/index.html" -UseBasicParsing -TimeoutSec 5).StatusCode
+            $apiStatus = (Invoke-WebRequest -Uri "$apiHealthUrl/swagger/index.html" -UseBasicParsing -TimeoutSec 5).StatusCode
             if ($apiStatus -ge 200 -and $apiStatus -lt 400) { $apiOk = $true }
         } catch {}
     }
@@ -247,12 +268,24 @@ Write-Host "Run complete."
 Write-Host " - Database Mode: $Mode ($dbProvider)"
 Write-Host " - API PID: $(if($apiReused){$existingApiPid}else{$api.Id})"
 Write-Host " - CMS PID: $($cms.Id)"
-Write-Host " - API: $(if($apiOk){'OK'}else{'FAIL'})  http://localhost:5000/swagger/index.html"
+Write-Host " - API: $(if($apiOk){'OK'}else{'FAIL'})  $apiHealthUrl/swagger/index.html"
 Write-Host " - CMS: $(if($cmsOk){'OK'}else{'FAIL'})  $cmsUrl"
+
+if (-not $LocalOnlyApi) {
+    $localIps = Get-LocalIpv4Addresses
+    if ($localIps.Count -gt 0) {
+        Write-Host " - Android Emulator API: http://10.0.2.2:$apiPort"
+        foreach ($ip in $localIps) {
+            Write-Host " - Real Device API: http://${ip}:$apiPort"
+        }
+    } else {
+        Write-Host " - Real Device API: khong tim thay IPv4 LAN, kiem tra adapter mang."
+    }
+}
 
 if ($apiOk) {
     try {
-        $poiCount = (Invoke-RestMethod -Uri "http://localhost:5000/api/diemthamquan" -Method Get -TimeoutSec 8).Count
+        $poiCount = (Invoke-RestMethod -Uri "$apiHealthUrl/api/diemthamquan" -Method Get -TimeoutSec 8).Count
         Write-Host " - API Data (DiemThamQuan): $poiCount"
         if ($poiCount -eq 0) {
             Write-Host "   WARNING: DB dang trong. Chay lai voi -ResetOfflineDb de seed lai du lieu mau."

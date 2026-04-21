@@ -3,6 +3,7 @@ using HeThongThuyetMinhDuLich.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.FileProviders;
 using System.Text.Json.Serialization;
 using System.Text;
 using System.IO;
@@ -83,7 +84,16 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+var sharedWwwrootPath = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "wwwroot"));
+if (Directory.Exists(sharedWwwrootPath))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(sharedWwwrootPath)
+    });
+}
+
 app.UseStaticFiles();
 app.MapControllers();
-
 app.Run();

@@ -17,7 +17,14 @@ using Android.Media;
 namespace HeThongThuyetMinhDuLich.Mobile;
 
 public partial class MainPage : ContentPage
-{
+{   
+    private string _baseUrl;
+    private string GetFullUrl(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return "";
+
+        return _baseUrl.TrimEnd('/') + "/" + path.TrimStart('/');
+    }
     private static readonly TimeSpan GeofenceCooldown = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan GeofenceSuppressionAfterStop = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan GpsTestStepInterval = TimeSpan.FromSeconds(6);
@@ -29,6 +36,7 @@ public partial class MainPage : ContentPage
     private const double MaximumAccuracyBufferMeters = 25;
     private const string GpxTestAssetName = "vinh-khanh-food-tour.gpx";
 
+   private readonly SyncService _syncService;
     private readonly MobileApiClient _apiClient;
     private readonly AuthSession _authSession;
     private readonly LanguageService _languageService;
@@ -48,14 +56,12 @@ public partial class MainPage : ContentPage
     private MauiMap? _mapView;
     private IDispatcherTimer? _gpsTimer;
     private IDispatcherTimer? _gpsTestTimer;
-    private IDispatcherTimer? _syncTimer;
     private Location? _currentLocation;
     private DiemThamQuanItem? _nearestPoi;
     private List<Location> _gpsTestTrack = new List<Location>();
     private IReadOnlyList<SimulationWaypoint> _gpsTestWaypoints = new List<SimulationWaypoint>();
     private readonly HashSet<int> _gpsTestTriggeredPoiIds = new HashSet<int>();
     private bool _isRefreshingGps;
-    private bool _isSyncing;
     private bool _isConnectivitySubscribed;
     private bool _isHandlingPoiSelection;
     private bool _isUpdatingLanguageSelection;
@@ -78,11 +84,13 @@ public partial class MainPage : ContentPage
 #endif
 
     public MainPage(MobileApiClient apiClient, AuthSession authSession, LanguageService languageService)
-    {
+    {   
         InitializeComponent();
         _apiClient = apiClient;
         _authSession = authSession;
         _languageService = languageService;
+        _baseUrl = Preferences.Get("api_url", "http://10.0.2.2:5000");
+        _syncService = new SyncService(_apiClient, _baseUrl);
         PoiCollection.ItemsSource = _visibleDiemThamQuan;
         ContentCollection.ItemsSource = _noiDung;
         PoiGalleryCollection.ItemsSource = _selectedPoiImages;
@@ -93,31 +101,42 @@ public partial class MainPage : ContentPage
         ConfigureToolbar();
     }
 
-    protected override async void OnAppearing()
+   protected override async void OnAppearing()
+{
+    base.OnAppearing();
+
+    try
     {
-        base.OnAppearing();
         SubscribeLanguageChanges();
         ApplyLocalization();
         ConfigureToolbar();
 
         EnsureConnectivitySubscription();
 
-        try
-        {
-            await LoadNgonNguAsync();
-            await LoadDiemThamQuanAsync();
-            await EnsureGpsTestTrackLoadedAsync();
-            await SyncOfflineStateWithRetriesAsync();
-            await RefreshGpsAsync(requestPermissionIfNeeded: true, showErrors: false);
-            StartGpsTimer();
-            StartSyncTimer();
-        }
-        catch (Exception ex)
-        {
-            await ShowAlertAsync(T("StartupErrorTitle"), _languageService.Format("StartupErrorBody", ex.Message), T("ConfirmAction"));
-        }
-    }
+        await LoadNgonNguAsync();
+        await LoadDiemThamQuanAsync();
 
+        if (_diemThamQuan.Count > 0)
+        {
+            var firstPoi = _diemThamQuan.First();
+            await SelectPoiAsync(firstPoi, false, "auto", false);
+        }
+
+        // 🔥 sync lần đầu
+        _ = _syncService.SyncAllAsync();
+        // 🔥 auto sync
+        _syncService.StartAutoSync();
+
+        await EnsureGpsTestTrackLoadedAsync();
+        await RefreshGpsAsync(true, false);
+
+        StartGpsTimer();
+    }
+    catch (Exception ex)
+    {
+        await DisplayAlertAsync("Loi", ex.Message, "OK");
+    }
+}
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
@@ -125,12 +144,7 @@ public partial class MainPage : ContentPage
         StopGpsTimer();
         StopPlayback();
         UnsubscribeLanguageChanges();
-
-        if (_syncTimer is not null)
-        {
-            _syncTimer.Stop();
-            _syncTimer = null;
-        }
+       
 
         if (_isConnectivitySubscribed)
         {
@@ -152,23 +166,16 @@ public partial class MainPage : ContentPage
 
     private async void OnConnectivityChanged(object? sender, ConnectivityChangedEventArgs e)
     {
-        if (e.NetworkAccess != NetworkAccess.Internet || _isSyncing)
-        {
-            return;
-        }
-
         try
         {
-            _isSyncing = true;
-            await SyncOfflineStateWithRetriesAsync();
+            if (e.NetworkAccess != NetworkAccess.Internet)
+                return;
+
+            await _syncService.SyncAllAsync();
         }
-        catch
+        catch (Exception ex)
         {
-            // ignore reconnect sync failures
-        }
-        finally
-        {
-            _isSyncing = false;
+            System.Diagnostics.Debug.WriteLine("CONNECT ERROR: " + ex.Message);
         }
     }
 
@@ -222,88 +229,6 @@ public partial class MainPage : ContentPage
             ?? items.FirstOrDefault();
         SetUnifiedLanguageSelection(defaultLang?.MaNgonNgu ?? 0);
         UpdateLanguageStateLabel();
-    }
-
-    private void StartSyncTimer()
-    {
-        if (_syncTimer is not null)
-        {
-            return;
-        }
-
-        _syncTimer = Dispatcher.CreateTimer();
-        _syncTimer.Interval = TimeSpan.FromMinutes(10);
-        _syncTimer.Tick += async (_, _) =>
-        {
-            if (_isSyncing)
-            {
-                return;
-            }
-
-            _isSyncing = true;
-            try
-            {
-                await SyncOfflineStateWithRetriesAsync();
-                var items = await _apiClient.GetDiemThamQuanAsync();
-                if (items.Count != _diemThamQuan.Count ||
-                    !_diemThamQuan.Select(x => (x.MaDiem, x.NgayCapNhat)).SequenceEqual(items.Select(x => (x.MaDiem, x.NgayCapNhat))))
-                {
-                    _diemThamQuan.Clear();
-                    foreach (var item in items)
-                    {
-                        _diemThamQuan.Add(item);
-                    }
-
-                    RefreshPoiLocalization();
-                    UpdateNearestPoi();
-                    RenderMapPins();
-                    UpdateMapViewport();
-                }
-            }
-            catch
-            {
-                // ignore sync failures
-            }
-            finally
-            {
-                _isSyncing = false;
-            }
-        };
-
-        _syncTimer.Start();
-    }
-
-    private async Task SyncOfflineStateWithRetriesAsync()
-    {
-        var poiIds = _diemThamQuan.Select(x => x.MaDiem).ToList();
-        var retryDelays = new[]
-        {
-            TimeSpan.Zero,
-            TimeSpan.FromSeconds(2),
-            TimeSpan.FromSeconds(5)
-        };
-
-        foreach (var delay in retryDelays)
-        {
-            if (delay > TimeSpan.Zero)
-            {
-                await Task.Delay(delay);
-            }
-
-            try
-            {
-                await _apiClient.SyncOfflineStateAsync(poiIds);
-                return;
-            }
-            catch when (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
-            {
-                return;
-            }
-            catch
-            {
-                // retry until delays are exhausted
-            }
-        }
     }
 
     private void StartGpsTimer()
@@ -2068,6 +1993,16 @@ public partial class MainPage : ContentPage
             Priority = 1,
             Command = new Command(async () => await HandleAccountToolbarAsync())
         });
+        ToolbarItems.Add(new ToolbarItem
+        {
+            Text = "⚙️",
+            Order = ToolbarItemOrder.Primary,
+            Priority = 2,
+            Command = new Command(async () =>
+            {
+                await Shell.Current.GoToAsync(nameof(SettingsPage));
+            })
+        });
     }
 
     private async Task HandleAccountToolbarAsync()
@@ -2082,7 +2017,14 @@ public partial class MainPage : ContentPage
             _authSession.DisplayName ?? _authSession.TenDangNhap ?? T("AccountFallback"),
             T("CloseAction"),
             null,
+            "Lich su su dung",
             T("LogoutAction"));
+
+        if (action == "Lich su su dung")
+        {
+            await Shell.Current.GoToAsync(nameof(UsageHistoryPage));
+            return;
+        }
 
         if (action == T("LogoutAction"))
         {
@@ -2365,34 +2307,93 @@ public partial class MainPage : ContentPage
     }
 
     private async Task LoadPoiImagesAsync(int maDiem)
+{
+    var images = await _apiClient.GetHinhAnhByDiemAsync(maDiem);
+    _selectedPoiImages.Clear();
+
+    var poi = _diemThamQuan.FirstOrDefault(x => x.MaDiem == maDiem);
+    var version = poi?.NgayCapNhat.Ticks ?? 0;
+
+    foreach (var img in images)
     {
-        var images = await _apiClient.GetHinhAnhByDiemAsync(maDiem);
-        _selectedPoiImages.Clear();
-        foreach (var image in images)
+        var url = img.DuongDanHinhAnh;
+
+        if (string.IsNullOrWhiteSpace(url))
+            continue;
+
+        // 🔥 FIX URL
+        url = url.Replace("file:///", "")
+                 .Replace("file:/", "")
+                 .Replace("\\", "/");
+
+        if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            url = _baseUrl.TrimEnd('/') + "/" + url.TrimStart('/');
+
+        var fileName = $"{maDiem}_{version}_{Path.GetFileName(url)}";
+        var localPath = Path.Combine(FileSystem.AppDataDirectory, fileName);
+
+        string finalPath;
+
+        // ✅ ƯU TIÊN LOCAL
+        if (File.Exists(localPath))
         {
-            _selectedPoiImages.Add(image);
-        }
-
-        PoiGalleryCard.IsVisible = _selectedPoiImages.Count > 0;
-        PoiGalleryEmptyLabel.IsVisible = _selectedPoiImages.Count == 0;
-        PoiGalleryCollection.IsVisible = _selectedPoiImages.Count > 1;
-
-        var heroImage = _selectedPoiImages.FirstOrDefault(x => x.LaAnhDaiDien) ?? _selectedPoiImages.FirstOrDefault();
-        SetHeroImage(heroImage?.DuongDanHinhAnh);
-
-        if (heroImage is not null)
-        {
-            PoiGalleryCollection.SelectedItem = heroImage;
+            finalPath = "file://" + localPath;
         }
         else
         {
-            PoiGalleryCollection.SelectedItem = null;
+            finalPath = url;
         }
+
+        _selectedPoiImages.Add(new HinhAnhDiemThamQuanItem
+        {
+            DuongDanHinhAnh = finalPath,
+            LaAnhDaiDien = img.LaAnhDaiDien
+        });
     }
 
+    PoiGalleryCard.IsVisible = _selectedPoiImages.Count > 0;
+    PoiGalleryEmptyLabel.IsVisible = _selectedPoiImages.Count == 0;
+    PoiGalleryCollection.IsVisible = _selectedPoiImages.Count > 1;
+
+    var heroImage = _selectedPoiImages.FirstOrDefault(x => x.LaAnhDaiDien)
+                    ?? _selectedPoiImages.FirstOrDefault();
+
+    SetHeroImage(heroImage?.DuongDanHinhAnh);
+    PoiGalleryCollection.SelectedItem = heroImage;
+}
+    private static readonly HttpClient _http = new();
+
+private async Task<string> DownloadImageAsync(string url, string fileName)
+{
+    try
+    {
+        var localPath = Path.Combine(FileSystem.AppDataDirectory, fileName);
+
+        if (File.Exists(localPath))
+            return localPath;
+
+        var response = await _http.GetAsync(url);
+        _http.Timeout = TimeSpan.FromSeconds(10);
+        if (!response.IsSuccessStatusCode)
+            return "";
+
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+
+        if (bytes.Length == 0)
+            return "";
+
+        File.WriteAllBytes(localPath, bytes);
+
+        return localPath;
+    }
+    catch
+    {
+        return "";
+    }
+}
     private void SetHeroImage(string? imageUrl)
     {
-        SelectedPoiHeroImage.Source = string.IsNullOrWhiteSpace(imageUrl) ? null : ImageSource.FromUri(new Uri(imageUrl));
+        SelectedPoiHeroImage.Source = GetFullUrl(imageUrl);
         PoiGalleryEmptyLabel.IsVisible = string.IsNullOrWhiteSpace(imageUrl);
     }
 

@@ -1,7 +1,9 @@
 param(
     [string]$AdbPath = "C:\Program Files (x86)\Android\android-sdk\platform-tools\adb.exe",
     [string]$DeviceId = "emulator-5554",
-    [switch]$UseUnsignedApk
+    [switch]$UseUnsignedApk,
+    [ValidateSet("Release", "Debug")]
+    [string]$Configuration = "Release"
 )
 
 $ErrorActionPreference = "Stop"
@@ -10,20 +12,31 @@ if (-not (Test-Path $AdbPath)) {
     throw "Khong tim thay adb tai: $AdbPath"
 }
 
-$apkDir = Join-Path $PSScriptRoot "HeThongThuyetMinhDuLich.Mobile\bin\Debug\net10.0-android\android-x64"
-if (-not (Test-Path $apkDir)) {
-    throw "Khong tim thay thu muc APK: $apkDir"
-}
-
 $apkName = if ($UseUnsignedApk) {
     "com.companyname.hethongthuyetminhdulich.mobile.apk"
 } else {
     "com.companyname.hethongthuyetminhdulich.mobile-Signed.apk"
 }
 
-$apkPath = Join-Path $apkDir $apkName
-if (-not (Test-Path $apkPath)) {
-    throw "Khong tim thay APK: $apkPath"
+if ($Configuration -eq "Release") {
+    $candidateApkPaths = @(
+        (Join-Path $PSScriptRoot "HeThongThuyetMinhDuLich.Mobile\bin\Release\net10.0-android\publish\$apkName"),
+        (Join-Path $PSScriptRoot "HeThongThuyetMinhDuLich.Mobile\bin\Release\net10.0-android\$apkName"),
+        (Join-Path $PSScriptRoot "HeThongThuyetMinhDuLich.Mobile\bin\Release\net10.0-android\publish\com.companyname.hethongthuyetminhdulich.mobile.apk"),
+        (Join-Path $PSScriptRoot "HeThongThuyetMinhDuLich.Mobile\bin\Release\net10.0-android\com.companyname.hethongthuyetminhdulich.mobile.apk")
+    )
+} else {
+    $candidateApkPaths = @(
+        (Join-Path $PSScriptRoot "HeThongThuyetMinhDuLich.Mobile\bin\Debug\net10.0-android\android-x64\$apkName"),
+        (Join-Path $PSScriptRoot "HeThongThuyetMinhDuLich.Mobile\bin\Debug\net10.0-android\android-x64\com.companyname.hethongthuyetminhdulich.mobile.apk"),
+        (Join-Path $PSScriptRoot "HeThongThuyetMinhDuLich.Mobile\bin\Debug\net10.0-android\$apkName"),
+        (Join-Path $PSScriptRoot "HeThongThuyetMinhDuLich.Mobile\bin\Debug\net10.0-android\com.companyname.hethongthuyetminhdulich.mobile.apk")
+    )
+}
+
+$apkPath = $candidateApkPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $apkPath) {
+    throw "Khong tim thay APK. Da tim trong: $($candidateApkPaths -join '; ')"
 }
 
 $deviceLines = & $AdbPath devices

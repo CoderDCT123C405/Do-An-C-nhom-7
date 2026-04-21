@@ -128,6 +128,22 @@ public class ThongKeTheoKichHoatItem
     public int TongThoiLuongDaNghe { get; set; }
 }
 
+public class NguoiDungDangHoatDongItem
+{
+    public int MaNguoiDung { get; set; }
+    public DateTime LanHoatDongGanNhat { get; set; }
+    public int SoLuotNghe { get; set; }
+}
+
+public class NguoiDungDangHoatDongResponse
+{
+    public int WithinMinutes { get; set; }
+    public DateTime MocThoiGianUtc { get; set; }
+    public int SoNguoiDungDangHoatDong { get; set; }
+    public int TongLuotNgheTrongKhoang { get; set; }
+    public List<NguoiDungDangHoatDongItem> DanhSach { get; set; } = [];
+}
+
 public class NgonNguItem
 {
     public int MaNgonNgu { get; set; }

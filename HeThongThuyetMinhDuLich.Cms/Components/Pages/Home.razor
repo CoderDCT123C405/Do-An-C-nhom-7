@@ -32,7 +32,93 @@
     var longSessionShare = tongLuotNghe > 0
         ? filteredLichSu.Count(x => x.ThoiLuongDaNghe >= LongSessionThresholdSeconds) / (double)tongLuotNghe
         : 0;
+    var activeUserCount = _nguoiDungDangHoatDong.SoNguoiDungDangHoatDong;
+    var activeWindowMinutes = _nguoiDungDangHoatDong.WithinMinutes <= 0 ? 15 : _nguoiDungDangHoatDong.WithinMinutes;
+    var activeListenCount = _nguoiDungDangHoatDong.TongLuotNgheTrongKhoang;
 }
+<style>
+    .dashboard-filter-card {
+    padding: 16px;
+    border-radius: 12px;
+}
+
+/* HEADER */
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* BUTTON TOGGLE */
+.btn-toggle {
+    border: none;
+    background: #f1f3f5;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-toggle:hover {
+    background: #e9ecef;
+}
+
+.btn-toggle .icon {
+    margin-right: 5px;
+}
+
+/* CONTAINER ANIMATION */
+.filter-container {
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.filter-container.closed {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
+}
+
+.filter-container.open {
+    max-height: 500px;
+    opacity: 1;
+    margin-top: 15px;
+}
+
+/* GRID */
+.dashboard-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+/* ITEM */
+.filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.filter-item label {
+    font-size: 13px;
+    color: #666;
+}
+
+.filter-item input,
+.filter-item select {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+</style>
 
 <div class="page-title">
     <div>
@@ -56,69 +142,102 @@
 }
 
 <div class="card dashboard-filter-card">
-    <div class="section-header">
+
+    <!-- HEADER -->
+    <div class="section-header filter-header">
         <div>
             <h4>Filter du lieu</h4>
             <p>Ap dung cho KPI, top du lieu, xu huong nghe va bang lich su.</p>
         </div>
-        <span class="badge badge-muted">Cap nhat theo bo loc hien tai</span>
-    </div>
 
-    <div class="dashboard-filter-grid">
-        <div>
-            <label>Tu ngay</label>
-            <InputDate @bind-Value="_fromDate" TValue="DateTime?" />
-        </div>
+        <div class="filter-actions">
+            <span class="badge badge-muted">Cap nhat theo bo loc hien tai</span>
 
-        <div>
-            <label>Den ngay</label>
-            <InputDate @bind-Value="_toDate" TValue="DateTime?" />
-        </div>
-
-        <div>
-            <label>Diem tham quan</label>
-            <select @bind="_selectedMaDiem">
-                <option value="0">Tat ca diem</option>
-                @foreach (var diem in _diem.OrderBy(x => x.TenDiem))
-                {
-                    <option value="@diem.MaDiem">@diem.TenDiem</option>
-                }
-            </select>
-        </div>
-
-        <div>
-            <label>Min thoi gian nghe</label>
-            <InputNumber @bind-Value="_minDurationSeconds" TValue="int?" />
-        </div>
-
-        <div>
-            <label>Tu khoa</label>
-            <input placeholder="Nguoi dung, diem, noi dung..." @bind="_search" @bind:event="oninput" />
-        </div>
-
-        <div>
-            <label>Bieu do theo</label>
-            <select @bind="_timeResolution">
-                <option value="day">Ngay</option>
-                <option value="hour">Khung gio</option>
-            </select>
-        </div>
-
-        <div>
-            <label>Top hien thi</label>
-            <select @bind="_topCount">
-                <option value="5">Top 5</option>
-                <option value="10">Top 10</option>
-            </select>
+            <button class="btn-toggle" @onclick="ToggleFilter">
+                <span class="icon">@(_showFilter ? "▾" : "▸")</span>
+                @(_showFilter ? "Thu gon" : "Mo rong")
+            </button>
         </div>
     </div>
- </div>
+
+    <!-- BODY -->
+    <div class="filter-container @(_showFilter ? "open" : "closed")">
+
+        <div class="dashboard-filter-grid">
+
+            <div class="filter-item">
+                <label>Tu ngay</label>
+                <InputDate @bind-Value="_fromDate" TValue="DateTime?" />
+            </div>
+
+            <div class="filter-item">
+                <label>Den ngay</label>
+                <InputDate @bind-Value="_toDate" TValue="DateTime?" />
+            </div>
+
+            <div class="filter-item">
+                <label>Diem tham quan</label>
+                <select @bind="_selectedMaDiem">
+                    <option value="0">Tat ca diem</option>
+                    @foreach (var diem in _diem.OrderBy(x => x.TenDiem))
+                    {
+                        <option value="@diem.MaDiem">@diem.TenDiem</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label>Min thoi gian nghe</label>
+                <InputNumber @bind-Value="_minDurationSeconds" TValue="int?" />
+            </div>
+
+            <div class="filter-item">
+                <label>Tu khoa</label>
+                <input placeholder="Nguoi dung, diem, noi dung..."
+                       @bind="_search"
+                       @bind:event="oninput" />
+            </div>
+
+            <div class="filter-item">
+                <label>Bieu do theo</label>
+                <select @bind="_timeResolution">
+                    <option value="day">Ngay</option>
+                    <option value="hour">Khung gio</option>
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label>Top hien thi</label>
+                <select @bind="_topCount">
+                    <option value="5">Top 5</option>
+                    <option value="10">Top 10</option>
+                </select>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _showFilter = true;
+
+    void ToggleFilter()
+    {
+        _showFilter = !_showFilter;
+    }
+}
 
 <div class="dashboard-kpi-grid">
     <div class="card dashboard-kpi-card">
         <small>Tong diem tham quan</small>
         <div class="kpi-value">@_diem.Count</div>
         <p>@_theoDiem.Count(x => x.SoLuotNghe > 0) diem da phat it nhat 1 lan</p>
+    </div>
+
+    <div class="card dashboard-kpi-card">
+        <small>Nguoi dung dang hoat dong (@activeWindowMinutes phut)</small>
+        <div class="kpi-value">@activeUserCount</div>
+        <p>@activeListenCount luot nghe gan nhat</p>
     </div>
 
     <div class="card dashboard-kpi-card">
@@ -474,6 +593,7 @@
     private List<LoaiDiemThamQuanItem> _loai = [];
     private List<ThongKeTheoDiemItem> _theoDiem = [];
     private List<ThongKeTheoKichHoatItem> _theoKichHoat = [];
+    private NguoiDungDangHoatDongResponse _nguoiDungDangHoatDong = new();
     private List<LichSuPhatItem> _lichSuPhat = [];
     private List<MaQRItem> _maQr = [];
     private bool _isLoading;
@@ -510,15 +630,17 @@
             var loaiTask = ApiClient.GetLoaiDiemAsync();
             var theoDiemTask = ApiClient.GetThongKeTheoDiemAsync();
             var theoKichHoatTask = ApiClient.GetThongKeTheoKichHoatAsync();
+            var nguoiDungDangHoatDongTask = ApiClient.GetNguoiDungDangHoatDongAsync(15);
             var lichSuTask = ApiClient.GetLichSuPhatAsync();
             var maQrTask = ApiClient.GetMaQRAsync();
 
-            await Task.WhenAll(diemTask, loaiTask, theoDiemTask, theoKichHoatTask, lichSuTask, maQrTask);
+            await Task.WhenAll(diemTask, loaiTask, theoDiemTask, theoKichHoatTask, nguoiDungDangHoatDongTask, lichSuTask, maQrTask);
 
             _diem = diemTask.Result.ToList();
             _loai = loaiTask.Result.ToList();
             _theoDiem = theoDiemTask.Result.ToList();
             _theoKichHoat = theoKichHoatTask.Result.ToList();
+            _nguoiDungDangHoatDong = nguoiDungDangHoatDongTask.Result;
             _lichSuPhat = lichSuTask.Result.ToList();
             _maQr = maQrTask.Result.ToList();
         }

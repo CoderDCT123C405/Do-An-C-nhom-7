@@ -34,6 +34,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<MainPage>();
         builder.Services.AddSingleton<AppShell>();
         builder.Services.AddTransient<AuthPage>();
+        builder.Services.AddTransient<UsageHistoryPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();
