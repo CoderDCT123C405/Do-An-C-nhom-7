@@ -409,7 +409,10 @@ public class MobileCacheStore
             MaNoiDung = request.MaNoiDung,
             CachKichHoat = request.CachKichHoat,
             ThoiGianBatDau = request.ThoiGianBatDau,
-            ThoiLuongDaNghe = request.ThoiLuongDaNghe
+            ThoiLuongDaNghe = request.ThoiLuongDaNghe,
+            DeviceId = request.DeviceId,
+            SessionId = request.SessionId,
+            LastSeen = request.LastSeen
         });
     }
 
@@ -450,6 +453,7 @@ public class MobileCacheStore
         await _db.CreateTableAsync<CachedNoiDung>();
         await _db.CreateTableAsync<CachedQr>();
         await _db.CreateTableAsync<PendingPlaybackHistory>();
+        await EnsurePendingPlaybackHistorySchemaAsync();
         await _db.CreateTableAsync<CachedSyncCheckpoint>();
 
         _initialized = true;
@@ -511,6 +515,29 @@ public class MobileCacheStore
         }
 
         await _db.ExecuteAsync("ALTER TABLE CachedPoi ADD COLUMN AnhDaiDienUrl TEXT NULL");
+    }
+
+    private async Task EnsurePendingPlaybackHistorySchemaAsync()
+    {
+        var columns = await _db.QueryAsync<CacheColumnInfo>("PRAGMA table_info('PendingPlaybackHistory')");
+        var existingColumns = columns
+            .Select(x => x.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (!existingColumns.Contains(nameof(PendingPlaybackHistory.DeviceId)))
+        {
+            await _db.ExecuteAsync("ALTER TABLE PendingPlaybackHistory ADD COLUMN DeviceId TEXT NULL");
+        }
+
+        if (!existingColumns.Contains(nameof(PendingPlaybackHistory.SessionId)))
+        {
+            await _db.ExecuteAsync("ALTER TABLE PendingPlaybackHistory ADD COLUMN SessionId TEXT NULL");
+        }
+
+        if (!existingColumns.Contains(nameof(PendingPlaybackHistory.LastSeen)))
+        {
+            await _db.ExecuteAsync("ALTER TABLE PendingPlaybackHistory ADD COLUMN LastSeen TEXT NULL");
+        }
     }
 }
 public class CachedPoi
@@ -591,6 +618,9 @@ public class PendingPlaybackHistory
     public string CachKichHoat { get; set; } = string.Empty;
     public DateTime? ThoiGianBatDau { get; set; }
     public int? ThoiLuongDaNghe { get; set; }
+    public string? DeviceId { get; set; }
+    public string? SessionId { get; set; }
+    public DateTime? LastSeen { get; set; }
 }
 
 public class CacheColumnInfo

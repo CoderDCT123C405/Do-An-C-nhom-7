@@ -24,12 +24,13 @@ public class LichSuPhatController(DuLichDbContext dbContext) : ControllerBase
             {
                 x.MaLichSuPhat,
                 x.MaNguoiDung,
-                HoTenNguoiDung = x.NguoiDung != null ? x.NguoiDung.HoTen : null,
+                TenNguoiDung = x.NguoiDung != null ? x.NguoiDung.HoTen : null,
                 x.MaDiem,
                 TenDiem = x.DiemThamQuan != null ? x.DiemThamQuan.TenDiem : null,
                 x.MaNoiDung,
                 TieuDeNoiDung = x.NoiDungThuyetMinh != null ? x.NoiDungThuyetMinh.TieuDe : null,
                 x.CachKichHoat,
+                x.DeviceId,
                 x.ThoiGianBatDau,
                 x.ThoiLuongDaNghe
             })
@@ -51,12 +52,13 @@ public class LichSuPhatController(DuLichDbContext dbContext) : ControllerBase
             {
                 x.MaLichSuPhat,
                 x.MaNguoiDung,
-                HoTenNguoiDung = x.NguoiDung != null ? x.NguoiDung.HoTen : null,
+                TenNguoiDung = x.NguoiDung != null ? x.NguoiDung.HoTen : null,
                 x.MaDiem,
                 TenDiem = x.DiemThamQuan != null ? x.DiemThamQuan.TenDiem : null,
                 x.MaNoiDung,
                 TieuDeNoiDung = x.NoiDungThuyetMinh != null ? x.NoiDungThuyetMinh.TieuDe : null,
                 x.CachKichHoat,
+                x.DeviceId,
                 x.ThoiGianBatDau,
                 x.ThoiLuongDaNghe
             })
@@ -136,24 +138,99 @@ public class LichSuPhatController(DuLichDbContext dbContext) : ControllerBase
         var normalizedMinutes = Math.Clamp(withinMinutes, 1, 24 * 60);
         var thresholdUtc = DateTime.UtcNow.AddMinutes(-normalizedMinutes);
 
-        var activeRows = await dbContext.LichSuPhats
+        var recentRows = await dbContext.LichSuPhats
             .AsNoTracking()
-            .Where(x => x.MaNguoiDung.HasValue && x.ThoiGianBatDau >= thresholdUtc)
+            .Where(x => (x.LastSeen ?? x.ThoiGianBatDau) >= thresholdUtc)
+            .Select(g => new
+            {
+                g.MaLichSuPhat,
+                g.MaNguoiDung,
+                g.DeviceId,
+                g.SessionId,
+                g.IpAddress,
+                LanHoatDong = g.LastSeen ?? g.ThoiGianBatDau
+            })
+            .ToListAsync();
+
+        var authenticatedDeviceIds = recentRows
+            .Where(x => x.MaNguoiDung.HasValue && !string.IsNullOrWhiteSpace(x.DeviceId))
+            .Select(x => x.DeviceId!.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var userGroups = recentRows
+            .Where(x => x.MaNguoiDung.HasValue)
             .GroupBy(x => x.MaNguoiDung!.Value)
             .Select(g => new
             {
-                MaNguoiDung = g.Key,
-                LanHoatDongGanNhat = g.Max(x => x.ThoiGianBatDau),
+                LoaiDinhDanh = "user",
+                DinhDanh = $"user:{g.Key}",
+                MaNguoiDung = (int?)g.Key,
+                DeviceId = g
+                    .Where(x => !string.IsNullOrWhiteSpace(x.DeviceId))
+                    .Select(x => x.DeviceId!.Trim())
+                    .FirstOrDefault(),
+                LanHoatDongGanNhat = g.Max(x => x.LanHoatDong),
                 SoLuotNghe = g.Count()
+            });
+
+        var guestRows = recentRows
+            .Where(x => !x.MaNguoiDung.HasValue)
+            .Where(x =>
+                string.IsNullOrWhiteSpace(x.DeviceId) ||
+                !authenticatedDeviceIds.Contains(x.DeviceId.Trim()));
+
+        var deviceGroups = guestRows
+            .GroupBy(x =>
+            {
+                var deviceId = x.DeviceId?.Trim();
+                if (!string.IsNullOrWhiteSpace(deviceId))
+                {
+                    return $"device:{deviceId}";
+                }
+
+                var sessionId = x.SessionId?.Trim();
+                if (!string.IsNullOrWhiteSpace(sessionId))
+                {
+                    return $"session:{sessionId}";
+                }
+
+                var ipAddress = x.IpAddress?.Trim();
+                if (!string.IsNullOrWhiteSpace(ipAddress))
+                {
+                    return $"ip:{ipAddress}";
+                }
+
+                return $"history:{x.MaLichSuPhat}";
             })
+            .Select(g => new
+            {
+                LoaiDinhDanh = "device",
+                DinhDanh = g.Key,
+                MaNguoiDung = (int?)null,
+                DeviceId = g
+                    .Where(x => !string.IsNullOrWhiteSpace(x.DeviceId))
+                    .Select(x => x.DeviceId!.Trim())
+                    .FirstOrDefault(),
+                LanHoatDongGanNhat = g.Max(x => x.LanHoatDong),
+                SoLuotNghe = g.Count()
+            });
+
+        var activeRows = userGroups
+            .Concat(deviceGroups)
             .OrderByDescending(x => x.LanHoatDongGanNhat)
-            .ToListAsync();
+            .ToList();
+
+        var activeUserCount = activeRows.Count(x => string.Equals(x.LoaiDinhDanh, "user", StringComparison.OrdinalIgnoreCase));
+        var activeDeviceCount = activeRows.Count(x => string.Equals(x.LoaiDinhDanh, "device", StringComparison.OrdinalIgnoreCase));
 
         return Ok(new
         {
             WithinMinutes = normalizedMinutes,
             MocThoiGianUtc = thresholdUtc,
             SoNguoiDungDangHoatDong = activeRows.Count,
+            SoDoiTuongDangHoatDong = activeRows.Count,
+            SoNguoiDungDaDangNhapDangHoatDong = activeUserCount,
+            SoThietBiKhachDangHoatDong = activeDeviceCount,
             TongLuotNgheTrongKhoang = activeRows.Sum(x => x.SoLuotNghe),
             DanhSach = activeRows
         });
@@ -162,6 +239,9 @@ public class LichSuPhatController(DuLichDbContext dbContext) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<LichSuPhat>> Create(LichSuPhatDto model)
     {
+        var deviceId = string.IsNullOrWhiteSpace(model.DeviceId) ? null : model.DeviceId.Trim();
+        var sessionId = string.IsNullOrWhiteSpace(model.SessionId) ? null : model.SessionId.Trim();
+
         var entity = new LichSuPhat
         {
             MaNguoiDung = model.MaNguoiDung,
@@ -169,7 +249,11 @@ public class LichSuPhatController(DuLichDbContext dbContext) : ControllerBase
             MaNoiDung = model.MaNoiDung,
             CachKichHoat = model.CachKichHoat,
             ThoiGianBatDau = model.ThoiGianBatDau ?? DateTime.UtcNow,
-            ThoiLuongDaNghe = model.ThoiLuongDaNghe
+            ThoiLuongDaNghe = model.ThoiLuongDaNghe,
+            DeviceId = deviceId,
+            SessionId = sessionId,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+            LastSeen = model.LastSeen ?? DateTime.UtcNow
         };
 
         dbContext.LichSuPhats.Add(entity);
@@ -187,12 +271,19 @@ public class LichSuPhatController(DuLichDbContext dbContext) : ControllerBase
             return NotFound();
         }
 
+        var deviceId = string.IsNullOrWhiteSpace(model.DeviceId) ? item.DeviceId : model.DeviceId.Trim();
+        var sessionId = string.IsNullOrWhiteSpace(model.SessionId) ? item.SessionId : model.SessionId.Trim();
+
         item.MaNguoiDung = model.MaNguoiDung;
         item.MaDiem = model.MaDiem;
         item.MaNoiDung = model.MaNoiDung;
         item.CachKichHoat = model.CachKichHoat;
         item.ThoiGianBatDau = model.ThoiGianBatDau ?? item.ThoiGianBatDau;
         item.ThoiLuongDaNghe = model.ThoiLuongDaNghe;
+        item.DeviceId = deviceId;
+        item.SessionId = sessionId;
+        item.IpAddress ??= HttpContext.Connection.RemoteIpAddress?.ToString();
+        item.LastSeen = model.LastSeen ?? DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
         return NoContent();

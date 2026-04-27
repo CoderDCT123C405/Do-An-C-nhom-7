@@ -11,9 +11,11 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
     private const string CacheGenerationPreferenceKey = "mobile.cache.generation";
     private const string CurrentCacheGeneration = "sqlserver-sync-v4-poi-images";
     private const string ApiUrlPreferenceKey = "api_url";
+    private const string DeviceIdPreferenceKey = "mobile.device.id";
 
     private string? _resolvedBaseUrl;
     private bool _cacheCompatibilityChecked;
+    private readonly string _sessionId = Guid.NewGuid().ToString("N");
 
     private static readonly HashSet<string> AllowedPlaybackTriggers = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -39,6 +41,19 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
     private const string SyncKeyNoiDung = MobileCacheStore.SyncKeyNoiDung;
     private const string SyncKeyNgonNgu = MobileCacheStore.SyncKeyNgonNgu;
     private const string SyncKeyQr = MobileCacheStore.SyncKeyQr;
+
+    private static string GetOrCreateDeviceId()
+    {
+        var current = Preferences.Default.Get(DeviceIdPreferenceKey, string.Empty)?.Trim();
+        if (!string.IsNullOrWhiteSpace(current))
+        {
+            return current;
+        }
+
+        var generated = $"{DeviceInfo.Platform.ToString().ToLowerInvariant()}-{Guid.NewGuid():N}";
+        Preferences.Default.Set(DeviceIdPreferenceKey, generated);
+        return generated;
+    }
 
     // 🔊 Resolve URL audio
     public string ResolveAudioUrl(string? pathOrUrl)
@@ -533,7 +548,10 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
                 MaNoiDung = item.MaNoiDung,
                 CachKichHoat = item.CachKichHoat,
                 ThoiGianBatDau = item.ThoiGianBatDau,
-                ThoiLuongDaNghe = item.ThoiLuongDaNghe
+                ThoiLuongDaNghe = item.ThoiLuongDaNghe,
+                DeviceId = item.DeviceId,
+                SessionId = item.SessionId,
+                LastSeen = item.LastSeen
             });
 
             var response = await client.PostAsJsonAsync("api/lichsuphat", normalizedRequest);
@@ -710,6 +728,11 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
 
     private string GetPreferredBaseUrl()
     {
+        if (!string.IsNullOrWhiteSpace(_resolvedBaseUrl))
+        {
+            return NormalizeBaseUrl(_resolvedBaseUrl);
+        }
+
         var savedApiUrl = Preferences.Get(ApiUrlPreferenceKey, string.Empty);
         if (!string.IsNullOrWhiteSpace(savedApiUrl))
         {
@@ -739,7 +762,7 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
         return builder.Uri.ToString();
     }
 
-    private static LichSuPhatCreateRequest NormalizePlaybackHistoryRequest(LichSuPhatCreateRequest request)
+    private LichSuPhatCreateRequest NormalizePlaybackHistoryRequest(LichSuPhatCreateRequest request)
     {
         var trigger = string.IsNullOrWhiteSpace(request.CachKichHoat)
             ? "manual"
@@ -750,6 +773,14 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
             trigger = "manual";
         }
 
+        var normalizedDeviceId = string.IsNullOrWhiteSpace(request.DeviceId)
+            ? GetOrCreateDeviceId()
+            : request.DeviceId.Trim();
+
+        var normalizedSessionId = string.IsNullOrWhiteSpace(request.SessionId)
+            ? _sessionId
+            : request.SessionId.Trim();
+
         return new LichSuPhatCreateRequest
         {
             MaNguoiDung = request.MaNguoiDung,
@@ -757,7 +788,10 @@ public class MobileApiClient(IHttpClientFactory httpClientFactory, MobileCacheSt
             MaNoiDung = request.MaNoiDung,
             CachKichHoat = trigger,
             ThoiGianBatDau = request.ThoiGianBatDau,
-            ThoiLuongDaNghe = request.ThoiLuongDaNghe
+            ThoiLuongDaNghe = request.ThoiLuongDaNghe,
+            DeviceId = normalizedDeviceId,
+            SessionId = normalizedSessionId,
+            LastSeen = request.LastSeen ?? DateTime.UtcNow
         };
     }
 

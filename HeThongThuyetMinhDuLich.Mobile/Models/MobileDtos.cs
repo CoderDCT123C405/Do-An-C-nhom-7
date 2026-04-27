@@ -132,6 +132,9 @@ public class LichSuPhatCreateRequest
     public string CachKichHoat { get; set; } = string.Empty;
     public DateTime? ThoiGianBatDau { get; set; }
     public int? ThoiLuongDaNghe { get; set; }
+    public string? DeviceId { get; set; }
+    public string? SessionId { get; set; }
+    public DateTime? LastSeen { get; set; }
 }
 
 public class LichSuSuDungItem

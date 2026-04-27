@@ -9,6 +9,10 @@ public class LichSuPhat
     public string CachKichHoat { get; set; } = string.Empty;
     public DateTime ThoiGianBatDau { get; set; } = DateTime.UtcNow;
     public int? ThoiLuongDaNghe { get; set; }
+    public string? DeviceId { get; set; }
+    public string? SessionId { get; set; }
+    public string? IpAddress { get; set; }
+    public DateTime? LastSeen { get; set; }
 
     public NguoiDung? NguoiDung { get; set; }
     public DiemThamQuan? DiemThamQuan { get; set; }

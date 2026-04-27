@@ -508,7 +508,7 @@
                                         Stroke="#DCE8F7"
                                         StrokeThickness="1"
                                         StrokeShape="RoundRectangle 12">
-                                    <Image Source="http://10.0.2.2:5000/images/poi/VK113/01.jpg"
+                                    <Image Source="{Binding DuongDanHinhAnh}"
                                            Aspect="AspectFill"
                                            HeightRequest="84"
                                            WidthRequest="84" />

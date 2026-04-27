@@ -21,9 +21,18 @@ public partial class MainPage : ContentPage
     private string _baseUrl;
     private string GetFullUrl(string? path)
     {
-        if (string.IsNullOrWhiteSpace(path)) return "";
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return string.Empty;
+        }
 
-        return _baseUrl.TrimEnd('/') + "/" + path.TrimStart('/');
+        var trimmed = path.Trim();
+        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var absolute))
+        {
+            return absolute.ToString();
+        }
+
+        return _baseUrl.TrimEnd('/') + "/" + trimmed.TrimStart('/');
     }
     private static readonly TimeSpan GeofenceCooldown = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan GeofenceSuppressionAfterStop = TimeSpan.FromSeconds(20);
@@ -2306,42 +2315,17 @@ public partial class MainPage : ContentPage
         ContentCollection.ItemsSource = _noiDung;
     }
 
-    private async Task LoadPoiImagesAsync(int maDiem)
+private async Task LoadPoiImagesAsync(int maDiem)
 {
     var images = await _apiClient.GetHinhAnhByDiemAsync(maDiem);
     _selectedPoiImages.Clear();
 
-    var poi = _diemThamQuan.FirstOrDefault(x => x.MaDiem == maDiem);
-    var version = poi?.NgayCapNhat.Ticks ?? 0;
-
     foreach (var img in images)
     {
-        var url = img.DuongDanHinhAnh;
-
-        if (string.IsNullOrWhiteSpace(url))
+        var finalPath = GetFullUrl(img.DuongDanHinhAnh);
+        if (string.IsNullOrWhiteSpace(finalPath))
+        {
             continue;
-
-        // 🔥 FIX URL
-        url = url.Replace("file:///", "")
-                 .Replace("file:/", "")
-                 .Replace("\\", "/");
-
-        if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            url = _baseUrl.TrimEnd('/') + "/" + url.TrimStart('/');
-
-        var fileName = $"{maDiem}_{version}_{Path.GetFileName(url)}";
-        var localPath = Path.Combine(FileSystem.AppDataDirectory, fileName);
-
-        string finalPath;
-
-        // ✅ ƯU TIÊN LOCAL
-        if (File.Exists(localPath))
-        {
-            finalPath = "file://" + localPath;
-        }
-        else
-        {
-            finalPath = url;
         }
 
         _selectedPoiImages.Add(new HinhAnhDiemThamQuanItem

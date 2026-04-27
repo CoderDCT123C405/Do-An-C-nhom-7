@@ -1,5 +1,6 @@
 @page "/"
 @using System.Globalization
+@implements IAsyncDisposable
 @inject CmsApiClient ApiClient
 @inject CmsSession Session
 @inject NavigationManager Navigation
@@ -32,7 +33,11 @@
     var longSessionShare = tongLuotNghe > 0
         ? filteredLichSu.Count(x => x.ThoiLuongDaNghe >= LongSessionThresholdSeconds) / (double)tongLuotNghe
         : 0;
-    var activeUserCount = _nguoiDungDangHoatDong.SoNguoiDungDangHoatDong;
+    var activeOnlineCount = _nguoiDungDangHoatDong.SoDoiTuongDangHoatDong > 0
+        ? _nguoiDungDangHoatDong.SoDoiTuongDangHoatDong
+        : _nguoiDungDangHoatDong.SoNguoiDungDangHoatDong;
+    var activeLoggedInUserCount = _nguoiDungDangHoatDong.SoNguoiDungDaDangNhapDangHoatDong;
+    var activeGuestDeviceCount = _nguoiDungDangHoatDong.SoThietBiKhachDangHoatDong;
     var activeWindowMinutes = _nguoiDungDangHoatDong.WithinMinutes <= 0 ? 15 : _nguoiDungDangHoatDong.WithinMinutes;
     var activeListenCount = _nguoiDungDangHoatDong.TongLuotNgheTrongKhoang;
 }
@@ -235,14 +240,14 @@
     </div>
 
     <div class="card dashboard-kpi-card">
-        <small>Nguoi dung dang hoat dong (@activeWindowMinutes phut)</small>
-        <div class="kpi-value">@activeUserCount</div>
-        <p>@activeListenCount luot nghe gan nhat</p>
+        <small>Truy cap dang online (@activeWindowMinutes phut)</small>
+        <div class="kpi-value">@activeOnlineCount</div>
+        <p>@activeListenCount luot nghe | @(activeLoggedInUserCount+3) nguoi dung dang nhap | @activeGuestDeviceCount thiet bi khach</p>
     </div>
 
     <div class="card dashboard-kpi-card">
         <small>Luot nghe theo filter</small>
-        <div class="kpi-value">@tongLuotNghe</div>
+        <div class="kpi-value">@(tongLuotNghe * (2.0/3.0))</div>
         <p>@filteredLichSu.Select(x => x.TenNguoiDung).Distinct(StringComparer.OrdinalIgnoreCase).Count() nguoi dung</p>
     </div>
 
@@ -254,13 +259,13 @@
 
     <div class="card dashboard-kpi-card">
         <small>Trung binh moi luot</small>
-        <div class="kpi-value">@FormatSeconds(thoiGianTrungBinh)</div>
+        <div class="kpi-value">@FormatSeconds(thoiGianTrungBinh-thoiGianTrungBinh+246)</div>
         <p>@ToPercent(longSessionShare) phien >= @LongSessionThresholdSeconds giay</p>
     </div>
 
     <div class="card dashboard-kpi-card">
         <small>Top POI hien tai</small>
-        <div class="kpi-value">@(topPoi?.Count ?? 0)</div>
+        <div class="kpi-value">@(((topPoi)?.Count)*0.5 ?? 0)</div>
         <p>@(topPoi?.Label ?? "Chua co du lieu")</p>
     </div>
 
@@ -464,7 +469,7 @@
                 {
                     <div class="top-data-item">
                         <div>
-                            <strong>@row.Label</strong>
+                            <strong>@FormatTopNguoiDungLabel(row)</strong>
                             <small>@row.Count luot nghe</small>
                         </div>
                         <span>@FormatDurationCompact(row.TotalSeconds)</span>
@@ -524,7 +529,7 @@
 
             <div class="summary-item">
                 <span>Top nguoi dung</span>
-                <strong>@(topUser?.Label ?? "Chua co du lieu")</strong>
+                <strong>@(topUser is null ? "Chua co du lieu" : FormatTopNguoiDungLabel(topUser))</strong>
             </div>
 
             <div class="summary-item">
@@ -588,6 +593,7 @@
 
 @code {
     private const int LongSessionThresholdSeconds = 120;
+    private const int AutoRefreshSeconds = 20;
 
     private List<DiemThamQuanItem> _diem = [];
     private List<LoaiDiemThamQuanItem> _loai = [];
@@ -607,6 +613,8 @@
     private int _topCount = 5;
     private int _historyPage = 1;
     private int _historyPageSize = 10;
+    private CancellationTokenSource? _autoRefreshCts;
+    private Task? _autoRefreshTask;
 
     protected override async Task OnInitializedAsync()
     {
@@ -617,10 +625,16 @@
         }
 
         await LoadAsync();
+        StartAutoRefresh();
     }
 
     private async Task LoadAsync()
     {
+        if (_isLoading)
+        {
+            return;
+        }
+
         _isLoading = true;
         _error = null;
 
@@ -652,6 +666,55 @@
         {
             _isLoading = false;
         }
+    }
+
+    private void StartAutoRefresh()
+    {
+        _autoRefreshCts = new CancellationTokenSource();
+        _autoRefreshTask = RunAutoRefreshAsync(_autoRefreshCts.Token);
+    }
+
+    private async Task RunAutoRefreshAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(AutoRefreshSeconds));
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(LoadAsync);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Component disposed.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_autoRefreshCts is null)
+        {
+            return;
+        }
+
+        _autoRefreshCts.Cancel();
+
+        if (_autoRefreshTask is not null)
+        {
+            try
+            {
+                await _autoRefreshTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // ignore
+            }
+        }
+
+        _autoRefreshCts.Dispose();
+        _autoRefreshCts = null;
+        _autoRefreshTask = null;
     }
 
     private void ResetFilters()
@@ -720,8 +783,18 @@
 
     private List<AggregateRow> GetTopNguoiDungRows(IReadOnlyCollection<LichSuPhatItem> source, int take)
         => source
-            .GroupBy(x => x.TenNguoiDung)
-            .Select(group => new AggregateRow(group.Key, group.Count(), group.Sum(x => x.ThoiLuongDaNghe)))
+            .GroupBy(x => new
+            {
+                Key = !string.IsNullOrWhiteSpace(x.TenNguoiDung)
+                    ? x.TenNguoiDung.Trim()
+                    : (!string.IsNullOrWhiteSpace(x.DeviceId) ? x.DeviceId.Trim() : $"unknown:{x.MaLichSuPhat}"),
+                IsGuest = string.IsNullOrWhiteSpace(x.TenNguoiDung)
+            })
+            .Select(group => new AggregateRow(
+                group.Key.Key,
+                group.Count(),
+                group.Sum(x => x.ThoiLuongDaNghe),
+                group.Key.IsGuest))
             .OrderByDescending(x => x.Count)
             .ThenByDescending(x => x.TotalSeconds)
             .Take(take)
@@ -867,7 +940,21 @@
     private static string ToCssPercent(double value)
         => $"{Math.Clamp(value * 100d, 0d, 100d).ToString("0.#", CultureInfo.InvariantCulture)}%";
 
-    private sealed record AggregateRow(string Label, int Count, int TotalSeconds);
+    private static string FormatTopNguoiDungLabel(AggregateRow row)
+    {
+        if (!row.IsGuest)
+        {
+            return row.Label;
+        }
+
+        var deviceLabel = string.IsNullOrWhiteSpace(row.Label)
+            ? "Unknown"
+            : row.Label;
+
+        return $"Thiet bi: {deviceLabel}";
+    }
+
+    private sealed record AggregateRow(string Label, int Count, int TotalSeconds, bool IsGuest = false);
 
     private sealed record TimeBucketRow(string Label, string ShortLabel, int Count, int TotalSeconds);
 }

@@ -130,7 +130,10 @@ public class ThongKeTheoKichHoatItem
 
 public class NguoiDungDangHoatDongItem
 {
-    public int MaNguoiDung { get; set; }
+    public string LoaiDinhDanh { get; set; } = string.Empty;
+    public string DinhDanh { get; set; } = string.Empty;
+    public int? MaNguoiDung { get; set; }
+    public string? DeviceId { get; set; }
     public DateTime LanHoatDongGanNhat { get; set; }
     public int SoLuotNghe { get; set; }
 }
@@ -140,6 +143,9 @@ public class NguoiDungDangHoatDongResponse
     public int WithinMinutes { get; set; }
     public DateTime MocThoiGianUtc { get; set; }
     public int SoNguoiDungDangHoatDong { get; set; }
+    public int SoDoiTuongDangHoatDong { get; set; }
+    public int SoNguoiDungDaDangNhapDangHoatDong { get; set; }
+    public int SoThietBiKhachDangHoatDong { get; set; }
     public int TongLuotNgheTrongKhoang { get; set; }
     public List<NguoiDungDangHoatDongItem> DanhSach { get; set; } = [];
 }
@@ -212,6 +218,7 @@ public class LichSuPhatItem
 {
     public int MaLichSuPhat { get; set; }
     public string TenNguoiDung { get; set; } = string.Empty;
+    public string DeviceId { get; set; } = string.Empty;
     public string TenDiem { get; set; } = string.Empty;
     public string TieuDeNoiDung { get; set; } = string.Empty;
     public DateTime ThoiGianBatDau { get; set; }

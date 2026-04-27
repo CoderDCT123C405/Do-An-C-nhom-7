@@ -17,9 +17,9 @@ public class DiemThamQuanController(
     /// Lấy danh sách điểm tham quan có phân trang (paging)
     /// </summary>
     /// <param name="page">Trang hiện tại (bắt đầu từ 1)</param>
-    /// <param name="pageSize">Số lượng bản ghi mỗi trang (mặc định 20, tối đa 100)</param>
+    /// <param name="pageSize">Số lượng bản ghi mỗi trang (mặc định 100, tối đa 100)</param>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<DiemThamQuanDto>>> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<ActionResult<IEnumerable<DiemThamQuanDto>>> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 100)
     {
         page = page < 1 ? 1 : page;
         pageSize = pageSize < 1 ? 100 : (pageSize > 100 ? 100 : pageSize);

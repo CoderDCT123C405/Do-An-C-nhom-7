@@ -20,4 +20,12 @@ public class LichSuPhatDto
 
     [Range(0, int.MaxValue)]
     public int? ThoiLuongDaNghe { get; set; }
+
+    [StringLength(128)]
+    public string? DeviceId { get; set; }
+
+    [StringLength(128)]
+    public string? SessionId { get; set; }
+
+    public DateTime? LastSeen { get; set; }
 }
